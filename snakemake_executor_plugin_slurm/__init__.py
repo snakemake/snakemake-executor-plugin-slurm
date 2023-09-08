@@ -58,7 +58,8 @@ class Executor(RemoteExecutor):
             pass_default_resources_args=True,
             # whether environment variables shall be passed to jobs
             pass_envvar_declarations_to_cmd=False,
-            init_sleep_seconds=40,
+            # wait a bit until slurmdbd has job info available
+            init_seconds_before_status_checks=40,
         )
         self.run_uuid = str(uuid.uuid4())
         self._fallback_account_arg = None
