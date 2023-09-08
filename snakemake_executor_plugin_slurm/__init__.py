@@ -52,7 +52,7 @@ class Executor(RemoteExecutor):
             # whether arguments for setting default resources shall be passed to jobs
             pass_default_resources_args=True,
             # whether environment variables shall be passed to jobs
-            pass_envvar_declarations_to_cmd=True,
+            pass_envvar_declarations_to_cmd=False,
             init_sleep_seconds=40,
         )
         self.run_uuid = str(uuid.uuid4())
