@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v3
+
+      - name: Install poetry
+        run: pipx install poetry
+
+      - name: Determine dependencies
+        run: poetry lock
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+          cache: poetry
+
+      - name: Install Dependencies using Poetry
+        run: poetry install
+
+      - name: Check formatting
+        run: poetry run black --check .
+
+  linting:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v3
+
+      - name: Install poetry
+        run: pipx install poetry
+
+      - name: Determine dependencies
+        run: poetry lock
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+          cache: poetry
+
+      - name: Install Dependencies using Poetry
+        run: poetry install
+
+      - name: Check code
+        run: poetry run flake8
+
+  testing:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - "8888:3306"
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: koesterlab/setup-slurm-action@v1
+
+      - name: Install poetry
+        run: pipx install poetry
+
+      - name: Determine dependencies
+        run: poetry lock
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+          cache: poetry
+
+      - name: Install dependencies
+        run: |
+          poetry install
+
+      - name: Run pytest
+        run: poetry run coverage run -m pytest tests/tests.py
+
+      - name: Run Coverage
+        run: poetry run coverage report -m
