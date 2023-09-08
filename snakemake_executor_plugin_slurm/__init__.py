@@ -1,3 +1,8 @@
+__author__ = "David Lähnemann, Johannes Köster, Christian Meesters"
+__copyright__ = "Copyright 2023, David Lähnemann, Johannes Köster, Christian Meesters"
+__email__ = "johannes.koester@uni-due.de"
+__license__ = "MIT"
+
 import csv
 from fractions import Fraction
 from io import StringIO
