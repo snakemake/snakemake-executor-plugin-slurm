@@ -268,23 +268,21 @@ class Executor(RemoteExecutor):
                 continue
             status = status_of_jobs[j.external_jobid]
             if status == "COMPLETED":
-                self.report_job_success(j.job)
+                self.report_job_success(j)
                 any_finished = True
                 active_jobs_seen_by_sacct.remove(j.external_jobid)
             elif status == "UNKNOWN":
                 # the job probably does not exist anymore, but 'sacct' did not work
                 # so we assume it is finished
-                self.report_job_success(j.job)
+                self.report_job_success(j)
                 any_finished = True
                 active_jobs_seen_by_sacct.remove(j.external_jobid)
             elif status in fail_stati:
-                self.print_job_error(
-                    j,
-                    msg=f"SLURM-job '{j.external_jobid}' failed, SLURM status is: "
-                    f"'{status}'",
-                    aux_logs=[j.slurm_logfile],
+                msg = (
+                    f"SLURM-job '{j.external_jobid}' failed, SLURM status is: "
+                    "'{status}'"
                 )
-                self.report_job_error(j.job)
+                self.report_job_error(j, msg=msg, aux_logs=[j.aux["slurm_logfile"]])
                 active_jobs_seen_by_sacct.remove(j.external_jobid)
             else:  # still running?
                 yield j
