@@ -72,7 +72,7 @@ class Executor(RemoteExecutor):
         # one after another, so we need to set -j to 1 for the
         # JobStep Executor, which in turn handles the launch of
         # SLURM jobsteps.
-        return [" --slurm-jobstep", "--jobs 1"]
+        return "--slurm-jobstep --jobs 1"
 
     def run_job(self, job: ExecutorJobInterface):
         # Implement here how to run a job.
