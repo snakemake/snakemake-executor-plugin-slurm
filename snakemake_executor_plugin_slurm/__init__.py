@@ -18,7 +18,7 @@ from snakemake_interface_executor_plugins import CommonSettings
 from snakemake_interface_executor_plugins.workflow import WorkflowExecutorInterface
 from snakemake_interface_executor_plugins.logging import LoggerExecutorInterface
 from snakemake_interface_executor_plugins.jobs import (
-    ExecutorJobInterface,
+    JobExecutorInterface,
 )
 from snakemake_interface_common.exceptions import WorkflowError
 from throttler import Throttler
@@ -74,7 +74,7 @@ class Executor(RemoteExecutor):
         # SLURM jobsteps.
         return "--slurm-jobstep --jobs 1"
 
-    def run_job(self, job: ExecutorJobInterface):
+    def run_job(self, job: JobExecutorInterface):
         # Implement here how to run a job.
         # You can access the job's resources, etc.
         # via the job object.
@@ -366,7 +366,7 @@ class Executor(RemoteExecutor):
 
         return (res, query_duration)
 
-    def get_account_arg(self, job: ExecutorJobInterface):
+    def get_account_arg(self, job: JobExecutorInterface):
         """
         checks whether the desired account is valid,
         returns a default account, if applicable
@@ -393,7 +393,7 @@ class Executor(RemoteExecutor):
                     )
             return self._fallback_account_arg
 
-    def get_partition_arg(self, job: ExecutorJobInterface):
+    def get_partition_arg(self, job: JobExecutorInterface):
         """
         checks whether the desired partition is valid,
         returns a default partition, if applicable
