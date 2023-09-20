@@ -87,7 +87,7 @@ class Executor(RemoteExecutor):
 
         log_folder = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
 
-        slurm_logfile = f".snakemake/slurm_logs/{log_folder}/%j.log"
+        slurm_logfile = os.path.abspath(f".snakemake/slurm_logs/{log_folder}/%j.log")
         os.makedirs(os.path.dirname(slurm_logfile), exist_ok=True)
 
         # generic part of a submission string:
@@ -143,12 +143,13 @@ class Executor(RemoteExecutor):
             call += f" {job.resources.slurm_extra}"
 
         exec_job = self.format_job_exec(job)
+
         # ensure that workdir is set correctly
         # use short argument as this is the same in all slurm versions
         # (see https://github.com/snakemake/snakemake/issues/2014)
         call += f" -D {self.workflow.workdir_init}"
         # and finally the job to execute with all the snakemake parameters
-        call += f" --wrap={shlex.quote(exec_job)}"
+        call += f" --wrap=\"{exec_job}\""
 
         self.logger.debug(f"sbatch call: {call}")
         try:
@@ -280,7 +281,7 @@ class Executor(RemoteExecutor):
             elif status in fail_stati:
                 msg = (
                     f"SLURM-job '{j.external_jobid}' failed, SLURM status is: "
-                    "'{status}'"
+                    f"'{status}'"
                 )
                 self.report_job_error(j, msg=msg, aux_logs=[j.aux["slurm_logfile"]])
                 active_jobs_seen_by_sacct.remove(j.external_jobid)
