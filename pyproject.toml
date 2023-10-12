@@ -12,7 +12,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.9"
 snakemake-interface-common = "^1.4.1"
-snakemake-interface-executor-plugins = "^4.0.0"
+snakemake-interface-executor-plugins = "^4.0.1"
 snakemake-executor-plugin-slurm-jobstep = "^0.1.0"
 throttler = "^1.2.2"
 
@@ -22,6 +22,9 @@ flake8 = "^6.1.0"
 coverage = "^7.3.1"
 pytest = "^7.4.2"
 snakemake = {git = "https://github.com/snakemake/snakemake.git"}
+
+[tool.coverage.run]
+omit = [".*", "*/site-packages/*", "Snakefile"]
 
 [build-system]
 requires = ["poetry-core"]
