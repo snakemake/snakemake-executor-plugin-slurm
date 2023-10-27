@@ -13,19 +13,24 @@ jobs:
       - name: Check out the code
         uses: actions/checkout@v3
 
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
       - name: Install poetry
-        run: pipx install poetry
+        run: pip install poetry
 
       - name: Determine dependencies
         run: poetry lock
 
       - uses: actions/setup-python@v4
         with:
-          python-version: "3.9"
+          python-version: "3.11"
           cache: poetry
 
-      - name: Install Dependencies using Poetry
-        run: poetry install
+      - name: Install dependencies
+        run: |
+          poetry install
 
       - name: Check formatting
         run: poetry run black --check .
@@ -36,19 +41,24 @@ jobs:
       - name: Check out the code
         uses: actions/checkout@v3
 
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
       - name: Install poetry
-        run: pipx install poetry
+        run: pip install poetry
 
       - name: Determine dependencies
         run: poetry lock
 
       - uses: actions/setup-python@v4
         with:
-          python-version: "3.9"
+          python-version: "3.11"
           cache: poetry
 
-      - name: Install Dependencies using Poetry
-        run: poetry install
+      - name: Install dependencies
+        run: |
+          poetry install
 
       - name: Check code
         run: poetry run flake8
@@ -68,15 +78,19 @@ jobs:
 
       - uses: koesterlab/setup-slurm-action@v1
 
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
       - name: Install poetry
-        run: pipx install poetry
+        run: pip install poetry
 
       - name: Determine dependencies
         run: poetry lock
 
       - uses: actions/setup-python@v4
         with:
-          python-version: "3.9"
+          python-version: "3.11"
           cache: poetry
 
       - name: Install dependencies
