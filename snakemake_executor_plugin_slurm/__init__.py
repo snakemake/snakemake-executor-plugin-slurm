@@ -293,6 +293,9 @@ class Executor(RemoteExecutor):
                 (1 / mean_sacct_query_duration) / 5,
             )
         ).limit_denominator()
+        self.logger.debug(
+            f"New rate limit: {rate_limit.numerator} in period {rate_limit.denominator}"
+        )
         self.status_rate_limiter = Throttler(
             rate_limit=rate_limit.numerator,
             period=rate_limit.denominator,
