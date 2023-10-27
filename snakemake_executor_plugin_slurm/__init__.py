@@ -242,8 +242,6 @@ class Executor(RemoteExecutor):
                     "slurmdbd job accounting is properly set up.\n"
                 )
 
-        self.update_status_rate_limiter(sacct_query_durations)
-
         any_finished = False
         for j in active_jobs:
             # the job probably didn't make it into slurmdbd yet, so
@@ -280,29 +278,6 @@ class Executor(RemoteExecutor):
             )
         else:
             self.next_seconds_between_status_checks = None
-
-    def update_status_rate_limiter(self, sacct_query_durations):
-        # Update self.status_rate_limiter to avoid too many API calls in retries.
-        mean_sacct_query_duration = sum(sacct_query_durations) / len(
-            sacct_query_durations
-        )
-        self.logger.debug(sacct_query_durations)
-        self.logger.debug((self.status_rate_limiter._rate_limit,
-                           self.status_rate_limiter._period))
-        rate_limit = Fraction(
-            min(
-                self.status_rate_limiter._rate_limit / self.status_rate_limiter._period,
-                # if slurmdbd (sacct) is strained and slow, reduce the query frequency
-                (1 / mean_sacct_query_duration) / 5,
-            )
-        ).limit_denominator()
-        self.logger.debug(
-            f"New rate limit: {rate_limit.numerator} in period {rate_limit.denominator}"
-        )
-        self.status_rate_limiter = Throttler(
-            rate_limit=rate_limit.numerator,
-            period=rate_limit.denominator,
-        )
 
     def cancel_jobs(self, active_jobs: List[SubmittedJobInfo]):
         # Cancel all active jobs.
