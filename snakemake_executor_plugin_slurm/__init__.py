@@ -286,6 +286,9 @@ class Executor(RemoteExecutor):
         mean_sacct_query_duration = sum(sacct_query_durations) / len(
             sacct_query_durations
         )
+        self.logger.debug(sacct_query_durations)
+        self.logger.debug((self.status_rate_limiter._rate_limit,
+                           self.status_rate_limiter._period))
         rate_limit = Fraction(
             min(
                 self.status_rate_limiter._rate_limit / self.status_rate_limiter._period,
