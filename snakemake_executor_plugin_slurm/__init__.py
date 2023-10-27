@@ -39,7 +39,7 @@ common_settings = CommonSettings(
     pass_envvar_declarations_to_cmd=False,
     auto_deploy_default_storage_provider=False,
     # wait a bit until slurmdbd has job info available
-    init_seconds_before_status_checks=40
+    init_seconds_before_status_checks=40,
 )
 
 
@@ -135,7 +135,7 @@ class Executor(RemoteExecutor):
         # (see https://github.com/snakemake/snakemake/issues/2014)
         call += f" -D {self.workflow.workdir_init}"
         # and finally the job to execute with all the snakemake parameters
-        call += f" --wrap=\"{exec_job}\""
+        call += f' --wrap="{exec_job}"'
 
         self.logger.debug(f"sbatch call: {call}")
         try:
