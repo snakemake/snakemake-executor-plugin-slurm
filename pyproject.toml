@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "snakemake-executor-plugin-slurm"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Snakemake executor plugin for submitting jobs to a SLURM cluster."
 authors = [
     "David Lähnemann <david.laehnemann@dkfz-heidelberg.de>",
