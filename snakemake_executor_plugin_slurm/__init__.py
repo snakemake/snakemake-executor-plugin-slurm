@@ -4,7 +4,6 @@ __email__ = "johannes.koester@uni-due.de"
 __license__ = "MIT"
 
 import csv
-from fractions import Fraction
 from io import StringIO
 import os
 import subprocess
@@ -18,7 +17,6 @@ from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
 from snakemake_interface_common.exceptions import WorkflowError
-from throttler import Throttler
 
 
 # Required:
