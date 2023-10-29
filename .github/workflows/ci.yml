@@ -76,7 +76,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: koesterlab/setup-slurm-action@v1
+      - uses: koesterlab/setup-slurm-action@main
 
       - uses: actions/setup-python@v4
         with:
