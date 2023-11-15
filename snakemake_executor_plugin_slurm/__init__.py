@@ -210,6 +210,9 @@ class Executor(RemoteExecutor):
                     f"sacct -X --parsable2 --noheader --format=JobIdRaw,State "
                     f"--name {self.run_uuid}"
                 )
+                if status_of_jobs is None and sacct_query_duration is None:
+                    logger.debug(f"Could not check status of job {self.run_uuid}")
+                    continue
                 sacct_query_durations.append(sacct_query_duration)
                 self.logger.debug(f"status_of_jobs after sacct is: {status_of_jobs}")
                 # only take jobs that are still active
@@ -305,6 +308,7 @@ class Executor(RemoteExecutor):
         command -- a slurm command that returns one line for each job with:
                    "<raw/main_job_id>|<long_status_string>"
         """
+        res = query_duration = None
         try:
             time_before_query = time.time()
             command_res = subprocess.check_output(
