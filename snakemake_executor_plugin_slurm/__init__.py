@@ -212,7 +212,7 @@ class Executor(RemoteExecutor):
                     f"--name {self.run_uuid}"
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
-                    logger.debug(f"Could not check status of job {self.run_uuid}")
+                    self.logger.debug(f"could not check status of job {self.run_uuid}")
                     continue
                 sacct_query_durations.append(sacct_query_duration)
                 self.logger.debug(f"status_of_jobs after sacct is: {status_of_jobs}")
