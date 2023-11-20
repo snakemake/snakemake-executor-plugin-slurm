@@ -12,7 +12,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 snakemake-interface-common = "^1.13.0"
-snakemake-interface-executor-plugins = "^7.0.0"
+snakemake-interface-executor-plugins = "^8.0.2"
 snakemake-executor-plugin-slurm-jobstep = "^0.1.5"
 throttler = "^1.2.2"
 
