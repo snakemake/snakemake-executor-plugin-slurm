@@ -2,7 +2,11 @@
 name = "snakemake-executor-plugin-slurm"
 version = "0.1.2"
 description = "A Snakemake executor plugin for submitting jobs to a SLURM cluster."
-author = "David Lähnemann <david.laehnemann@dkfz-heidelberg.de>, Johannes Koester <johannes.koester@uni-due.de>, Christian Meesters <meesters@uni-mainz.de>"
+authors = [
+    "Christian Meesters <meesters@uni-mainz.de>",
+    "David Lähnemann <david.laehnemann@dkfz-heidelberg.de>",
+    "Johannes Koester <johannes.koester@uni-due.de>",
+]
 readme = "README.md"
 
 [tool.poetry.dependencies]
