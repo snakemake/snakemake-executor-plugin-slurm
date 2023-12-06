@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.1.2...v0.1.3) (2023-12-06)
+
+
+### Bug Fixes
+
+* Handle unresponsive sacct ([#5](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/5)) ([2f7ec1b](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/2f7ec1bb8cc809f0acba92c92819d57fd1affee1))
+
+
+### Documentation
+
+* update author encoding ([890bdb0](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/890bdb0d011bec922bdce6fa874f06a010ea8334))
+
 ## [0.1.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.1.1...v0.1.2) (2023-11-20)
 
 
