@@ -8,6 +8,10 @@ authors = [
     "Johannes Koester <johannes.koester@uni-due.de>",
 ]
 readme = "README.md"
+license = "MIT"
+repository = "https://github.com/snakemake/snakemake-executor-plugin-slurm"
+documentation = "https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html"
+keywords = ["snakemake", "plugin", "executor", "cluster", "slurm"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
