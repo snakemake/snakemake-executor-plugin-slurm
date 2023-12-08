@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.1.3...v0.1.4) (2023-12-08)
+
+
+### Documentation
+
+* metadata ([4edf9d5](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/4edf9d59f454333299b04f06855bc1522e481d56))
+
 ## [0.1.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.1.2...v0.1.3) (2023-12-06)
 
 
