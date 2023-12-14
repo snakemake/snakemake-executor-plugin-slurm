@@ -221,7 +221,8 @@ class Executor(RemoteExecutor):
                     set(status_of_jobs.keys()) & active_jobs_ids
                 )
                 self.logger.debug(
-                    f"active_jobs_ids_with_current_sacct_status are: {active_jobs_ids_with_current_sacct_status}"
+                    f"active_jobs_ids_with_current_sacct_status are: "
+                    f"{active_jobs_ids_with_current_sacct_status}"
                 )
                 active_jobs_seen_by_sacct = (
                     active_jobs_seen_by_sacct
