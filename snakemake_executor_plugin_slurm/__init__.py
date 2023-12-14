@@ -234,9 +234,7 @@ class Executor(RemoteExecutor):
                     active_jobs_seen_by_sacct
                     - active_jobs_ids_with_current_sacct_status
                 )
-                self.logger.debug(
-                    f"missing_sacct_status are: {missing_sacct_status}"
-                )
+                self.logger.debug(f"missing_sacct_status are: {missing_sacct_status}")
                 if not missing_sacct_status:
                     break
             if i >= status_attempts - 1:
