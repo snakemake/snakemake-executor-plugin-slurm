@@ -220,6 +220,9 @@ class Executor(RemoteExecutor):
                 active_jobs_ids_with_current_sacct_status = (
                     set(status_of_jobs.keys()) & active_jobs_ids
                 )
+                self.logger.debug(
+                    f"active_jobs_ids_with_current_sacct_status are: {active_jobs_ids_with_current_sacct_status}"
+                )
                 active_jobs_seen_by_sacct = (
                     active_jobs_seen_by_sacct
                     | active_jobs_ids_with_current_sacct_status
@@ -230,6 +233,9 @@ class Executor(RemoteExecutor):
                 missing_sacct_status = (
                     active_jobs_seen_by_sacct
                     - active_jobs_ids_with_current_sacct_status
+                )
+                self.logger.debug(
+                    f"missing_sacct_status are: {missing_sacct_status}"
                 )
                 if not missing_sacct_status:
                     break
