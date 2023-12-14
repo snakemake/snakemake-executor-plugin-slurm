@@ -209,7 +209,7 @@ class Executor(RemoteExecutor):
                 (status_of_jobs, sacct_query_duration) = await self.job_stati(
                     # -X: only show main job, no substeps
                     f"sacct -X --parsable2 --noheader --format=JobIdRaw,State "
-                    f"--starttime now-4weeks --endtime now --name {self.run_uuid}"
+                    f"--starttime now-2days --endtime now --name {self.run_uuid}"
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
                     self.logger.debug(f"could not check status of job {self.run_uuid}")
