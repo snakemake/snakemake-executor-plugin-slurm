@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.1.4...v0.1.5) (2024-01-05)
+
+
+### Bug Fixes
+
+* Force sacct to look at the last 2 days ([#9](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/9)) ([914265d](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/914265df76f1d6eab7ed0b38c61e123489ec0bc2))
+
 ## [0.1.4](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.1.3...v0.1.4) (2023-12-08)
 
 
