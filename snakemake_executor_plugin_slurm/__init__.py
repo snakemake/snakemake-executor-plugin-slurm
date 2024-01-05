@@ -209,7 +209,7 @@ class Executor(RemoteExecutor):
                 (status_of_jobs, sacct_query_duration) = await self.job_stati(
                     # -X: only show main job, no substeps
                     f"sacct -X --parsable2 --noheader --format=JobIdRaw,State "
-                    f"--name {self.run_uuid}"
+                    f"--starttime now-2days --endtime now --name {self.run_uuid}"
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
                     self.logger.debug(f"could not check status of job {self.run_uuid}")
@@ -219,6 +219,10 @@ class Executor(RemoteExecutor):
                 # only take jobs that are still active
                 active_jobs_ids_with_current_sacct_status = (
                     set(status_of_jobs.keys()) & active_jobs_ids
+                )
+                self.logger.debug(
+                    f"active_jobs_ids_with_current_sacct_status are: "
+                    f"{active_jobs_ids_with_current_sacct_status}"
                 )
                 active_jobs_seen_by_sacct = (
                     active_jobs_seen_by_sacct
@@ -231,6 +235,7 @@ class Executor(RemoteExecutor):
                     active_jobs_seen_by_sacct
                     - active_jobs_ids_with_current_sacct_status
                 )
+                self.logger.debug(f"missing_sacct_status are: {missing_sacct_status}")
                 if not missing_sacct_status:
                     break
             if i >= status_attempts - 1:
