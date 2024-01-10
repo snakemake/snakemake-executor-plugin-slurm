@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.1.5...v0.2.0) (2024-01-10)
+
+
+### Features
+
+* include rule name as comment ([#16](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/16)) ([2e39b18](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/2e39b18688c8e80d4b78c23de01484374a7f065c))
+
 ## [0.1.5](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.1.4...v0.1.5) (2024-01-05)
 
 
