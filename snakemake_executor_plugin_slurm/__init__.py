@@ -68,8 +68,6 @@ class Executor(RemoteExecutor):
         # with job_info being of type
         # snakemake_interface_executor_plugins.executors.base.SubmittedJobInfo.
 
-        jobid = job.jobid
-
         log_folder = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
 
         slurm_logfile = os.path.abspath(f".snakemake/slurm_logs/{log_folder}/%j.log")
@@ -78,7 +76,10 @@ class Executor(RemoteExecutor):
         # generic part of a submission string:
         # we use a run_uuid as the job-name, to allow `--name`-based
         # filtering in the job status checks (`sacct --name` and `squeue --name`)
-        call = f"sbatch --job-name {self.run_uuid} -o {slurm_logfile} --export=ALL"
+        call = (
+            f"sbatch --job-name {self.run_uuid} --output {slurm_logfile} --export=ALL "
+            f"--comment {job.name}"
+        )
 
         call += self.get_account_arg(job)
         call += self.get_partition_arg(job)
@@ -149,7 +150,7 @@ class Executor(RemoteExecutor):
         slurm_jobid = out.split(" ")[-1]
         slurm_logfile = slurm_logfile.replace("%j", slurm_jobid)
         self.logger.info(
-            f"Job {jobid} has been submitted with SLURM jobid {slurm_jobid} "
+            f"Job {job.jobid} has been submitted with SLURM jobid {slurm_jobid} "
             f"(log: {slurm_logfile})."
         )
         self.report_job_submission(
