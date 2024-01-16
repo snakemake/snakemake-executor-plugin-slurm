@@ -39,6 +39,7 @@ common_settings = CommonSettings(
     auto_deploy_default_storage_provider=False,
     # wait a bit until slurmdbd has job info available
     init_seconds_before_status_checks=40,
+    pass_group_args=True,
 )
 
 
@@ -51,7 +52,7 @@ class Executor(RemoteExecutor):
         self._fallback_partition = None
 
     def additional_general_args(self):
-        return "--executor slurm-jobstep"
+        return "--executor slurm-jobstep --jobs 1"
 
     def run_job(self, job: JobExecutorInterface):
         # Implement here how to run a job.
