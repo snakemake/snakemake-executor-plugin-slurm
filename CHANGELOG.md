@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.2.0...v0.2.1) (2024-01-16)
+
+
+### Bug Fixes
+
+* ensure proper handling of group jobs in combination with the slurm-jobstep executor ([f5c3d4c](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/f5c3d4c6b9bdcba68a512388d36d72d2700920bf))
+* remove limitation to single job in jobstep executor for group jobs ([18acfb6](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/18acfb6c4d1588c44941355d0f024c76de52bdbb))
+
 ## [0.2.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.1.5...v0.2.0) (2024-01-10)
 
 
