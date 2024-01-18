@@ -39,6 +39,7 @@ common_settings = CommonSettings(
     auto_deploy_default_storage_provider=False,
     # wait a bit until slurmdbd has job info available
     init_seconds_before_status_checks=40,
+    pass_group_args=True,
 )
 
 
@@ -52,12 +53,6 @@ class Executor(RemoteExecutor):
         self._fallback_partition = None
 
     def additional_general_args(self):
-        # we need to set -j to 1 here, because the behaviour
-        # of snakemake is to submit all jobs at once, otherwise.
-        # However, the SLURM Executor is supposed to submit jobs
-        # one after another, so we need to set -j to 1 for the
-        # JobStep Executor, which in turn handles the launch of
-        # SLURM jobsteps.
         return "--executor slurm-jobstep --jobs 1"
 
     def run_job(self, job: JobExecutorInterface):
@@ -69,8 +64,6 @@ class Executor(RemoteExecutor):
         # with job_info being of type
         # snakemake_interface_executor_plugins.executors.base.SubmittedJobInfo.
 
-        jobid = job.jobid
-
         log_folder = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
 
         slurm_logfile = os.path.abspath(f".snakemake/slurm_logs/{log_folder}/%j.log")
@@ -79,7 +72,10 @@ class Executor(RemoteExecutor):
         # generic part of a submission string:
         # we use a run_uuid as the job-name, to allow `--name`-based
         # filtering in the job status checks (`sacct --name` and `squeue --name`)
-        call = f"sbatch --job-name {self.run_uuid} -o {slurm_logfile} --export=ALL"
+        call = (
+            f"sbatch --job-name {self.run_uuid} --output {slurm_logfile} --export=ALL "
+            f"--comment {job.name}"
+        )
 
         call += self.get_account_arg(job)
         call += self.get_partition_arg(job)
@@ -150,7 +146,7 @@ class Executor(RemoteExecutor):
         slurm_jobid = out.split(" ")[-1]
         slurm_logfile = slurm_logfile.replace("%j", slurm_jobid)
         self.logger.info(
-            f"Job {jobid} has been submitted with SLURM jobid {slurm_jobid} "
+            f"Job {job.jobid} has been submitted with SLURM jobid {slurm_jobid} "
             f"(log: {slurm_logfile})."
         )
         self.report_job_submission(
@@ -210,7 +206,7 @@ class Executor(RemoteExecutor):
                 (status_of_jobs, sacct_query_duration) = await self.job_stati(
                     # -X: only show main job, no substeps
                     f"sacct -X --parsable2 --noheader --format=JobIdRaw,State "
-                    f"--name {self.run_uuid}"
+                    f"--starttime now-2days --endtime now --name {self.run_uuid}"
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
                     self.logger.debug(f"could not check status of job {self.run_uuid}")
@@ -220,6 +216,10 @@ class Executor(RemoteExecutor):
                 # only take jobs that are still active
                 active_jobs_ids_with_current_sacct_status = (
                     set(status_of_jobs.keys()) & active_jobs_ids
+                )
+                self.logger.debug(
+                    f"active_jobs_ids_with_current_sacct_status are: "
+                    f"{active_jobs_ids_with_current_sacct_status}"
                 )
                 active_jobs_seen_by_sacct = (
                     active_jobs_seen_by_sacct
@@ -232,6 +232,7 @@ class Executor(RemoteExecutor):
                     active_jobs_seen_by_sacct
                     - active_jobs_ids_with_current_sacct_status
                 )
+                self.logger.debug(f"missing_sacct_status are: {missing_sacct_status}")
                 if not missing_sacct_status:
                     break
             if i >= status_attempts - 1:
