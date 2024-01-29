@@ -2,7 +2,7 @@
 
 Most SLURM clusters have two mandatory resource indicators for
 accounting and scheduling, [Account]{.title-ref} and
-[Partition]{.title-ref}, respectivily. These resources are usually
+[Partition]{.title-ref}, respectively. These resources are usually
 omitted from Snakemake workflows in order to keep the workflow
 definition independent from the platform. However, it is also possible
 to specify them inside of the workflow as resources in the rule
@@ -25,7 +25,7 @@ Usually, it is advisable to persist such settings via a
 [configuration profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles), which
 can be provided system-wide, per user, and in addition per workflow.
 
-## Ordinary SMP jobs
+## Ordinary ]MP jobs
 
 Most jobs will be carried out by programs which are either single core
 scripts or threaded programs, hence SMP ([shared memory
@@ -42,10 +42,10 @@ rule a:
 ```
 
 This will give jobs from this rule 14GB of memory and 8 CPU cores. It is
-advisable to use resonable default resources, such that you don\'t need
+advisable to use reasonable default resources, such that you don\'t need
 to specify them for every rule. Snakemake already has reasonable
 defaults built in, which are automatically activated when using any non-local executor
-(hence also with slurm).
+(hence also with SLURM).
 
 ## MPI jobs {#cluster-slurm-mpi}
 
@@ -82,17 +82,18 @@ For a SLURM cluster, a mapping between Snakemake and SLURM needs to be performed
 
 You can use the following specifications:
 
-| SLURM        | Snakemake  | Description              |
-|----------------|------------|---------------------------------------|
-| `--partition`  | `slurm_partition`    | the partition a rule/job is to use |
-| `--time`  | `runtime`  | the walltime per job in minutes       |
-| `--constraint`   | `constraint`        | may hold features on some clusters    |
-| `--mem`        | `mem`, `mem_mb`   | memory a cluster node must      |
-|                |            | provide (`mem`: string with unit), `mem_mb`: i                               |
-| `--mem-per-cpu`              | `mem_mb_per_cpu`     | memory per reserved CPU               |
-| `--ntasks`     | `tasks`    | number of concurrent tasks / ranks    |
-| `--cpus-per-task`       | `cpus_per_task`      | number of cpus per task (in case of SMP, rather use `threads`)   |
-| `--nodes` | `nodes`    | number of nodes                       |
+| SLURM             | Snakemake         | Description                                                    |
+| ----------------- | ----------------- | -------------------------------------------------------------- |
+| `--partition`     | `slurm_partition` | the partition a rule/job is to use                             |
+| `--time`          | `runtime`         | the walltime per job in minutes                                |
+| `--constraint`    | `constraint`      | may hold features on some clusters                             |
+| `--mem`           | `mem`, `mem_mb`   | memory a cluster node must                                     |
+|                   |                   | provide (`mem`: string with unit), `mem_mb`: i                 |
+| `--mem-per-cpu`   | `mem_mb_per_cpu`  | memory per reserved CPU                                        |
+| `--ntasks`        | `tasks`           | number of concurrent tasks / ranks                             |
+| `--cpus-per-task` | `cpus_per_task`   | number of cpus per task (in case of SMP, rather use `threads`) |
+| `--nodes`         | `nodes`           | number of nodes                                                |
+| `--qos`           | `slurm_qos`       | quality of service (`qos`) group                               |
 
 Each of these can be part of a rule, e.g.:
 
@@ -103,14 +104,15 @@ rule:
     resources:
         partition: <partition name>
         runtime: <some number>
+	qos: <qos_name>
 ```
 
 Please note: as `--mem` and `--mem-per-cpu` are mutually exclusive on
 SLURM clusters, their corresponding resource flags `mem`/`mem_mb` and
 `mem_mb_per_cpu` are mutually exclusive, too. You can only reserve
 memory a compute node has to provide or the memory required per CPU
-(SLURM does not make any distintion between real CPU cores and those
-provided by hyperthreads). SLURM will try to sastify a combination of
+(SLURM does not make any distinction between real CPU cores and those
+provided by hyperthreads). SLURM will try to satisfy a combination of
 `mem_mb_per_cpu` and `cpus_per_task` and `nodes`, if `nodes` is not
 given.
 

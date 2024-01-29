@@ -120,6 +120,9 @@ class Executor(RemoteExecutor):
         cpus_per_task = max(1, cpus_per_task)
         call += f" --cpus-per-task={cpus_per_task}"
 
+        if job.resources.get("slurm_qos"):
+            call += f" --qos {job.resources.slurm_qos}"
+
         if job.resources.get("slurm_extra"):
             call += f" {job.resources.slurm_extra}"
 
