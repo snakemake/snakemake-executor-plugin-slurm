@@ -206,7 +206,7 @@ class Executor(RemoteExecutor):
                 (status_of_jobs, sacct_query_duration) = await self.job_stati(
                     # -X: only show main job, no substeps
                     f"sacct -X --parsable2 --noheader --format=JobIdRaw,State "
-                    f"--starttime {datetime.utcnow() - timedelta(days=2):%Y-%m-%dT%H} "
+                    f"--starttime {datetime.utcnow() - timedelta(days=2):%Y-%m-%dT%H:00} "
                     f"--endtime now --name {self.run_uuid}"
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
