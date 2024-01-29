@@ -25,7 +25,7 @@ Usually, it is advisable to persist such settings via a
 [configuration profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles), which
 can be provided system-wide, per user, and in addition per workflow.
 
-## Ordinary ]MP jobs
+## Ordinary SMP jobs
 
 Most jobs will be carried out by programs which are either single core
 scripts or threaded programs, hence SMP ([shared memory
