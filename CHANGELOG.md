@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.2.2...v0.3.0) (2024-02-01)
+
+
+### Features
+
+* print run id to log ([#10](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/10)) ([9ee8291](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/9ee82919ff42886bc5c64480c6fd1f74c4caf0d9))
+
 ## [0.2.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.2.1...v0.2.2) (2024-02-01)
 
 
