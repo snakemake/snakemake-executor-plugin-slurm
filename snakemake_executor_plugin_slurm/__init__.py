@@ -48,6 +48,7 @@ common_settings = CommonSettings(
 class Executor(RemoteExecutor):
     def __post_init__(self):
         self.run_uuid = str(uuid.uuid4())
+        self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
         self._fallback_partition = None
 
