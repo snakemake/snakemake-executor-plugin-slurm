@@ -2,7 +2,7 @@
 
 Most SLURM clusters have two mandatory resource indicators for
 accounting and scheduling, [Account]{.title-ref} and
-[Partition]{.title-ref}, respectivily. These resources are usually
+[Partition]{.title-ref}, respectively. These resources are usually
 omitted from Snakemake workflows in order to keep the workflow
 definition independent from the platform. However, it is also possible
 to specify them inside of the workflow as resources in the rule
@@ -42,7 +42,7 @@ rule a:
 ```
 
 This will give jobs from this rule 14GB of memory and 8 CPU cores. It is
-advisable to use resonable default resources, such that you don\'t need
+advisable to use reasonable default resources, such that you don\'t need
 to specify them for every rule. Snakemake already has reasonable
 defaults built in, which are automatically activated when using any non-local executor
 (hence also with slurm).
@@ -101,16 +101,16 @@ rule:
     input: ...
     output: ...
     resources:
-        partition: <partition name>
-        runtime: <some number>
+        partition=<partition name>
+        runtime=<some number>
 ```
 
 Please note: as `--mem` and `--mem-per-cpu` are mutually exclusive on
 SLURM clusters, their corresponding resource flags `mem`/`mem_mb` and
 `mem_mb_per_cpu` are mutually exclusive, too. You can only reserve
 memory a compute node has to provide or the memory required per CPU
-(SLURM does not make any distintion between real CPU cores and those
-provided by hyperthreads). SLURM will try to sastify a combination of
+(SLURM does not make any distinction between real CPU cores and those
+provided by hyperthreads). SLURM will try to satisfy a combination of
 `mem_mb_per_cpu` and `cpus_per_task` and `nodes`, if `nodes` is not
 given.
 
