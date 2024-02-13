@@ -65,8 +65,9 @@ class Executor(RemoteExecutor):
         # snakemake_interface_executor_plugins.executors.base.SubmittedJobInfo.
 
         log_folder = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
+        wildcard_str = f"_{'_'.join(job.wildcards)}" if job.wildcards else ""
 
-        slurm_logfile = os.path.abspath(f".snakemake/slurm_logs/{log_folder}/%j.log")
+        slurm_logfile = os.path.abspath(f".snakemake/slurm_logs/{log_folder}/%j{wildcard_str}.log")
         os.makedirs(os.path.dirname(slurm_logfile), exist_ok=True)
 
         # generic part of a submission string:
