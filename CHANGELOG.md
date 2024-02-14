@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.3.0...v0.3.1) (2024-02-14)
+
+
+### Bug Fixes
+
+* Use sacct syntax that is compatible with slurm &lt; 20.11.0 ([#26](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/26)) ([c1591ff](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/c1591ff0d0eb7267cb5a64906f14e4aa47b9eac7))
+
 ## [0.3.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.2.2...v0.3.0) (2024-02-01)
 
 
