@@ -205,7 +205,7 @@ class Executor(RemoteExecutor):
         sacct_starttime = f"{datetime.now() - timedelta(days=2):%Y-%m-%dT%H:00}"
         # previously we had
         # f"--starttime now-2days --endtime now --name {self.run_uuid}"
-        # in line 218 - once v20.11 is definitively not in use any more, 
+        # in line 218 - once v20.11 is definitively not in use any more,
         # the more readable version ought to be re-adapted
 
         # this code is inspired by the snakemake profile:
