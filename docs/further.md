@@ -42,7 +42,7 @@ rule a:
 ```
 
 This will give jobs from this rule 14GB of memory and 8 CPU cores. It is
-advisable to use reasonable default resources, such that you don\'t need
+advisable to use reasonable default resources, such that you don't need
 to specify them for every rule. Snakemake already has reasonable
 defaults built in, which are automatically activated when using any non-local executor
 (hence also with slurm).
