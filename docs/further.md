@@ -4,7 +4,7 @@ Most SLURM clusters have two mandatory resource indicators for
 accounting and scheduling, [Account]{.title-ref} and
 [Partition]{.title-ref}, respectively. These resources are usually
 omitted from Snakemake workflows in order to keep the workflow
-definition independent from the platform. However, it is also possible
+definition independent of the platform. However, it is also possible
 to specify them inside of the workflow as resources in the rule
 definition (see `snakefiles-resources`{.interpreted-text role="ref"}).
 
