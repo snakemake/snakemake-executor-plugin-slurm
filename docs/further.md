@@ -2,7 +2,7 @@
 
 ## The general Idea
 
-To use this plugin, log in to your cluster's head node (sometimes called "login" node), activate your environment as usual and start Snakemake. Snakemake will then submit your jobs as cluster jobs.
+To use this plugin, log in to your cluster's head node (sometimes called the "login" node), activate your environment as usual and start Snakemake. Snakemake will then submit your jobs as cluster jobs.
 
 ## Specifying Account and Partition
 
@@ -84,6 +84,16 @@ other systems, e.g. by replacing `srun` with `mpiexec`:
 
 ``` console
 $ snakemake --set-resources calc_pi:mpi="mpiexec" ...
+```
+
+## Running Jobs locally
+
+Not all Snakemake workflows are adapted for heterogeneous environments, particularly clusters. Users might want to avoid the submission of _all_ rules as cluster jobs. Non-cluster jobs should usually include _short_ jobs, e.g. internet downloads or plotting rules.
+
+To label a rule as a non-cluster rule, use the `localrules` directive. Place it on top of a `Snakefile` as a comma-separated list like:
+
+```Python
+localrules: <rule_a>, <rule_b>
 ```
 
 ## Advanced Resource Specifications
