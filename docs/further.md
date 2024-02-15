@@ -4,7 +4,7 @@ Most SLURM clusters have two mandatory resource indicators for
 accounting and scheduling, [Account]{.title-ref} and
 [Partition]{.title-ref}, respectively. These resources are usually
 omitted from Snakemake workflows in order to keep the workflow
-definition independent of the platform. However, it is also possible
+definition independent to the platform. However, it is also possible
 to specify them inside of the workflow as resources in the rule
 definition (see `snakefiles-resources`{.interpreted-text role="ref"}).
 
@@ -27,7 +27,7 @@ can be provided system-wide, per user, and in addition per workflow.
 
 ## Ordinary SMP jobs
 
-Most jobs will be carried out by programs which are either single core
+Most jobs will be carried out by programs that are either single core
 scripts or threaded programs, hence SMP ([shared memory
 programs](https://en.wikipedia.org/wiki/Shared_memory)) in nature. Any
 given threads and `mem_mb` requirements will be passed to SLURM:
