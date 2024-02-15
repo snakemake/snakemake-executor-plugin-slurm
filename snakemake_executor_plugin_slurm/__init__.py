@@ -66,7 +66,7 @@ class Executor(RemoteExecutor):
         # snakemake_interface_executor_plugins.executors.base.SubmittedJobInfo.
 
         log_folder = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
-        
+
         try:
             wildcard_str = f"_{'_'.join(job.wildcards)}" if job.wildcards else ""
         except AttributeError:
