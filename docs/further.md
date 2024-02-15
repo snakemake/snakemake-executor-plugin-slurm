@@ -12,7 +12,7 @@ partition, respectively. These resources are usually
 omitted from Snakemake workflows in order to keep the workflow
 definition independent of the platform. However, it is also possible
 to specify them inside of the workflow as resources in the rule
-definition (see `snakefiles-resources`{.interpreted-text role="ref"}).
+definition.
 
 To specify them at the command line, define them as default resources:
 
@@ -181,4 +181,31 @@ squeue -u $USER -o %i,%P,%.10j,%.40k
 
 Here, the `.<number>` settings for the ID and the comment ensure a sufficient width, too.
 
-Snakemake will check the status of your jobs 40 seconds after submission. Another attempt will be made in 10 seconds, then 20, etcetera with an upper limit of 180 seconds. 
+Snakemake will check the status of your jobs 40 seconds after submission. Another attempt will be made in 10 seconds, then 20, etcetera with an upper limit of 180 seconds.
+
+## Using Profiles
+
+When using [profiles](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles), a command line may become shorter. A sample profile could look like this:
+
+```console
+__use_yte__: true
+executor: slurm
+latency-wait: 60
+default-storage-provider: fs
+shared-fs-usage:
+  - persistence
+  - software-deployment
+  - sources
+  - source-cache
+local-storage-prefix: "<your node local storage prefix>"
+```
+
+It will set the executor to be this SLURM executor, ensure sufficient file system latency and allow automatic stage-in of files using the [file system storage plugin](https://github.com/snakemake/snakemake-storage-plugin-fs).
+
+Note, that you need to set the `SNAKEMAKE_PROFILE` environment variable in your `~/.bashrc` file, e.g.:
+
+```console
+export SNAKEMAKE_PROFILE="$HOME/.config/snakemake"
+```
+
+Further note, that there is further development ongoing to enable differentiation of file access patterns. 
