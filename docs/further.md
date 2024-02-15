@@ -132,9 +132,11 @@ default-resources:
 
 set-resources:
     <rulename>:
-        slurm_partition: "parallel" # deviating partition for this rule
-        
+        slurm_partition: "<other partition>" # deviating partition for this rule
+        runtime: 60 # 1 hour
         slurm_extra: "'--nice=150'"
+        mem_mb_per_cpu: 1800
+        cpus_per_task: 40
 ```
 
 ## Additional Custom Job Configuration
@@ -155,7 +157,7 @@ rule myrule:
 
 Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles) to specify such resources.
 
-## Inquiring Job Information
+## Inquiring about Job Information and Adjusting the Rate Limiter
 
 The executor plugin for SLURM uses unique job names to inquire about job status. It ensures inquiring about job status for the series of jobs of a workflow does not put too much strain on the batch system's database. Human readable information is stored in the comment of a particular job. It is a combination of the rule name and wildcards. You can ask for it with the `sacct` or `squeue` commands, e.g.:
 
@@ -172,3 +174,5 @@ squeue -u $USER -o %i,%P,%.10j,%.40k
 ```
 
 Here, the `.<number>` settings for the ID and the comment ensure a sufficient width, too.
+
+Snakemake will check the status of your jobs 40 seconds after submission. Another attempt will be made in 10 seconds, then 20, etcetera with an upper limit of 180 seconds. 
