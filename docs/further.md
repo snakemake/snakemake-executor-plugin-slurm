@@ -7,8 +7,8 @@ To use this plugin, log in to your cluster's head node (sometimes called "login"
 ## Specifying Account and Partition
 
 Most SLURM clusters have two mandatory resource indicators for
-accounting and scheduling, [Account]{.title-ref} and
-[Partition]{.title-ref}, respectively. These resources are usually
+accounting and scheduling, the account and a
+partition, respectively. These resources are usually
 omitted from Snakemake workflows in order to keep the workflow
 definition independent of the platform. However, it is also possible
 to specify them inside of the workflow as resources in the rule
