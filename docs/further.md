@@ -209,3 +209,15 @@ export SNAKEMAKE_PROFILE="$HOME/.config/snakemake"
 ```
 
 Further note, that there is further development ongoing to enable differentiation of file access patterns. 
+
+## Summary:
+
+When put together, a frequent command line looks like:
+
+```console
+$ snakemake --workflow-profile <path> \
+> -j unlimited \ # assuming an unlimited number of jobs
+> --default-resources slurm_account=<account> slurm_partition=<default partition> \
+> --configfile config/config.yaml \
+> --directory <path> # assuming a data path not relative to the workflow
+```
