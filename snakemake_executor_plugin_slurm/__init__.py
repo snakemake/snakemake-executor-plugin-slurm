@@ -8,6 +8,7 @@ from io import StringIO
 import os
 import subprocess
 import time
+from datetime import datetime, timedelta
 from typing import List, Generator
 import uuid
 from snakemake_interface_executor_plugins.executors.base import SubmittedJobInfo
@@ -199,6 +200,14 @@ class Executor(RemoteExecutor):
         active_jobs_ids = {job_info.external_jobid for job_info in active_jobs}
         active_jobs_seen_by_sacct = set()
 
+        # We use this sacct syntax for argument 'starttime' to keep it compatible
+        # with slurm < 20.11
+        sacct_starttime = f"{datetime.now() - timedelta(days=2):%Y-%m-%dT%H:00}"
+        # previously we had
+        # f"--starttime now-2days --endtime now --name {self.run_uuid}"
+        # in line 218 - once v20.11 is definitively not in use any more,
+        # the more readable version ought to be re-adapted
+
         # this code is inspired by the snakemake profile:
         # https://github.com/Snakemake-Profiles/slurm
         for i in range(status_attempts):
@@ -206,7 +215,8 @@ class Executor(RemoteExecutor):
                 (status_of_jobs, sacct_query_duration) = await self.job_stati(
                     # -X: only show main job, no substeps
                     f"sacct -X --parsable2 --noheader --format=JobIdRaw,State "
-                    f"--starttime now-2days --endtime now --name {self.run_uuid}"
+                    f"--starttime {sacct_starttime} "
+                    f"--endtime now --name {self.run_uuid}"
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
                     self.logger.debug(f"could not check status of job {self.run_uuid}")
