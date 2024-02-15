@@ -41,13 +41,19 @@ rule a:
         mem_mb=14000
 ```
 
-This will give jobs from this rule 14GB of memory and 8 CPU cores. It is
-advisable to use reasonable default resources, such that you don't need
-to specify them for every rule. Snakemake already has reasonable
-defaults built in, which are automatically activated when using any non-local executor
-(hence also with slurm).
+This will give jobs from this rule 14GB of memory and 8 CPU cores. Using the SLURM executor plugin, we can alternatively define:
 
-## MPI jobs {#cluster-slurm-mpi}
+```python
+rule a:
+    input: ...
+    output: ...
+    resources:
+        cpus_per_task=8,
+        mem_mb=14000
+```
+instead of the `threads` parameter. Parameters in the `resources` section will take precedence.
+
+## MPI jobs
 
 Snakemake\'s Slurm backend also supports MPI jobs, see
 `snakefiles-mpi`{.interpreted-text role="ref"} for details. When using
