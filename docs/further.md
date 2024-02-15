@@ -4,7 +4,7 @@ Most SLURM clusters have two mandatory resource indicators for
 accounting and scheduling, [Account]{.title-ref} and
 [Partition]{.title-ref}, respectively. These resources are usually
 omitted from Snakemake workflows in order to keep the workflow
-definition independent to the platform. However, it is also possible
+definition independent of the platform. However, it is also possible
 to specify them inside of the workflow as resources in the rule
 definition (see `snakefiles-resources`{.interpreted-text role="ref"}).
 
@@ -55,9 +55,9 @@ instead of the `threads` parameter. Parameters in the `resources` section will t
 
 ## MPI jobs
 
-Snakemake\'s Slurm backend also supports MPI jobs, see
+Snakemake\'s SLURM backend also supports MPI jobs, see
 `snakefiles-mpi`{.interpreted-text role="ref"} for details. When using
-MPI with slurm, it is advisable to use `srun` as MPI starter.
+MPI with SLURM, it is advisable to use `srun` as MPI starter.
 
 ``` python
 rule calc_pi:
@@ -72,7 +72,7 @@ rule calc_pi:
       "{resources.mpi} -n {resources.tasks} calc-pi-mpi > {output} 2> {log}"
 ```
 
-Note that the `-n {resources.tasks}` is not necessary in case of SLURM,
+Note that the `-n {resources.tasks}` is not necessary in the case of SLURM,
 but it should be kept in order to allow execution of the workflow on
 other systems, e.g. by replacing `srun` with `mpiexec`:
 
@@ -82,7 +82,7 @@ $ snakemake --set-resources calc_pi:mpi="mpiexec" ...
 
 ## Advanced Resource Specifications
 
-A workflow rule may support a number of
+A workflow rule may support several
 [resource specifications](https://snakemake.readthedocs.io/en/latest/snakefiles/rules.html#resources).
 For a SLURM cluster, a mapping between Snakemake and SLURM needs to be performed.
 
@@ -113,16 +113,13 @@ rule:
 
 Please note: as `--mem` and `--mem-per-cpu` are mutually exclusive on
 SLURM clusters, their corresponding resource flags `mem`/`mem_mb` and
-`mem_mb_per_cpu` are mutually exclusive, too. You can only reserve
-memory a compute node has to provide or the memory required per CPU
-(SLURM does not make any distinction between real CPU cores and those
-provided by hyperthreads). SLURM will try to satisfy a combination of
-`mem_mb_per_cpu` and `cpus_per_task` and `nodes`, if `nodes` is not
-given.
+`mem_mb_per_cpu` are mutually exclusive, too. You can either reserve the
+memory a compute node has to provide(`--mem` flag) or the memory required per CPU (`--mem-per-cpu` flag). Depending on your cluster's settings hyperthreads are enabled. SLURM does not make any distinction between real CPU cores and those provided by hyperthreads. SLURM will try to satisfy a combination of
+`mem_mb_per_cpu` and `cpus_per_task` and `nodes` if the `nodes` parameter is not given.
 
 Note that it is usually advisable to avoid specifying SLURM (and compute
-infrastructure) specific resources (like `constraint`) inside of your
-workflow because that can limit the reproducibility on other systems.
+infrastructure) specific resources (like `constraint`) inside your
+workflow because that can limit the reproducibility when executed on other systems.
 Consider using the `--default-resources` and `--set-resources` flags to specify such resources
 at the command line or (ideally) within a [profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles).
 
