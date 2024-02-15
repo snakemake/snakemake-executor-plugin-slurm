@@ -1,6 +1,8 @@
 # The Executor Plugin for HPC Clusters using the SLURM Batch System
 
-## 
+## The general Idea
+
+To use this plugin, log in to your cluster's head node (sometimes called "login" node), activate your environment as usual and start Snakemake. Snakemake will then submit your jobs as cluster jobs.
 
 ## Specifying Account and Partition
 
