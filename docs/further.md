@@ -27,7 +27,7 @@ can be provided system-wide, per user, and in addition per workflow.
 
 ## Ordinary SMP jobs
 
-Most jobs will be carried out by programs that are either single core
+Most jobs will be carried out by programs that are either single-core
 scripts or threaded programs, hence SMP ([shared memory
 programs](https://en.wikipedia.org/wiki/Shared_memory)) in nature. Any
 given threads and `mem_mb` requirements will be passed to SLURM:
