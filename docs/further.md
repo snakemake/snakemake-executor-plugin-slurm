@@ -57,7 +57,7 @@ instead of the `threads` parameter. Parameters in the `resources` section will t
 
 Snakemake\'s SLURM backend also supports MPI jobs, see
 `snakefiles-mpi`{.interpreted-text role="ref"} for details. When using
-MPI with SLURM, it is advisable to use `srun` as MPI starter.
+MPI with SLURM, it is advisable to use `srun` as an MPI starter.
 
 ``` python
 rule calc_pi:
@@ -123,7 +123,21 @@ workflow because that can limit the reproducibility when executed on other syste
 Consider using the `--default-resources` and `--set-resources` flags to specify such resources
 at the command line or (ideally) within a [profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles).
 
-## Additional custom job configuration
+A sample configuration file as specified by the `--workflow-profile` flag might look like this:
+
+```YAML
+default-resources:
+    slurm_partition: "<your default partition>"
+    slurm_account:   "<your account>
+
+set-resources:
+    <rulename>:
+        slurm_partition: "parallel" # deviating partition for this rule
+        
+        slurm_extra: "'--nice=150'"
+```
+
+## Additional Custom Job Configuration
 
 SLURM installations can support custom plugins, which may add support
 for additional flags to `sbatch`. In addition, there are various
@@ -140,3 +154,21 @@ rule myrule:
 ```
 
 Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles) to specify such resources.
+
+## Inquiring Job Information
+
+The executor plugin for SLURM uses unique job names to inquire about job status. It ensures inquiring about job status for the series of jobs of a workflow does not put too much strain on the batch system's database. Human readable information is stored in the comment of a particular job. It is a combination of the rule name and wildcards. You can ask for it with the `sacct` or `squeue` commands, e.g.:
+
+``` console
+sacct -o JobID,State,Comment%40
+```
+
+Note, the "%40" after `Comment` ensures a width of 40 characters. This setting may be changed at will. If the width is too small, SLURM will abbreviate the column with a `+` sign.
+
+For running jobs, the `squeue` command:
+
+``` console
+squeue -u $USER -o %i,%P,%.10j,%.40k
+```
+
+Here, the `.<number>` settings for the ID and the comment ensure a sufficient width, too.
