@@ -168,7 +168,7 @@ rule myrule:
     input: ...
     output: ...
     resources:
-        slurm_extra="--qos=long --mail-type=ALL --mail-user=<your email>"
+        slurm_extra="'--qos=long --mail-type=ALL --mail-user=<your email>'"
 ```
 
 Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles) to specify such resources.
