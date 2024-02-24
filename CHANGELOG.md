@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.3.1...v0.3.2) (2024-02-24)
+
+
+### Bug Fixes
+
+* fix type error in job status checking if sacct fails ([6a197ae](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6a197ae6d73061def6700af58b29f981dc323278))
+
+
+### Documentation
+
+* extended docs ([#37](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/37)) ([cf0407c](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/cf0407cc8115d3b64f486b2178b67118e16a12a7))
+
 ## [0.3.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.3.0...v0.3.1) (2024-02-14)
 
 
