@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.4.0...v0.4.1) (2024-02-29)
+
+
+### Bug Fixes
+
+* fixes issue [#40](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/40) - ntasks set explicitly ([#44](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/44)) ([f5c2c2c](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/f5c2c2c83b17442ab261619eadd9e6f71e39b772))
+
 ## [0.4.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.3.2...v0.4.0) (2024-02-29)
 
 
