@@ -137,3 +137,26 @@ rule myrule:
 ```
 
 Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles) to specify such resources.
+
+## Software Recommendations
+
+### Conda, Mamba, Micromamba
+
+While Snakemake mainly relies on Conda for reproducible execution, many clusters impose file number limits in their "HOME" directory. Using [micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) in place of [mamba](https://mamba.readthedocs.io/en/latest/), which is recommended by Snakemake, might be a remedy: Micromamba does not save all the package files, hence users do not have to clean up manually.
+
+### Using Cluster Environment Modules
+
+HPC clusters provide so-called environment modules. Some clusters do not allow using Conda (and its derivatives). In this case, Snakemake can be instructed to use environment modules. The `--use-envmodules` flag will trigger loading modules defined for a specific rule, e.g.:
+
+```
+rule ...:
+   ...
+   envmodules:
+       "bio/VinaLC"
+```
+
+This will, internally, trigger a `module load bio/VinaL` immediatly prior to execution. 
+
+Note, that 
+- environment modules are best specified in a configuration file.
+- `--use-envmodules` can be combined with `--use-conda` and `--use-singularity`, which will then be only used as a fallback for rules which don't define environment modules.
