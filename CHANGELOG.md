@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.3.2...v0.4.0) (2024-02-29)
+
+
+### Features
+
+* add wildcards to output and comment ([#35](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/35)) ([190500b](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/190500b1995cb34dd3cf8354ecfda36eae64ad2b))
+
 ## [0.3.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.3.1...v0.3.2) (2024-02-24)
 
 
