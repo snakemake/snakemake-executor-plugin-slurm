@@ -5,7 +5,10 @@ tasks:
     - name: install dependencies
       command: |
         sudo apt-get update
-        sudo apt-get install retry ansible-galaxy
+        sudo apt-get install -y retry ansible
+    - name: start mariadb
+      command: |
+        sudo docker run -p 3306:3306 -p 33060:33060 -e MYSQL_ROOT_PASSWORD=root mariadb:10.7
     - name: deploy slurm roles
       command: ansible-galaxy role install https://github.com/galaxyproject/ansible-slurm/archive/1.0.1.tar.gz
     - name: write slurm playbook
@@ -37,7 +40,7 @@ tasks:
                   StoragePass: root
                   StorageUser: root
                   StorageHost: 127.0.0.1 # see https://stackoverflow.com/questions/58222386/github-actions-using-mysql-service-throws-access-denied-for-user-rootlocalh
-                  StoragePort: 8888
+                  StoragePort: 3306
                   DbdHost: localhost
               slurm_create_user: yes
               #slurm_munge_key: "../../../munge.key"
@@ -56,10 +59,7 @@ tasks:
                   shell: "/bin/bash"
                   uid: 1002
         EOF
-    # - name: prepare slurm
-    #   command: |
-    #     mkdir -p /tmp/1002-runtime # work around podman issue (https://github.com/containers/podman/issues/13338)
-    #     echo XDG_RUNTIME_DIR=/tmp/1002-runtime >> $GITHUB_ENV
+
     - name: setup slurm
       command: |
         ansible-playbook slurm-playbook.yml || (journalctl -xe && exit 1)
@@ -76,3 +76,7 @@ tasks:
     - name: test sbatch
       command: |
         sbatch -vvvv -N 1 --mem 5 --wrap "echo 'hello world'"
+
+    - name: setup snakemake
+      command: |
+        poetry install
