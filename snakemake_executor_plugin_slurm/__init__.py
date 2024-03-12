@@ -69,7 +69,7 @@ class Executor(RemoteExecutor):
 
         try:
             wildcard_str = f".{'_'.join(job.wildcards)}" if job.wildcards else ""
-            wildcard_str = wildcard_str.replace("/", ".")
+            wildcard_str = wildcard_str.replace(os.path.sep, "")
         except AttributeError:
             wildcard_str = ""
 
