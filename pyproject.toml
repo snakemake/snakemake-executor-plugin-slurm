@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "snakemake-executor-plugin-slurm"
-version = "0.4.1"
+version = "0.4.2"
 description = "A Snakemake executor plugin for submitting jobs to a SLURM cluster."
 authors = [
     "Christian Meesters <meesters@uni-mainz.de>",
@@ -16,7 +16,7 @@ keywords = ["snakemake", "plugin", "executor", "cluster", "slurm"]
 [tool.poetry.dependencies]
 python = "^3.11"
 snakemake-interface-common = "^1.13.0"
-snakemake-interface-executor-plugins = "^8.2.0"
+snakemake-interface-executor-plugins = "^9.0.0"
 snakemake-executor-plugin-slurm-jobstep = "^0.1.10"
 throttler = "^1.2.2"
 
