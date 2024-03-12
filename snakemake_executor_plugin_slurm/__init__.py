@@ -68,7 +68,7 @@ class Executor(RemoteExecutor):
         log_folder = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
 
         try:
-            wildcard_str = f"_{'_'.join(job.wildcards)}" if job.wildcards else ""
+            wildcard_str = f".{'_'.join(job.wildcards)}" if job.wildcards else ""
             wildcard_str = wildcard_str.replace("/", ".")
         except AttributeError:
             wildcard_str = ""
