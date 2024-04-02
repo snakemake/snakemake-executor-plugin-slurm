@@ -142,7 +142,12 @@ Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executi
 
 ### Conda, Mamba, Micromamba
 
-While Snakemake mainly relies on Conda for reproducible execution, many clusters impose file number limits in their "HOME" directory. Using [micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) in place of [mamba](https://mamba.readthedocs.io/en/latest/), which is recommended by Snakemake, might be a remedy: Micromamba does not save all the package files, hence users do not have to clean up manually.
+While Snakemake mainly relies on Conda for reproducible execution, many clusters impose file number limits in their "HOME" directory. You can resort to[micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) in place of [mamba](https://mamba.readthedocs.io/en/latest/), which is recommended by Snakemake: Micromamba does not save all the package files, hence users do not have to clean up manually. In this case, you need to install your environment for a workflow manually. Alternatively, run `mamba clean -a` occasionally for your environments.
+
+Note, `snakemake --use-conda ...` works as intended.
+
+To ensure the working of this plugin, install it in your base environment for the desired workflow.
+
 
 ### Using Cluster Environment Modules
 
@@ -155,8 +160,8 @@ rule ...:
        "bio/VinaLC"
 ```
 
-This will, internally, trigger a `module load bio/VinaL` immediatly prior to execution. 
+This will, internally, trigger a `module load bio`/VinaLC` immediately prior to execution. 
 
 Note, that 
 - environment modules are best specified in a configuration file.
-- `--use-envmodules` can be combined with `--use-conda` and `--use-singularity`, which will then be only used as a fallback for rules which don't define environment modules.
+- `--use-envmodules` can be combined with `--use-conda` and `--use-singularity`, which will then be only used as a fallback for rules not defining environment modules.
