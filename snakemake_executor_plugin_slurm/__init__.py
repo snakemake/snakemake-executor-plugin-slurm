@@ -131,6 +131,11 @@ class Executor(RemoteExecutor):
         cpus_per_task = max(1, cpus_per_task)
         call += f" --cpus-per-task={cpus_per_task}"
 
+        # As of SLURM version 22.05+ srun requires the -c/--cpus-per-task flag.
+        # We ensure the setting to be equal in both the submit and the jobstep
+        # plugin, by performing:
+        job.resources.cpus_per_task = cpus_per_task
+
         if job.resources.get("slurm_extra"):
             call += f" {job.resources.slurm_extra}"
 
