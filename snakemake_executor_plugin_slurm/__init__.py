@@ -88,6 +88,9 @@ class Executor(RemoteExecutor):
         call += self.get_account_arg(job)
         call += self.get_partition_arg(job)
 
+        if job.resources.get("clusters"):
+            call += f" --clusters {job.resources.clusters}"
+
         if job.resources.get("runtime"):
             call += f" -t {job.resources.runtime}"
         else:
@@ -218,15 +221,21 @@ class Executor(RemoteExecutor):
         # in line 218 - once v20.11 is definitively not in use any more,
         # the more readable version ought to be re-adapted
 
+        # -X: only show main job, no substeps
+        sacct_command = f"""sacct -X --parsable2 
+                        --noheader --format=JobIdRaw,State 
+                        --starttime {sacct_starttime} 
+                        --endtime now --name {self.run_uuid}"""
+
+        if job.resources.get("clusters"):
+            sacct_command += f" --clusters {job.resources.clusters}"
+
         # this code is inspired by the snakemake profile:
         # https://github.com/Snakemake-Profiles/slurm
         for i in range(status_attempts):
             async with self.status_rate_limiter:
                 (status_of_jobs, sacct_query_duration) = await self.job_stati(
-                    # -X: only show main job, no substeps
-                    f"sacct -X --parsable2 --noheader --format=JobIdRaw,State "
-                    f"--starttime {sacct_starttime} "
-                    f"--endtime now --name {self.run_uuid}"
+                    sacct_command
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
                     self.logger.debug(f"could not check status of job {self.run_uuid}")
@@ -316,8 +325,11 @@ class Executor(RemoteExecutor):
                 # about 30 sec, but can be longer in extreme cases.
                 # Under 'normal' circumstances, 'scancel' is executed in
                 # virtually no time.
+                scancel_command = f"scancel {jobids}"
+                if job.resources.get("clusters"):
+                    scancel_command += f" --clusters {job.resources.clusters}"
                 subprocess.check_output(
-                    f"scancel {jobids}",
+                    scancel_command,
                     text=True,
                     shell=True,
                     timeout=60,
