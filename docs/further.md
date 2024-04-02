@@ -115,6 +115,7 @@ You can use the following specifications:
 | `--ntasks`     | `tasks`    | number of concurrent tasks / ranks    |
 | `--cpus-per-task`       | `cpus_per_task`      | number of cpus per task (in case of SMP, rather use `threads`)   |
 | `--nodes` | `nodes`    | number of nodes                       |
+| `--clusters` | `cluster` | comma separated string of clusters |
 
 Each of these can be part of a rule, e.g.:
 
@@ -154,6 +155,10 @@ set-resources:
         mem_mb_per_cpu: 1800
         cpus_per_task: 40
 ```
+
+## Multicluster Support
+
+For reasons of scheduling multicluster support is provided by the `clusters` flag in resources sections. Note, that you have to write `clusters`, not `cluster`! 
 
 ## Additional Custom Job Configuration
 
