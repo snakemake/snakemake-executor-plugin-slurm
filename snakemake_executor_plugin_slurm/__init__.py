@@ -6,6 +6,7 @@ __license__ = "MIT"
 import csv
 from io import StringIO
 import os
+import re
 import shlex
 import subprocess
 import time
@@ -159,7 +160,7 @@ class Executor(RemoteExecutor):
                 f"SLURM job submission failed. The error message was {e.output}"
             )
 
-        slurm_jobid = out.split(" ")[-1]
+        slurm_jobid = re.findall(r"\d+", out)[-1]
         slurm_logfile = slurm_logfile.replace("%j", slurm_jobid)
         self.logger.info(
             f"Job {job.jobid} has been submitted with SLURM jobid {slurm_jobid} "
