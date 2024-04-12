@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.4.2...v0.4.3) (2024-04-12)
+
+
+### Bug Fixes
+
+* always create logdir before sbatch ([#67](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/67)) ([79fb961](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/79fb9612c1ddedd1eadc07741f17a940f2d989c6))
+
 ## [0.4.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.4.1...v0.4.2) (2024-03-11)
 
 
