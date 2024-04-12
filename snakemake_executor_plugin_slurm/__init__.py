@@ -65,7 +65,7 @@ class Executor(RemoteExecutor):
         # with job_info being of type
         # snakemake_interface_executor_plugins.executors.base.SubmittedJobInfo.
 
-        log_folder = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
+        group_or_rule = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
 
         try:
             wildcard_str = f"_{'_'.join(job.wildcards)}" if job.wildcards else ""
@@ -73,9 +73,17 @@ class Executor(RemoteExecutor):
             wildcard_str = ""
 
         slurm_logfile = os.path.abspath(
-            f".snakemake/slurm_logs/{log_folder}/%j{wildcard_str}.log"
+            f".snakemake/slurm_logs/{group_or_rule}/{wildcard_str}/%j.log"
         )
-        os.makedirs(os.path.dirname(slurm_logfile), exist_ok=True)
+        logdir = os.path.dirname(slurm_logfile)
+        # this behavior has been fixed in slurm 23.02, but there might be plenty of
+        # older versions around, hence we should rather be conservative here.
+        assert "%j" not in logdir, (
+            "bug: jobid placeholder in parent dir of logfile. This does not work as "
+            "we have to create that dir before submission in order to make sbatch "
+            "happy. Otherwise we get silent fails without logfiles being created."
+        )
+        os.makedirs(logdir, exist_ok=True)
 
         # generic part of a submission string:
         # we use a run_uuid as the job-name, to allow `--name`-based
