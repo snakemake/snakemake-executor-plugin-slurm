@@ -18,6 +18,7 @@ from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
 from snakemake_interface_common.exceptions import WorkflowError
+from snakemake_executor_plugin_slurm_jobstep import get_cpus_per_task
 
 
 # Required:
@@ -126,18 +127,7 @@ class Executor(RemoteExecutor):
         # fixes #40 - set ntasks regarlless of mpi, because
         # SLURM v22.05 will require it for all jobs
         call += f" --ntasks={job.resources.get('tasks', 1)}"
-
-        cpus_per_task = job.threads
-        if job.resources.get("cpus_per_task"):
-            if not isinstance(cpus_per_task, int):
-                raise WorkflowError(
-                    f"cpus_per_task must be an integer, but is {cpus_per_task}"
-                )
-            cpus_per_task = job.resources.cpus_per_task
-        # ensure that at least 1 cpu is requested
-        # because 0 is not allowed by slurm
-        cpus_per_task = max(1, cpus_per_task)
-        call += f" --cpus-per-task={cpus_per_task}"
+        call += f" --cpus-per-task={get_cpus_per_task(job)}"
 
         if job.resources.get("slurm_extra"):
             call += f" {job.resources.slurm_extra}"
