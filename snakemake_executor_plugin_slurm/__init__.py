@@ -18,6 +18,7 @@ from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
 from snakemake_interface_common.exceptions import WorkflowError
+from snakemake_executor_plugin_slurm_jobstep import get_cpus_per_task
 
 
 # Required:
@@ -65,7 +66,7 @@ class Executor(RemoteExecutor):
         # with job_info being of type
         # snakemake_interface_executor_plugins.executors.base.SubmittedJobInfo.
 
-        log_folder = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
+        group_or_rule = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
 
         try:
             wildcard_str = f".{'_'.join(job.wildcards)}" if job.wildcards else ""
@@ -74,9 +75,17 @@ class Executor(RemoteExecutor):
             wildcard_str = ""
 
         slurm_logfile = os.path.abspath(
-            f".snakemake/slurm_logs/{log_folder}/%j{wildcard_str}.log"
+            f".snakemake/slurm_logs/{group_or_rule}/{wildcard_str}/%j.log"
         )
-        os.makedirs(os.path.dirname(slurm_logfile), exist_ok=True)
+        logdir = os.path.dirname(slurm_logfile)
+        # this behavior has been fixed in slurm 23.02, but there might be plenty of
+        # older versions around, hence we should rather be conservative here.
+        assert "%j" not in logdir, (
+            "bug: jobid placeholder in parent dir of logfile. This does not work as "
+            "we have to create that dir before submission in order to make sbatch "
+            "happy. Otherwise we get silent fails without logfiles being created."
+        )
+        os.makedirs(logdir, exist_ok=True)
 
         # generic part of a submission string:
         # we use a run_uuid as the job-name, to allow `--name`-based
@@ -119,18 +128,7 @@ class Executor(RemoteExecutor):
         # fixes #40 - set ntasks regarlless of mpi, because
         # SLURM v22.05 will require it for all jobs
         call += f" --ntasks={job.resources.get('tasks', 1)}"
-
-        cpus_per_task = job.threads
-        if job.resources.get("cpus_per_task"):
-            if not isinstance(cpus_per_task, int):
-                raise WorkflowError(
-                    f"cpus_per_task must be an integer, but is {cpus_per_task}"
-                )
-            cpus_per_task = job.resources.cpus_per_task
-        # ensure that at least 1 cpu is requested
-        # because 0 is not allowed by slurm
-        cpus_per_task = max(1, cpus_per_task)
-        call += f" --cpus-per-task={cpus_per_task}"
+        call += f" --cpus-per-task={get_cpus_per_task(job)}"
 
         if job.resources.get("slurm_extra"):
             call += f" {job.resources.slurm_extra}"
