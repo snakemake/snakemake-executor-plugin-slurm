@@ -164,4 +164,4 @@ This will, internally, trigger a `module load bio`/VinaLC` immediately prior to 
 
 Note, that 
 - environment modules are best specified in a configuration file.
-- `--use-envmodules` can be combined with `--use-conda` and `--use-singularity`, which will then be only used as a fallback for rules not defining environment modules.
+- Using envmodules can be combined with conda and apptainer (`--sdm envmodules conda apptainer`), which will then be only used as a fallback for rules not defining environment modules.
