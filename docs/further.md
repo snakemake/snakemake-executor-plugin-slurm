@@ -151,7 +151,7 @@ To ensure the working of this plugin, install it in your base environment for th
 
 ### Using Cluster Environment Modules
 
-HPC clusters provide so-called environment modules. Some clusters do not allow using Conda (and its derivatives). In this case, Snakemake can be instructed to use environment modules. The `--use-envmodules` flag will trigger loading modules defined for a specific rule, e.g.:
+HPC clusters provide so-called environment modules. Some clusters do not allow using Conda (and its derivatives). In this case, Snakemake can be instructed to use environment modules. The `--sdm envmodules` flag will trigger loading modules defined for a specific rule, e.g.:
 
 ```
 rule ...:
