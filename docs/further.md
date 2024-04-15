@@ -173,7 +173,6 @@ rule myrule:
 
 Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles) to specify such resources.
 
-<<<<<<< HEAD
 ## Software Recommendations
 
 ### Conda, Mamba
@@ -187,7 +186,7 @@ To ensure the working of this plugin, install it in your base environment for th
 
 ### Using Cluster Environment:  Modules
 
-HPC clusters provide so-called environment modules. Some clusters do not allow using Conda (and its derivatives). In this case, Snakemake can be instructed to use environment modules. The `--sdm env-modules` flag will trigger loading modules defined for a specific rule, e.g.:
+HPC clusters provide so-called environment modules. Some clusters do not allow using Conda (and its derivatives). In this case, or when a particular software is not provided by a Conda channel, Snakemake can be instructed to use environment modules. The `--sdm env-modules` flag will trigger loading modules defined for a specific rule, e.g.:
 
 ```
 rule ...:
@@ -201,63 +200,3 @@ This will, internally, trigger a `module load bio`/VinaLC` immediately prior to 
 Note, that 
 - environment modules are best specified in a configuration file.
 - Using environment modules can be combined with conda and apptainer (`--sdm env-modules conda apptainer`), which will then be only used as a fallback for rules not defining environment modules.
-=======
-## Inquiring about Job Information and Adjusting the Rate Limiter
-
-The executor plugin for SLURM uses unique job names to inquire about job status. It ensures inquiring about job status for the series of jobs of a workflow does not put too much strain on the batch system's database. Human readable information is stored in the comment of a particular job. It is a combination of the rule name and wildcards. You can ask for it with the `sacct` or `squeue` commands, e.g.:
-
-``` console
-sacct -o JobID,State,Comment%40
-```
-
-Note, the "%40" after `Comment` ensures a width of 40 characters. This setting may be changed at will. If the width is too small, SLURM will abbreviate the column with a `+` sign.
-
-For running jobs, the `squeue` command:
-
-``` console
-squeue -u $USER -o %i,%P,%.10j,%.40k
-```
-
-Here, the `.<number>` settings for the ID and the comment ensure a sufficient width, too.
-
-Snakemake will check the status of your jobs 40 seconds after submission. Another attempt will be made in 10 seconds, then 20, etcetera with an upper limit of 180 seconds.
-
-## Using Profiles
-
-When using [profiles](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles), a command line may become shorter. A sample profile could look like this:
-
-```console
-__use_yte__: true
-executor: slurm
-latency-wait: 60
-default-storage-provider: fs
-shared-fs-usage:
-  - persistence
-  - software-deployment
-  - sources
-  - source-cache
-local-storage-prefix: "<your node local storage prefix>"
-```
-
-It will set the executor to be this SLURM executor, ensure sufficient file system latency and allow automatic stage-in of files using the [file system storage plugin](https://github.com/snakemake/snakemake-storage-plugin-fs).
-
-Note, that you need to set the `SNAKEMAKE_PROFILE` environment variable in your `~/.bashrc` file, e.g.:
-
-```console
-export SNAKEMAKE_PROFILE="$HOME/.config/snakemake"
-```
-
-Further note, that there is further development ongoing to enable differentiation of file access patterns. 
-
-## Summary:
-
-When put together, a frequent command line looks like:
-
-```console
-$ snakemake --workflow-profile <path> \
-> -j unlimited \ # assuming an unlimited number of jobs
-> --default-resources slurm_account=<account> slurm_partition=<default partition> \
-> --configfile config/config.yaml \
-> --directory <path> # assuming a data path not relative to the workflow
-```
->>>>>>> main
