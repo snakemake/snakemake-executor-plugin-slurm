@@ -223,7 +223,7 @@ class Executor(RemoteExecutor):
 
         # -X: only show main job, no substeps
         sacct_command = f"""sacct -X --parsable2 \
-                        --cluster all \
+                        --clusters all \
                         --noheader --format=JobIdRaw,State \
                         --starttime {sacct_starttime} \
                         --endtime now --name {self.run_uuid}"""
