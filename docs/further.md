@@ -140,18 +140,18 @@ Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executi
 
 ## Software Recommendations
 
-### Conda, Mamba, Micromamba
+### Conda, Mamba
 
-While Snakemake mainly relies on Conda for reproducible execution, many clusters impose file number limits in their "HOME" directory. You can resort to[micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) in place of [mamba](https://mamba.readthedocs.io/en/latest/), which is recommended by Snakemake: Micromamba does not save all the package files, hence users do not have to clean up manually. In this case, you need to install your environment for a workflow manually. Alternatively, run `mamba clean -a` occasionally for your environments.
+While Snakemake mainly relies on Conda for reproducible execution, many clusters impose file number limits in their "HOME" directory. In this case, run `mamba clean -a` occasionally for persisting environments.
 
 Note, `snakemake --sdm conda ...` works as intended.
 
 To ensure the working of this plugin, install it in your base environment for the desired workflow.
 
 
-### Using Cluster Environment Modules
+### Using Cluster Environment:  Modules
 
-HPC clusters provide so-called environment modules. Some clusters do not allow using Conda (and its derivatives). In this case, Snakemake can be instructed to use environment modules. The `--sdm envmodules` flag will trigger loading modules defined for a specific rule, e.g.:
+HPC clusters provide so-called environment modules. Some clusters do not allow using Conda (and its derivatives). In this case, Snakemake can be instructed to use environment modules. The `--sdm env-modules` flag will trigger loading modules defined for a specific rule, e.g.:
 
 ```
 rule ...:
@@ -164,4 +164,4 @@ This will, internally, trigger a `module load bio`/VinaLC` immediately prior to 
 
 Note, that 
 - environment modules are best specified in a configuration file.
-- Using envmodules can be combined with conda and apptainer (`--sdm envmodules conda apptainer`), which will then be only used as a fallback for rules not defining environment modules.
+- Using environment modules can be combined with conda and apptainer (`--sdm env-modules conda apptainer`), which will then be only used as a fallback for rules not defining environment modules.
