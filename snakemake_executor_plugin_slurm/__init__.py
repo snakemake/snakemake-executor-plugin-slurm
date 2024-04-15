@@ -18,6 +18,7 @@ from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
 from snakemake_interface_common.exceptions import WorkflowError
+from snakemake_executor_plugin_slurm_jobstep import get_cpus_per_task
 
 
 # Required:
@@ -65,10 +66,25 @@ class Executor(RemoteExecutor):
         # with job_info being of type
         # snakemake_interface_executor_plugins.executors.base.SubmittedJobInfo.
 
-        log_folder = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
+        group_or_rule = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
 
-        slurm_logfile = os.path.abspath(f".snakemake/slurm_logs/{log_folder}/%j.log")
-        os.makedirs(os.path.dirname(slurm_logfile), exist_ok=True)
+        try:
+            wildcard_str = f"_{'_'.join(job.wildcards)}" if job.wildcards else ""
+        except AttributeError:
+            wildcard_str = ""
+
+        slurm_logfile = os.path.abspath(
+            f".snakemake/slurm_logs/{group_or_rule}/{wildcard_str}/%j.log"
+        )
+        logdir = os.path.dirname(slurm_logfile)
+        # this behavior has been fixed in slurm 23.02, but there might be plenty of
+        # older versions around, hence we should rather be conservative here.
+        assert "%j" not in logdir, (
+            "bug: jobid placeholder in parent dir of logfile. This does not work as "
+            "we have to create that dir before submission in order to make sbatch "
+            "happy. Otherwise we get silent fails without logfiles being created."
+        )
+        os.makedirs(logdir, exist_ok=True)
 
         # generic part of a submission string:
         # we use a run_uuid as the job-name, to allow `--name`-based
@@ -107,20 +123,11 @@ class Executor(RemoteExecutor):
         if job.resources.get("mpi", False):
             if job.resources.get("nodes", False):
                 call += f" --nodes={job.resources.get('nodes', 1)}"
-            if job.resources.get("tasks", False):
-                call += f" --ntasks={job.resources.get('tasks', 1)}"
 
-        cpus_per_task = job.threads
-        if job.resources.get("cpus_per_task"):
-            if not isinstance(cpus_per_task, int):
-                raise WorkflowError(
-                    f"cpus_per_task must be an integer, but is {cpus_per_task}"
-                )
-            cpus_per_task = job.resources.cpus_per_task
-        # ensure that at least 1 cpu is requested
-        # because 0 is not allowed by slurm
-        cpus_per_task = max(1, cpus_per_task)
-        call += f" --cpus-per-task={cpus_per_task}"
+        # fixes #40 - set ntasks regarlless of mpi, because
+        # SLURM v22.05 will require it for all jobs
+        call += f" --ntasks={job.resources.get('tasks', 1)}"
+        call += f" --cpus-per-task={get_cpus_per_task(job)}"
 
         if job.resources.get("slurm_extra"):
             call += f" {job.resources.slurm_extra}"
@@ -199,6 +206,7 @@ class Executor(RemoteExecutor):
 
         active_jobs_ids = {job_info.external_jobid for job_info in active_jobs}
         active_jobs_seen_by_sacct = set()
+        missing_sacct_status = set()
 
         # We use this sacct syntax for argument 'starttime' to keep it compatible
         # with slurm < 20.11
@@ -245,53 +253,55 @@ class Executor(RemoteExecutor):
                 self.logger.debug(f"missing_sacct_status are: {missing_sacct_status}")
                 if not missing_sacct_status:
                     break
-            if i >= status_attempts - 1:
-                self.logger.warning(
-                    f"Unable to get the status of all active_jobs that should be "
-                    f"in slurmdbd, even after {status_attempts} attempts.\n"
-                    f"The jobs with the following slurm job ids were previously seen "
-                    "by sacct, but sacct doesn't report them any more:\n"
-                    f"{missing_sacct_status}\n"
-                    f"Please double-check with your slurm cluster administrator, that "
-                    "slurmdbd job accounting is properly set up.\n"
-                )
 
-        any_finished = False
-        for j in active_jobs:
-            # the job probably didn't make it into slurmdbd yet, so
-            # `sacct` doesn't return it
-            if j.external_jobid not in status_of_jobs:
-                # but the job should still be queueing or running and
-                # appear in slurmdbd (and thus `sacct` output) later
-                yield j
-                continue
-            status = status_of_jobs[j.external_jobid]
-            if status == "COMPLETED":
-                self.report_job_success(j)
-                any_finished = True
-                active_jobs_seen_by_sacct.remove(j.external_jobid)
-            elif status == "UNKNOWN":
-                # the job probably does not exist anymore, but 'sacct' did not work
-                # so we assume it is finished
-                self.report_job_success(j)
-                any_finished = True
-                active_jobs_seen_by_sacct.remove(j.external_jobid)
-            elif status in fail_stati:
-                msg = (
-                    f"SLURM-job '{j.external_jobid}' failed, SLURM status is: "
-                    f"'{status}'"
-                )
-                self.report_job_error(j, msg=msg, aux_logs=[j.aux["slurm_logfile"]])
-                active_jobs_seen_by_sacct.remove(j.external_jobid)
-            else:  # still running?
-                yield j
-
-        if not any_finished:
-            self.next_seconds_between_status_checks = min(
-                self.next_seconds_between_status_checks + 10, max_sleep_time
+        if missing_sacct_status:
+            self.logger.warning(
+                f"Unable to get the status of all active jobs that should be "
+                f"in slurmdbd, even after {status_attempts} attempts.\n"
+                f"The jobs with the following slurm job ids were previously seen "
+                "by sacct, but sacct doesn't report them any more:\n"
+                f"{missing_sacct_status}\n"
+                f"Please double-check with your slurm cluster administrator, that "
+                "slurmdbd job accounting is properly set up.\n"
             )
-        else:
-            self.next_seconds_between_status_checks = None
+
+        if status_of_jobs is not None:
+            any_finished = False
+            for j in active_jobs:
+                # the job probably didn't make it into slurmdbd yet, so
+                # `sacct` doesn't return it
+                if j.external_jobid not in status_of_jobs:
+                    # but the job should still be queueing or running and
+                    # appear in slurmdbd (and thus `sacct` output) later
+                    yield j
+                    continue
+                status = status_of_jobs[j.external_jobid]
+                if status == "COMPLETED":
+                    self.report_job_success(j)
+                    any_finished = True
+                    active_jobs_seen_by_sacct.remove(j.external_jobid)
+                elif status == "UNKNOWN":
+                    # the job probably does not exist anymore, but 'sacct' did not work
+                    # so we assume it is finished
+                    self.report_job_success(j)
+                    any_finished = True
+                    active_jobs_seen_by_sacct.remove(j.external_jobid)
+                elif status in fail_stati:
+                    msg = (
+                        f"SLURM-job '{j.external_jobid}' failed, SLURM status is: "
+                        f"'{status}'"
+                    )
+                    self.report_job_error(j, msg=msg, aux_logs=[j.aux["slurm_logfile"]])
+                    active_jobs_seen_by_sacct.remove(j.external_jobid)
+                else:  # still running?
+                    yield j
+
+            if not any_finished:
+                self.next_seconds_between_status_checks = min(
+                    self.next_seconds_between_status_checks + 10, max_sleep_time
+                )
+            else:
+                self.next_seconds_between_status_checks = None
 
     def cancel_jobs(self, active_jobs: List[SubmittedJobInfo]):
         # Cancel all active jobs.

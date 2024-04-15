@@ -1,0 +1,82 @@
+image: gitpod/workspace-full
+
+# Commands that will run on workspace start
+tasks:
+    - name: install dependencies
+      command: |
+        sudo apt-get update
+        sudo apt-get install -y retry ansible
+    - name: start mariadb
+      command: |
+        sudo docker run -p 3306:3306 -p 33060:33060 -e MYSQL_ROOT_PASSWORD=root mariadb:10.7
+    - name: deploy slurm roles
+      command: ansible-galaxy role install https://github.com/galaxyproject/ansible-slurm/archive/1.0.1.tar.gz
+    - name: write slurm playbook
+      command: |
+        cat << EOF > slurm-playbook.yml
+        - name: Slurm all in One
+          hosts: localhost
+          roles:
+            - role: 1.0.1
+              become: true
+          vars:
+              slurm_upgrade: true
+              slurm_roles: ['controller', 'exec', 'dbd']
+              slurm_config_dir: /etc/slurm
+              slurm_config:
+                  ClusterName: cluster
+                  SlurmctldLogFile: /var/log/slurm/slurmctld.log
+                  SlurmctldPidFile: /run/slurmctld.pid
+                  SlurmdLogFile: /var/log/slurm/slurmd.log
+                  SlurmdPidFile: /run/slurmd.pid
+                  SlurmdSpoolDir: /tmp/slurmd # the default /var/lib/slurm/slurmd does not work because of noexec mounting in github actions
+                  StateSaveLocation: /var/lib/slurm/slurmctld
+                  AccountingStorageType: accounting_storage/slurmdbd
+                  SelectType: select/cons_res
+              slurmdbd_config:
+                  StorageType: accounting_storage/mysql
+                  PidFile: /run/slurmdbd.pid
+                  LogFile: /var/log/slurm/slurmdbd.log
+                  StoragePass: root
+                  StorageUser: root
+                  StorageHost: 127.0.0.1 # see https://stackoverflow.com/questions/58222386/github-actions-using-mysql-service-throws-access-denied-for-user-rootlocalh
+                  StoragePort: 3306
+                  DbdHost: localhost
+              slurm_create_user: yes
+              #slurm_munge_key: "../../../munge.key"
+              slurm_nodes:
+                  - name: localhost
+                    State: UNKNOWN
+                    Sockets: 1
+                    CoresPerSocket: 2
+                    RealMemory: 2000
+              slurm_user:
+                  comment: "Slurm Workload Manager"
+                  gid: 1002
+                  group: slurm
+                  home: "/var/lib/slurm"
+                  name: slurm
+                  shell: "/bin/bash"
+                  uid: 1002
+        EOF
+
+    - name: setup slurm
+      command: |
+        ansible-playbook slurm-playbook.yml || (journalctl -xe && exit 1)
+    - name: add slurm account
+      command: |
+        sudo retry --until=success -- sacctmgr -i create account "Name=runner"
+        sudo sacctmgr -i create user "Name=runner" "Account=runner"
+    
+    - name: test srun
+      command: |
+        srun -vvvv echo "hello world"
+        sudo cat /var/log/slurm/slurmd.log
+
+    - name: test sbatch
+      command: |
+        sbatch -vvvv -N 1 --mem 5 --wrap "echo 'hello world'"
+
+    - name: setup snakemake
+      command: |
+        poetry install
