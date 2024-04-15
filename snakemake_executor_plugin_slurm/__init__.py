@@ -326,7 +326,7 @@ class Executor(RemoteExecutor):
                 # about 30 sec, but can be longer in extreme cases.
                 # Under 'normal' circumstances, 'scancel' is executed in
                 # virtually no time.
-                scancel_command = f"scancel {jobids}"
+                scancel_command = f"scancel {jobids} --clusters=all"
 
                 subprocess.check_output(
                     scancel_command,
