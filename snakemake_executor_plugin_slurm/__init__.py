@@ -55,7 +55,6 @@ class Executor(RemoteExecutor):
         self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
         self._fallback_partition = None
-        self._clusters = None
 
     def additional_general_args(self):
         return "--executor slurm-jobstep --jobs 1"
@@ -102,7 +101,6 @@ class Executor(RemoteExecutor):
 
         if job.resources.get("clusters"):
             call += f" --clusters {job.resources.clusters}"
-            self._clusters = job.resources.clusters
 
         if job.resources.get("runtime"):
             call += f" -t {job.resources.runtime}"
@@ -230,9 +228,6 @@ class Executor(RemoteExecutor):
                         --starttime {sacct_starttime} \
                         --endtime now --name {self.run_uuid}"""
 
-        if self._clusters is not None:
-            sacct_command += f" --clusters {self._clusters}"
-
         # for better redability in verbose output
         sacct_command = " ".join(shlex.split(sacct_command))
 
@@ -332,8 +327,7 @@ class Executor(RemoteExecutor):
                 # Under 'normal' circumstances, 'scancel' is executed in
                 # virtually no time.
                 scancel_command = f"scancel {jobids}"
-                if self._clusters is not None:
-                    scancel_command += f" --clusters {self._clusters}"
+
                 subprocess.check_output(
                     scancel_command,
                     text=True,
