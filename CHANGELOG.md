@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.5](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.4.4...v0.4.5) (2024-04-17)
+
+
+### Bug Fixes
+
+* fix path typo ([#72](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/72)) ([f64fb5a](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/f64fb5adce9dc285c0b212af22d98b4289e8ce25))
+
 ## [0.4.4](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.4.3...v0.4.4) (2024-04-15)
 
 
