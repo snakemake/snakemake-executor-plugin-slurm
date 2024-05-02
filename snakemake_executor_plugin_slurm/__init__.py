@@ -60,7 +60,9 @@ class Executor(RemoteExecutor):
         if not done:
             if "SLURM_JOB_ID" in os.environ:
                 self.logger.warning(
-                    "Running Snakemake in a SLURM within a job may lead to unexpected behavior. Please run Snakemake directly on the head node."
+                    "Running Snakemake in a SLURM within a job may lead"
+                    " to unexpected behavior. Please run Snakemake directly"
+                    " on the head node."
                 )
                 time.sleep(5)
         done = True
