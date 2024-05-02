@@ -2,7 +2,7 @@
 
 ## The general Idea
 
-To use this plugin, log in to your cluster's head node (sometimes called the "login" node), activate your environment as usual and start Snakemake. Snakemake will then submit your jobs as cluster jobs.
+To use this plugin, log in to your cluster's head node (sometimes called the "login" node), activate your environment as usual, and start Snakemake. Snakemake will then submit your jobs as cluster jobs.
 
 ## Specifying Account and Partition
 
@@ -219,6 +219,12 @@ export SNAKEMAKE_PROFILE="$HOME/.config/snakemake"
 ```
 
 Further note, that there is further development ongoing to enable differentiation of file access patterns. 
+
+## Nesting Jobs (or Running this Plugin within a Job)
+
+Some environments provide a shell within a SLURM job, for instance, IDEs started in on-demand context. If Snakemake attempts to use this plugin to spawn jobs on the cluster, this may work just as intended. Or it might not: depending on cluster settings or individual settings, submitted jobs may be ill-parameterized or will not find the right environment.
+
+If the plugin detects to be running within a job, it will therefore issue a warning and stop for 5 seconds.
 
 ## Summary:
 
