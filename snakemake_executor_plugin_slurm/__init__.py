@@ -49,10 +49,21 @@ common_settings = CommonSettings(
 # Implementation of your executor
 class Executor(RemoteExecutor):
     def __post_init__(self):
+        # run check whether we are running in a SLURM job context
+        self.warn_on_jobcontext()
         self.run_uuid = str(uuid.uuid4())
         self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
         self._fallback_partition = None
+
+    def warn_on_jobcontext(self, done=None):
+        if not done:
+            if "SLURM_JOB_ID" in os.environ:
+                self.logger.warning(
+                    "Running Snakemake in a SLURM within a job may lead to unexpected behavior. Please run Snakemake directly on the head node."
+                )
+                time.sleep(5)
+        done = True
 
     def additional_general_args(self):
         return "--executor slurm-jobstep --jobs 1"
