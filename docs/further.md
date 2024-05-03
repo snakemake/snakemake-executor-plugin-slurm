@@ -232,7 +232,7 @@ Further note, that you need to set the `SNAKEMAKE_PROFILE` environment variable 
 export SNAKEMAKE_PROFILE="$HOME/.config/snakemake"
 ```
 
-Further note, that there is further development ongoing to enable differentiation of file access patterns. 
+==This is ongoing development. Eventually you will be able to annotate different file access patterns.==
 
 ## Summary:
 
