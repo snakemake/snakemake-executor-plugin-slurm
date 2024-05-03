@@ -71,7 +71,7 @@ class Executor(RemoteExecutor):
         group_or_rule = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
 
         try:
-            wildcard_str = f"_{'_'.join(job.wildcards)}" if job.wildcards else ""
+            wildcard_str = "_".join(job.wildcards) if job.wildcards else ""
         except AttributeError:
             wildcard_str = ""
 
