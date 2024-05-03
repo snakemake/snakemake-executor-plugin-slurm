@@ -414,7 +414,7 @@ class Executor(RemoteExecutor):
             sacct_out = subprocess.check_output(
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
-            return sacct_out.strip()
+            return sacct_out.strip().replace("(null)", "")
         except subprocess.CalledProcessError as e:
             self.logger.warning(
                 f"No account was given, not able to get a SLURM account via sacct: "
