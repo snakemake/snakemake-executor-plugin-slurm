@@ -220,6 +220,51 @@ export SNAKEMAKE_PROFILE="$HOME/.config/snakemake"
 
 Further note, that there is further development ongoing to enable differentiation of file access patterns. 
 
+## Retries - Or Trying again when a Job failed
+
+Some cluster jobs may fail. In this case Snakemake can be instructed to try another submit, in this example up to 3 times:
+
+```console
+snakemake --retries=3
+```
+
+We can use this to dynamically adjust the runtime behaviour:
+
+## Dynamic Parameterization
+
+Using dynamic parameterization we can react on different different inputs and prevent our HPC jobs from failing.
+
+### Adjusting Memory Requirements
+
+Input size of files may vary. [If we have an estimate for the RAM requirement due to varying input file sizes, we can use this to dynamically adjust our jobs.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources)
+
+### Adjusting Runtime
+
+Runtime adjustments can be made in a Snakefile:
+
+```Python
+def get_time(wildcards, attempt):
+    return f"{1 * attempt}h"
+
+rule foo:
+    input: ...
+    output: ...
+    resources:
+        runtime=get_time
+    ...
+```
+
+or in a workflow profile
+
+```YAML
+set-resources:
+    foo:
+        runtime: f"{1 * attempt}h"
+```
+
+Be sure to use sensible settings for your cluster and make use of parallel execution (e.g. threads) and [global profiles](#using-profiles) to avoid I/O contention. 
+
+
 ## Summary:
 
 When put together, a frequent command line looks like:
