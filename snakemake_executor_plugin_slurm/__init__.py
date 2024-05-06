@@ -436,7 +436,7 @@ class Executor(RemoteExecutor):
                 f"'{account}' with sacctmgr: {e.stderr}"
             )
 
-        accounts = [_.strip() for _ in accounts.split('\n') if len(_)]
+        accounts = [_.strip() for _ in accounts.split("\n") if len(_)]
 
         if account not in accounts:
             raise WorkflowError(
