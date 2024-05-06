@@ -89,9 +89,10 @@ class Executor(RemoteExecutor):
         # generic part of a submission string:
         # we use a run_uuid as the job-name, to allow `--name`-based
         # filtering in the job status checks (`sacct --name` and `squeue --name`)
+        comment_str = f"{job.name} {wildcard_str}"
         call = (
             f"sbatch --job-name {self.run_uuid} --output {slurm_logfile} --export=ALL "
-            f"--comment {job.name}"
+            f"--comment {comment_str}"
         )
 
         call += self.get_account_arg(job)
