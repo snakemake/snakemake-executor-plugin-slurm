@@ -289,7 +289,8 @@ class Executor(RemoteExecutor):
                 elif status in fail_stati:
                     msg = (
                         f"SLURM-job '{j.external_jobid}' failed, SLURM status is: "
-                        f"'{status}'"
+                        # message ends with '. ' because it is proceeded with a new sentence
+                        f"'{status}'. "
                     )
                     self.report_job_error(j, msg=msg, aux_logs=[j.aux["slurm_logfile"]])
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
