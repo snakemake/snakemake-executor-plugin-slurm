@@ -369,7 +369,7 @@ class Executor(RemoteExecutor):
             # here, we check whether the given or guessed account is valid
             # if not, a WorkflowError is raised
             self.test_account(job.resources.slurm_account)
-            return f" -A {job.resources.slurm_account}"
+            return f" -A '{job.resources.slurm_account}'"
         else:
             if self._fallback_account_arg is None:
                 self.logger.warning("No SLURM account given, trying to guess.")
@@ -436,7 +436,7 @@ class Executor(RemoteExecutor):
                 f"'{account}' with sacctmgr: {e.stderr}"
             )
 
-        accounts = accounts.split()
+        accounts = [_.strip() for _ in accounts.split('\n') if len(_)]
 
         if account not in accounts:
             raise WorkflowError(
