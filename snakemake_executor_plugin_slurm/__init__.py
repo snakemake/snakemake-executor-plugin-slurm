@@ -92,7 +92,7 @@ class Executor(RemoteExecutor):
         if wildcard_str == "":
             comment_str = f"rule_{job.name}"
         else:
-            comment_str = f"rule_{job.name}_wildcards_{wildcard_str}"
+            comment_str = f"rule_{job.name}__wildcards_{wildcard_str}"
         call = (
             f"sbatch --job-name {self.run_uuid} --output {slurm_logfile} --export=ALL "
             f"--comment {comment_str}"
