@@ -442,7 +442,10 @@ class Executor(RemoteExecutor):
                 f"'{account}' with sacctmgr: {e.stderr}"
             )
 
-        accounts = [_.strip() for _ in accounts.split("\n") if _]
+        # The set() has been introduced during review. It eleminates
+        # duplicates. They are not harmful, but disturbing to read.
+        # the set eliminates duplicates - not harmful, but disturbing to read
+        accounts = set(_.strip() for _ in accounts.split("\n") if _)
 
         if account not in accounts:
             raise WorkflowError(
