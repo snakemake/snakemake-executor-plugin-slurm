@@ -442,9 +442,8 @@ class Executor(RemoteExecutor):
                 f"'{account}' with sacctmgr: {e.stderr}"
             )
 
-        # The set() has been introduced during review. It eleminates
+        # The set() has been introduced during review to eliminate
         # duplicates. They are not harmful, but disturbing to read.
-        # the set eliminates duplicates - not harmful, but disturbing to read
         accounts = set(_.strip() for _ in accounts.split("\n") if _)
 
         if account not in accounts:
