@@ -214,7 +214,7 @@ class Executor(RemoteExecutor):
 
         # We use this sacct syntax for argument 'starttime' to keep it compatible
         # with slurm < 20.11
-        sacct_starttime = f"{datetime.now() - timedelta(days=2):%Y-%m-%dT%H:00}"
+        sacct_starttime = f"{datetime.now() - timedelta(days = 2):%Y-%m-%dT%H:00}"
         # previously we had
         # f"--starttime now-2days --endtime now --name {self.run_uuid}"
         # in line 218 - once v20.11 is definitively not in use any more,
@@ -293,7 +293,7 @@ class Executor(RemoteExecutor):
                 elif status in fail_stati:
                     msg = (
                         f"SLURM-job '{j.external_jobid}' failed, SLURM status is: "
-                        # message ends with '. ', because it is proceeded 
+                        # message ends with '. ', because it is proceeded
                         # with a new sentence
                         f"'{status}'. "
                     )
