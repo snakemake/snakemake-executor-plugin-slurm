@@ -6,6 +6,7 @@ __license__ = "MIT"
 import csv
 from io import StringIO
 import os
+import re
 import subprocess
 import time
 from datetime import datetime, timedelta
@@ -134,6 +135,7 @@ class Executor(RemoteExecutor):
         call += f" --cpus-per-task={get_cpus_per_task(job)}"
 
         if job.resources.get("slurm_extra"):
+            self.check_slurm_extra()
             call += f" {job.resources.slurm_extra}"
 
         exec_job = self.format_job_exec(job)
@@ -479,3 +481,15 @@ class Executor(RemoteExecutor):
             "'slurm_partition=<your default partition>'."
         )
         return ""
+
+    def check_slurm_extra(self):
+        jobname = re.compile(r"--job-name[=?|\s+]|-J\s?")
+        if re.search(jobname, job.resources.slurm_extra):
+            raise WorkflowError(
+                "The --job-name option is not allowed in the 'slurm_extra' "
+                "parameter. The job name is set by snakemake and must not be "
+                "overwritten. It is internally used to check the stati of the "
+                "all submitted jobs by this workflow."
+                "Please consult the documentation if you are unsure how to "
+                "query the status of your jobs."
+            )
