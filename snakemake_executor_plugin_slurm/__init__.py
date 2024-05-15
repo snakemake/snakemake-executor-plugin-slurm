@@ -135,7 +135,7 @@ class Executor(RemoteExecutor):
         call += f" --cpus-per-task={get_cpus_per_task(job)}"
 
         if job.resources.get("slurm_extra"):
-            self.check_slurm_extra()
+            self.check_slurm_extra(job)
             call += f" {job.resources.slurm_extra}"
 
         exec_job = self.format_job_exec(job)
@@ -482,7 +482,7 @@ class Executor(RemoteExecutor):
         )
         return ""
 
-    def check_slurm_extra(self):
+    def check_slurm_extra(self, job):
         jobname = re.compile(r"--job-name[=?|\s+]|-J\s?")
         if re.search(jobname, job.resources.slurm_extra):
             raise WorkflowError(
