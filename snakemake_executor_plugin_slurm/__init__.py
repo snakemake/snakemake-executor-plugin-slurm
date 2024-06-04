@@ -123,14 +123,23 @@ class Executor(RemoteExecutor):
                 "- submitting without. This might or might not work on your cluster."
             )
 
-        # MPI job
-        if job.resources.get("mpi", False):
-            if job.resources.get("nodes", False):
-                call += f" --nodes={job.resources.get('nodes', 1)}"
+        if job.resources.get("nodes", False):
+            call += f" --nodes={job.resources.get('nodes', 1)}"
 
         # fixes #40 - set ntasks regarlless of mpi, because
         # SLURM v22.05 will require it for all jobs
         call += f" --ntasks={job.resources.get('tasks', 1)}"
+        # MPI job
+        if job.resources.get("mpi", False):
+            if not job.resources.get("tasks_per_node") and not job.resources.get(
+                "nodes"
+            ):
+                logger.warning(
+                    "MPI job detected, but no 'tasks_per_node' or 'nodes' "
+                    "specified. Assuming 'tasks_per_node=1'."
+                    "Probably not what you want."
+                )
+
         call += f" --cpus-per-task={get_cpus_per_task(job)}"
 
         if job.resources.get("slurm_extra"):
