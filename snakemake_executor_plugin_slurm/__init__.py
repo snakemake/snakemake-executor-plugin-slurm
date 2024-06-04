@@ -495,10 +495,10 @@ class Executor(RemoteExecutor):
         jobname = re.compile(r"--job-name[=?|\s+]|-J\s?")
         if re.search(jobname, job.resources.slurm_extra):
             raise WorkflowError(
-                "The --job-name option is not allowed in the 'slurm_extra' "
+                "The '--job-name' option is not allowed in the 'slurm_extra' "
                 "parameter. The job name is set by snakemake and must not be "
-                "overwritten. It is internally used to check the stati of the "
-                "all submitted jobs by this workflow."
+                "overwritten. It is internally used to check the stati of all "
+                "submitted jobs by this workflow."
                 "Please consult the documentation if you are unsure how to "
                 "query the status of your jobs."
             )
