@@ -128,14 +128,23 @@ class Executor(RemoteExecutor):
                 "- submitting without. This might or might not work on your cluster."
             )
 
-        # MPI job
-        if job.resources.get("mpi", False):
-            if job.resources.get("nodes", False):
-                call += f" --nodes={job.resources.get('nodes', 1)}"
+        if job.resources.get("nodes", False):
+            call += f" --nodes={job.resources.get('nodes', 1)}"
 
         # fixes #40 - set ntasks regarlless of mpi, because
         # SLURM v22.05 will require it for all jobs
         call += f" --ntasks={job.resources.get('tasks', 1)}"
+        # MPI job
+        if job.resources.get("mpi", False):
+            if not job.resources.get("tasks_per_node") and not job.resources.get(
+                "nodes"
+            ):
+                self.logger.warning(
+                    "MPI job detected, but no 'tasks_per_node' or 'nodes' "
+                    "specified. Assuming 'tasks_per_node=1'."
+                    "Probably not what you want."
+                )
+
         call += f" --cpus-per-task={get_cpus_per_task(job)}"
 
         if job.resources.get("slurm_extra"):
@@ -219,7 +228,7 @@ class Executor(RemoteExecutor):
 
         # We use this sacct syntax for argument 'starttime' to keep it compatible
         # with slurm < 20.11
-        sacct_starttime = f"{datetime.now() - timedelta(days=2):%Y-%m-%dT%H:00}"
+        sacct_starttime = f"{datetime.now() - timedelta(days = 2):%Y-%m-%dT%H:00}"
         # previously we had
         # f"--starttime now-2days --endtime now --name {self.run_uuid}"
         # in line 218 - once v20.11 is definitively not in use any more,
@@ -305,7 +314,9 @@ class Executor(RemoteExecutor):
                 elif status in fail_stati:
                     msg = (
                         f"SLURM-job '{j.external_jobid}' failed, SLURM status is: "
-                        f"'{status}'"
+                        # message ends with '. ', because it is proceeded
+                        # with a new sentence
+                        f"'{status}'. "
                     )
                     self.report_job_error(j, msg=msg, aux_logs=[j.aux["slurm_logfile"]])
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
@@ -387,7 +398,7 @@ class Executor(RemoteExecutor):
             # here, we check whether the given or guessed account is valid
             # if not, a WorkflowError is raised
             self.test_account(job.resources.slurm_account)
-            return f" -A {job.resources.slurm_account}"
+            return f" -A '{job.resources.slurm_account}'"
         else:
             if self._fallback_account_arg is None:
                 self.logger.warning("No SLURM account given, trying to guess.")
@@ -454,7 +465,9 @@ class Executor(RemoteExecutor):
                 f"'{account}' with sacctmgr: {e.stderr}"
             )
 
-        accounts = accounts.split()
+        # The set() has been introduced during review to eliminate
+        # duplicates. They are not harmful, but disturbing to read.
+        accounts = set(_.strip() for _ in accounts.split("\n") if _)
 
         if account not in accounts:
             raise WorkflowError(

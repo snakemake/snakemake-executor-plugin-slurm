@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.5.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.5.1...v0.5.2) (2024-06-04)
+
+
+### Bug Fixes
+
+* [#97](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/97) preventing node confinment ([#98](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/98)) ([fa7877f](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/fa7877f8d086883ce74db75c3246b8c050720a62))
+
+## [0.5.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.5.0...v0.5.1) (2024-05-14)
+
+
+### Bug Fixes
+
+* allowing for accounts containing whitespace ([#86](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/86)) ([6993f2d](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6993f2d7dd7c31fd34a79317df35ff80779f8a63))
+* proper line ending status message ([#87](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/87)) ([7b94aec](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/7b94aec8fdda5d2b0f8986154b6cb07d1954b7e8))
+
 ## [0.5.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.4.5...v0.5.0) (2024-05-06)
 
 
