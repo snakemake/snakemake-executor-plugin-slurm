@@ -86,6 +86,8 @@ other systems, e.g. by replacing `srun` with `mpiexec`:
 $ snakemake --set-resources calc_pi:mpi="mpiexec" ...
 ```
 
+To submit "ordinary" MPI jobs, submitting with `tasks` (the MPI ranks) is sufficient. Alternatively, on some clusters, it might be convenient to just configure `nodes`. Consider using a combination of `tasks` and `cpus_per_task` for hybrid applications (those that use ranks (multiprocessing) and threads). A detailed topology layout can be achieved using the `slurm_extra` parameter (see below) using further flags like `--distribution`.
+
 ## Running Jobs locally
 
 Not all Snakemake workflows are adapted for heterogeneous environments, particularly clusters. Users might want to avoid the submission of _all_ rules as cluster jobs. Non-cluster jobs should usually include _short_ jobs, e.g. internet downloads or plotting rules.
@@ -158,8 +160,7 @@ set-resources:
 ## Additional Custom Job Configuration
 
 SLURM installations can support custom plugins, which may add support
-for additional flags to `sbatch`. In addition, there are various
-`sbatch` options not directly supported via the resource definitions
+for additional flags to `sbatch`. In addition, there are various batch options not directly supported via the resource definitions
 shown above. You may use the `slurm_extra` resource to specify
 additional flags to `sbatch`:
 
