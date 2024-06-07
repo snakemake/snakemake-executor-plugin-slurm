@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.5.2...v0.6.0) (2024-06-07)
+
+
+### Features
+
+* will reject jobs, which attempt setting job names by 'slurm_extra' ([#93](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/93)) ([df2fd3d](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/df2fd3dfbbe1e0a606da719f33391d5c9fe9d679))
+
 ## [0.5.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.5.1...v0.5.2) (2024-06-04)
 
 
