@@ -223,13 +223,19 @@ Further note, that there is further development ongoing to enable differentiatio
 
 ## Retries - Or Trying again when a Job failed
 
-Some cluster jobs may fail. In this case Snakemake can be instructed to try another submit, in this example up to 3 times:
+Some cluster jobs may fail. In this case Snakemake can be instructed to try another submit before the entire workflow fails, in this example up to 3 times:
 
 ```console
 snakemake --retries=3
 ```
 
-We can use this to dynamically adjust the runtime behaviour:
+If a workflow fails entirely (e.g. when there are cluster failures), it can be resumed as any other Snakemake workflow:
+
+```console
+snakemake --rerun-incomplete
+```
+
+To prevent failures due to faulty parameterization, we can dynamically adjust the runtime behaviour:
 
 ## Dynamic Parameterization
 
