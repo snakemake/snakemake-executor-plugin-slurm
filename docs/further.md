@@ -2,7 +2,7 @@
 
 ## The general Idea
 
-To use this plugin, log in to your cluster's head node (sometimes called the "login" node), activate your environment as usual and start Snakemake. Snakemake will then submit your jobs as cluster jobs.
+To use this plugin, log in to your cluster's head node (sometimes called the "login" node), activate your environment as usual, and start Snakemake. Snakemake will then submit your jobs as cluster jobs.
 
 ## Specifying Account and Partition
 
@@ -86,6 +86,8 @@ other systems, e.g. by replacing `srun` with `mpiexec`:
 $ snakemake --set-resources calc_pi:mpi="mpiexec" ...
 ```
 
+To submit "ordinary" MPI jobs, submitting with `tasks` (the MPI ranks) is sufficient. Alternatively, on some clusters, it might be convenient to just configure `nodes`. Consider using a combination of `tasks` and `cpus_per_task` for hybrid applications (those that use ranks (multiprocessing) and threads). A detailed topology layout can be achieved using the `slurm_extra` parameter (see below) using further flags like `--distribution`.
+
 ## Running Jobs locally
 
 Not all Snakemake workflows are adapted for heterogeneous environments, particularly clusters. Users might want to avoid the submission of _all_ rules as cluster jobs. Non-cluster jobs should usually include _short_ jobs, e.g. internet downloads or plotting rules.
@@ -158,8 +160,7 @@ set-resources:
 ## Additional Custom Job Configuration
 
 SLURM installations can support custom plugins, which may add support
-for additional flags to `sbatch`. In addition, there are various
-`sbatch` options not directly supported via the resource definitions
+for additional flags to `sbatch`. In addition, there are various batch options not directly supported via the resource definitions
 shown above. You may use the `slurm_extra` resource to specify
 additional flags to `sbatch`:
 
@@ -233,6 +234,57 @@ export SNAKEMAKE_PROFILE="$HOME/.config/snakemake"
 ```
 
 ==This is ongoing development. Eventually you will be able to annotate different file access patterns.==
+
+## Retries - Or Trying again when a Job failed
+
+Some cluster jobs may fail. In this case Snakemake can be instructed to try another submit before the entire workflow fails, in this example up to 3 times:
+
+```console
+snakemake --retries=3
+```
+
+If a workflow fails entirely (e.g. when there are cluster failures), it can be resumed as any other Snakemake workflow:
+
+```console
+snakemake --rerun-incomplete
+```
+
+To prevent failures due to faulty parameterization, we can dynamically adjust the runtime behaviour:
+
+## Dynamic Parameterization
+
+Using dynamic parameterization we can react on different different inputs and prevent our HPC jobs from failing.
+
+### Adjusting Memory Requirements
+
+Input size of files may vary. [If we have an estimate for the RAM requirement due to varying input file sizes, we can use this to dynamically adjust our jobs.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources)
+
+### Adjusting Runtime
+
+Runtime adjustments can be made in a Snakefile:
+
+```Python
+def get_time(wildcards, attempt):
+    return f"{1 * attempt}h"
+
+rule foo:
+    input: ...
+    output: ...
+    resources:
+        runtime=get_time
+    ...
+```
+
+or in a workflow profile
+
+```YAML
+set-resources:
+    foo:
+        runtime: f"{1 * attempt}h"
+```
+
+Be sure to use sensible settings for your cluster and make use of parallel execution (e.g. threads) and [global profiles](#using-profiles) to avoid I/O contention. 
+
 
 ## Summary:
 

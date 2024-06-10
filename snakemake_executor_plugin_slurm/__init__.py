@@ -6,6 +6,7 @@ __license__ = "MIT"
 import csv
 from io import StringIO
 import os
+import re
 import subprocess
 import time
 from datetime import datetime, timedelta
@@ -123,17 +124,27 @@ class Executor(RemoteExecutor):
                 "- submitting without. This might or might not work on your cluster."
             )
 
-        # MPI job
-        if job.resources.get("mpi", False):
-            if job.resources.get("nodes", False):
-                call += f" --nodes={job.resources.get('nodes', 1)}"
+        if job.resources.get("nodes", False):
+            call += f" --nodes={job.resources.get('nodes', 1)}"
 
         # fixes #40 - set ntasks regarlless of mpi, because
         # SLURM v22.05 will require it for all jobs
         call += f" --ntasks={job.resources.get('tasks', 1)}"
+        # MPI job
+        if job.resources.get("mpi", False):
+            if not job.resources.get("tasks_per_node") and not job.resources.get(
+                "nodes"
+            ):
+                self.logger.warning(
+                    "MPI job detected, but no 'tasks_per_node' or 'nodes' "
+                    "specified. Assuming 'tasks_per_node=1'."
+                    "Probably not what you want."
+                )
+
         call += f" --cpus-per-task={get_cpus_per_task(job)}"
 
         if job.resources.get("slurm_extra"):
+            self.check_slurm_extra(job)
             call += f" {job.resources.slurm_extra}"
 
         exec_job = self.format_job_exec(job)
@@ -479,3 +490,15 @@ class Executor(RemoteExecutor):
             "'slurm_partition=<your default partition>'."
         )
         return ""
+
+    def check_slurm_extra(self, job):
+        jobname = re.compile(r"--job-name[=?|\s+]|-J\s?")
+        if re.search(jobname, job.resources.slurm_extra):
+            raise WorkflowError(
+                "The '--job-name' option is not allowed in the 'slurm_extra' "
+                "parameter. The job name is set by snakemake and must not be "
+                "overwritten. It is internally used to check the stati of all "
+                "submitted jobs by this workflow."
+                "Please consult the documentation if you are unsure how to "
+                "query the status of your jobs."
+            )
