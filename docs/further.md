@@ -198,8 +198,7 @@ Snakemake will check the status of your jobs 40 seconds after submission. Anothe
 
 When using [profiles](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles), a command line may become shorter. A sample profile could look like this:
 
-```console
-__use_yte__: true
+```YAML
 executor: slurm
 latency-wait: 60
 default-storage-provider: fs
@@ -208,18 +207,33 @@ shared-fs-usage:
   - software-deployment
   - sources
   - source-cache
-local-storage-prefix: "<your node local storage prefix>"
+remote-job-local-storage-prefix: "<your node local storage prefix>"
+local-storage-prefix: "<your local storage prefix, e.g. on login nodes>"
 ```
 
-It will set the executor to be this SLURM executor, ensure sufficient file system latency, and allow automatic stage-in of files using the [file system storage plugin](https://github.com/snakemake/snakemake-storage-plugin-fs).
+The entire configuration will set the executor to SLURM executor, ensures sufficient file system latency and allow automatic stage-in of files using the [file system storage plugin](https://github.com/snakemake/snakemake-storage-plugin-fs).
 
-Note, that you need to set the `SNAKEMAKE_PROFILE` environment variable in your `~/.bashrc` file, e.g.:
+On a cluster with a scratch directory per job id, the prefix within jobs might be:
+
+```YAML
+remote-job-local-storage-prefix: "<scratch>/$SLURM_JOB_ID"
+```
+
+On a cluster with a scratch directory per user, the prefix within jobs might be:
+
+```YAML
+remote-job-local-storage-prefix: "<scratch>/$USER"
+```
+
+Note, that the path `<scratch>` needs to be taken from a specific cluster documentation.
+
+Further note, that you need to set the `SNAKEMAKE_PROFILE` environment variable in your `~/.bashrc` file, e.g.:
 
 ```console
 export SNAKEMAKE_PROFILE="$HOME/.config/snakemake"
 ```
 
-Further note, that there is further development ongoing to enable differentiation of file access patterns. 
+==This is ongoing development. Eventually you will be able to annotate different file access patterns.==
 
 ## Retries - Or Trying again when a Job failed
 
