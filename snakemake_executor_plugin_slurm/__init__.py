@@ -89,9 +89,13 @@ class Executor(RemoteExecutor):
         # generic part of a submission string:
         # we use a run_uuid as the job-name, to allow `--name`-based
         # filtering in the job status checks (`sacct --name` and `squeue --name`)
+        if wildcard_str == "":
+            comment_str = f"rule_{job.name}"
+        else:
+            comment_str = f"rule_{job.name}_wildcards_{wildcard_str}"
         call = (
             f"sbatch --job-name {self.run_uuid} --output {slurm_logfile} --export=ALL "
-            f"--comment {job.name}"
+            f"--comment {comment_str}"
         )
 
         call += self.get_account_arg(job)
@@ -210,7 +214,7 @@ class Executor(RemoteExecutor):
 
         # We use this sacct syntax for argument 'starttime' to keep it compatible
         # with slurm < 20.11
-        sacct_starttime = f"{datetime.now() - timedelta(days=2):%Y-%m-%dT%H:00}"
+        sacct_starttime = f"{datetime.now() - timedelta(days = 2):%Y-%m-%dT%H:00}"
         # previously we had
         # f"--starttime now-2days --endtime now --name {self.run_uuid}"
         # in line 218 - once v20.11 is definitively not in use any more,
@@ -289,7 +293,9 @@ class Executor(RemoteExecutor):
                 elif status in fail_stati:
                     msg = (
                         f"SLURM-job '{j.external_jobid}' failed, SLURM status is: "
-                        f"'{status}'"
+                        # message ends with '. ', because it is proceeded
+                        # with a new sentence
+                        f"'{status}'. "
                     )
                     self.report_job_error(j, msg=msg, aux_logs=[j.aux["slurm_logfile"]])
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
@@ -369,7 +375,7 @@ class Executor(RemoteExecutor):
             # here, we check whether the given or guessed account is valid
             # if not, a WorkflowError is raised
             self.test_account(job.resources.slurm_account)
-            return f" -A {job.resources.slurm_account}"
+            return f" -A '{job.resources.slurm_account}'"
         else:
             if self._fallback_account_arg is None:
                 self.logger.warning("No SLURM account given, trying to guess.")
@@ -436,7 +442,9 @@ class Executor(RemoteExecutor):
                 f"'{account}' with sacctmgr: {e.stderr}"
             )
 
-        accounts = accounts.split()
+        # The set() has been introduced during review to eliminate
+        # duplicates. They are not harmful, but disturbing to read.
+        accounts = set(_.strip() for _ in accounts.split("\n") if _)
 
         if account not in accounts:
             raise WorkflowError(
