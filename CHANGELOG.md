@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.6.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.5.2...v0.6.0) (2024-06-07)
+
+
+### Features
+
+* will reject jobs, which attempt setting job names by 'slurm_extra' ([#93](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/93)) ([df2fd3d](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/df2fd3dfbbe1e0a606da719f33391d5c9fe9d679))
+
+## [0.5.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.5.1...v0.5.2) (2024-06-04)
+
+
+### Bug Fixes
+
+* [#97](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/97) preventing node confinment ([#98](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/98)) ([fa7877f](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/fa7877f8d086883ce74db75c3246b8c050720a62))
+
+## [0.5.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.5.0...v0.5.1) (2024-05-14)
+
+
+### Bug Fixes
+
+* allowing for accounts containing whitespace ([#86](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/86)) ([6993f2d](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6993f2d7dd7c31fd34a79317df35ff80779f8a63))
+* proper line ending status message ([#87](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/87)) ([7b94aec](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/7b94aec8fdda5d2b0f8986154b6cb07d1954b7e8))
+
+## [0.5.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.4.5...v0.5.0) (2024-05-06)
+
+
+### Features
+
+* wildcards in comment string [#85](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/85) ([#88](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/88)) ([730cac0](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/730cac09c12a7038557ee937bc58c8c9e483c8f3))
+
+## [0.4.5](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.4.4...v0.4.5) (2024-04-17)
+
+
+### Bug Fixes
+
+* fix path typo ([#72](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/72)) ([f64fb5a](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/f64fb5adce9dc285c0b212af22d98b4289e8ce25))
+
+## [0.4.4](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.4.3...v0.4.4) (2024-04-15)
+
+
+### Miscellaneous Chores
+
+* release 0.4.4 ([6f2b966](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6f2b96668b4e4f84cc1e8bcb5e123c97d3abdfd0))
+
 ## [0.4.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.4.2...v0.4.3) (2024-04-12)
 
 
