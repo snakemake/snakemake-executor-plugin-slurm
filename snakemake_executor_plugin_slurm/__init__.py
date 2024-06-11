@@ -6,6 +6,7 @@ __license__ = "MIT"
 import csv
 from io import StringIO
 import os
+import re
 import subprocess
 import time
 from datetime import datetime, timedelta
@@ -102,9 +103,13 @@ class Executor(RemoteExecutor):
         # generic part of a submission string:
         # we use a run_uuid as the job-name, to allow `--name`-based
         # filtering in the job status checks (`sacct --name` and `squeue --name`)
+        if wildcard_str == "":
+            comment_str = f"rule_{job.name}"
+        else:
+            comment_str = f"rule_{job.name}_wildcards_{wildcard_str}"
         call = (
             f"sbatch --job-name {self.run_uuid} --output {slurm_logfile} --export=ALL "
-            f"--comment {job.name}"
+            f"--comment {comment_str}"
         )
 
         call += self.get_account_arg(job)
@@ -132,17 +137,27 @@ class Executor(RemoteExecutor):
                 "- submitting without. This might or might not work on your cluster."
             )
 
-        # MPI job
-        if job.resources.get("mpi", False):
-            if job.resources.get("nodes", False):
-                call += f" --nodes={job.resources.get('nodes', 1)}"
+        if job.resources.get("nodes", False):
+            call += f" --nodes={job.resources.get('nodes', 1)}"
 
         # fixes #40 - set ntasks regarlless of mpi, because
         # SLURM v22.05 will require it for all jobs
         call += f" --ntasks={job.resources.get('tasks', 1)}"
+        # MPI job
+        if job.resources.get("mpi", False):
+            if not job.resources.get("tasks_per_node") and not job.resources.get(
+                "nodes"
+            ):
+                self.logger.warning(
+                    "MPI job detected, but no 'tasks_per_node' or 'nodes' "
+                    "specified. Assuming 'tasks_per_node=1'."
+                    "Probably not what you want."
+                )
+
         call += f" --cpus-per-task={get_cpus_per_task(job)}"
 
         if job.resources.get("slurm_extra"):
+            self.check_slurm_extra(job)
             call += f" {job.resources.slurm_extra}"
 
         exec_job = self.format_job_exec(job)
@@ -223,7 +238,7 @@ class Executor(RemoteExecutor):
 
         # We use this sacct syntax for argument 'starttime' to keep it compatible
         # with slurm < 20.11
-        sacct_starttime = f"{datetime.now() - timedelta(days=2):%Y-%m-%dT%H:00}"
+        sacct_starttime = f"{datetime.now() - timedelta(days = 2):%Y-%m-%dT%H:00}"
         # previously we had
         # f"--starttime now-2days --endtime now --name {self.run_uuid}"
         # in line 218 - once v20.11 is definitively not in use any more,
@@ -302,7 +317,9 @@ class Executor(RemoteExecutor):
                 elif status in fail_stati:
                     msg = (
                         f"SLURM-job '{j.external_jobid}' failed, SLURM status is: "
-                        f"'{status}'"
+                        # message ends with '. ', because it is proceeded
+                        # with a new sentence
+                        f"'{status}'. "
                     )
                     self.report_job_error(j, msg=msg, aux_logs=[j.aux["slurm_logfile"]])
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
@@ -382,7 +399,7 @@ class Executor(RemoteExecutor):
             # here, we check whether the given or guessed account is valid
             # if not, a WorkflowError is raised
             self.test_account(job.resources.slurm_account)
-            return f" -A {job.resources.slurm_account}"
+            return f" -A '{job.resources.slurm_account}'"
         else:
             if self._fallback_account_arg is None:
                 self.logger.warning("No SLURM account given, trying to guess.")
@@ -449,7 +466,9 @@ class Executor(RemoteExecutor):
                 f"'{account}' with sacctmgr: {e.stderr}"
             )
 
-        accounts = accounts.split()
+        # The set() has been introduced during review to eliminate
+        # duplicates. They are not harmful, but disturbing to read.
+        accounts = set(_.strip() for _ in accounts.split("\n") if _)
 
         if account not in accounts:
             raise WorkflowError(
@@ -484,3 +503,15 @@ class Executor(RemoteExecutor):
             "'slurm_partition=<your default partition>'."
         )
         return ""
+
+    def check_slurm_extra(self, job):
+        jobname = re.compile(r"--job-name[=?|\s+]|-J\s?")
+        if re.search(jobname, job.resources.slurm_extra):
+            raise WorkflowError(
+                "The '--job-name' option is not allowed in the 'slurm_extra' "
+                "parameter. The job name is set by snakemake and must not be "
+                "overwritten. It is internally used to check the stati of all "
+                "submitted jobs by this workflow."
+                "Please consult the documentation if you are unsure how to "
+                "query the status of your jobs."
+            )
