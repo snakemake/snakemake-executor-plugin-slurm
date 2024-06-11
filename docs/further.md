@@ -182,7 +182,7 @@ While Snakemake mainly relies on Conda for reproducible execution, many clusters
 
 Note, `snakemake --sdm conda ...` works as intended.
 
-To ensure the working of this plugin, install it in your base environment for the desired workflow.
+To ensure that this plugin is working, install it in your base environment for the desired workflow.
 
 
 ### Using Cluster Environment:  Modules
