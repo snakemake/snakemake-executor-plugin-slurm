@@ -74,6 +74,7 @@ class Executor(RemoteExecutor):
         self.settings: ExecutorSettings = self.workflow.executor_settings
         self.common_settings.init_seconds_before_status_checks = self.settings.init_seconds_before_status_checks
 
+<<<<<<< HEAD
     def warn_on_jobcontext(self):
         if "SLURM_JOB_ID" in os.environ:
             self.logger.warning(
@@ -82,6 +83,19 @@ class Executor(RemoteExecutor):
                 "Please run Snakemake directly on the login node."
             )
         
+=======
+    def warn_on_jobcontext(self, done=None):
+        if not done:
+            if "SLURM_JOB_ID" in os.environ:
+                self.logger.warning(
+                    "Running Snakemake in a SLURM within a job may lead"
+                    " to unexpected behavior. Please run Snakemake directly"
+                    " on the head node."
+                )
+                time.sleep(5)
+        done = True
+
+>>>>>>> 257e830 (feat: warning if run in job (#78))
     def additional_general_args(self):
         return "--executor slurm-jobstep --jobs 1"
 
