@@ -291,6 +291,12 @@ set-resources:
 Be sure to use sensible settings for your cluster and make use of parallel execution (e.g. threads) and [global profiles](#using-profiles) to avoid I/O contention. 
 
 
+## Nesting Jobs (or Running this Plugin within a Job)
+
+Some environments provide a shell within a SLURM job, for instance, IDEs started in on-demand context. If Snakemake attempts to use this plugin to spawn jobs on the cluster, this may work just as intended. Or it might not: depending on cluster settings or individual settings, submitted jobs may be ill-parameterized or will not find the right environment.
+
+If the plugin detects to be running within a job, it will therefore issue a warning and stop for 5 seconds.
+
 ## Summary:
 
 When put together, a frequent command line looks like:
