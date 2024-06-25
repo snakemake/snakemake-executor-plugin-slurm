@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.6.0...v0.7.0) (2024-06-25)
+
+
+### Features
+
+* warning if run in job ([#78](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/78)) ([257e830](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/257e830f28d7a226a0a7dad85703298677b9173c))
+
+
+### Documentation
+
+* added paragraphs about dynamic resource allocation ([#79](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/79)) ([06a1555](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/06a1555e0a1466576f2fea59a979d8d3e0c19df4))
+* storage update ([#80](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/80)) ([7e19560](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/7e19560731ca595687856ce45c8dd9e2fc5446cc))
+
 ## [0.6.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.5.2...v0.6.0) (2024-06-07)
 
 
