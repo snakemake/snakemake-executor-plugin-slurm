@@ -410,6 +410,7 @@ class Executor(RemoteExecutor):
                 account = self.get_account()
                 if account:
                     self.logger.warning(f"Guessed SLURM account: {account}")
+                    self.test_account(f"{account}")
                     self._fallback_account_arg = f" -A {account}"
                 else:
                     self.logger.warning(
@@ -447,7 +448,7 @@ class Executor(RemoteExecutor):
             sacct_out = subprocess.check_output(
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
-            return sacct_out.strip()
+            return sacct_out.replace("(null)", "").strip()
         except subprocess.CalledProcessError as e:
             self.logger.warning(
                 f"No account was given, not able to get a SLURM account via sacct: "
