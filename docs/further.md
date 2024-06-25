@@ -179,17 +179,46 @@ rule myrule:
 
 Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles) to specify such resources.
 
+## Software Recommendations
+
+### Conda, Mamba
+
+While Snakemake mainly relies on Conda for reproducible execution, many clusters impose file number limits in their "HOME" directory. In this case, run `mamba clean -a` occasionally for persisting environments.
+
+Note, `snakemake --sdm conda ...` works as intended.
+
+To ensure that this plugin is working, install it in your base environment for the desired workflow.
+
+
+### Using Cluster Environment:  Modules
+
+HPC clusters provide so-called environment modules. Some clusters do not allow using Conda (and its derivatives). In this case, or when a particular software is not provided by a Conda channel, Snakemake can be instructed to use environment modules. The `--sdm env-modules` flag will trigger loading modules defined for a specific rule, e.g.:
+
+```
+rule ...:
+   ...
+   envmodules:
+       "bio/VinaLC"
+```
+
+This will, internally, trigger a `module load bio`/VinaLC` immediately prior to execution. 
+
+Note, that 
+- environment modules are best specified in a configuration file.
+- Using environment modules can be combined with conda and apptainer (`--sdm env-modules conda apptainer`), which will then be only used as a fallback for rules not defining environment modules.
+For running jobs, the `squeue` command:
+
 ## Inquiring about Job Information and Adjusting the Rate Limiter
 
 The executor plugin for SLURM uses unique job names to inquire about job status. It ensures inquiring about job status for the series of jobs of a workflow does not put too much strain on the batch system's database. Human readable information is stored in the comment of a particular job. It is a combination of the rule name and wildcards. You can ask for it with the `sacct` or `squeue` commands, e.g.:
 
-``` console
+``` console 
 sacct -o JobID,State,Comment%40
 ```
 
 Note, the "%40" after `Comment` ensures a width of 40 characters. This setting may be changed at will. If the width is too small, SLURM will abbreviate the column with a `+` sign.
 
-For running jobs, the `squeue` command:
+For running jobs, you can use the squeue command:
 
 ``` console
 squeue -u $USER -o %i,%P,%.10j,%.40k
