@@ -183,7 +183,11 @@ class Executor(RemoteExecutor):
                 f"SLURM job submission failed. The error message was {e.output}"
             )
 
-        slurm_jobid = re.findall(r"\d+", out)[-1]
+        # multicluster submissions yield submission infos like
+        # "Submitted batch job <id> on cluster <name>".
+        # To extract the job id in this case we need to match any number
+        # in between a string - which might change in future versions of SLURM.
+        slurm_jobid = re.search(r"\d+", out).group()
         slurm_logfile = slurm_logfile.replace("%j", slurm_jobid)
         self.logger.info(
             f"Job {job.jobid} has been submitted with SLURM jobid {slurm_jobid} "
