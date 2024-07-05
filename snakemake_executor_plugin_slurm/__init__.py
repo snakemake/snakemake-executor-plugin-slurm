@@ -57,7 +57,6 @@ class Executor(RemoteExecutor):
         self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
         self._fallback_partition = None
-        self._clusters = None
 
     def warn_on_jobcontext(self, done=None):
         if not done:
@@ -119,7 +118,6 @@ class Executor(RemoteExecutor):
 
         if job.resources.get("clusters"):
             call += f" --clusters {job.resources.clusters}"
-            self._clusters = job.resources.clusters
 
         if job.resources.get("runtime"):
             call += f" -t {job.resources.runtime}"
@@ -361,14 +359,8 @@ class Executor(RemoteExecutor):
                 # about 30 sec, but can be longer in extreme cases.
                 # Under 'normal' circumstances, 'scancel' is executed in
                 # virtually no time.
-<<<<<<< HEAD
                 scancel_command = f"scancel {jobids} --clusters=all"
 
-=======
-                scancel_command = f"scancel {jobids}"
-                if self._clusters is not None:
-                    scancel_command += f" --clusters {self._clusters}"
->>>>>>> 6b197af (gnarf: again fixing merge conflict)
                 subprocess.check_output(
                     scancel_command,
                     text=True,
