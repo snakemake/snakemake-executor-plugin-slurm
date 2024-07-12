@@ -19,7 +19,6 @@ from snakemake_interface_executor_plugins.settings import (
     ExecutorSettingsBase,
     CommonSettings,
 )
-from snakemake_interface_executor_plugins.settings import CommonSettings
 from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
