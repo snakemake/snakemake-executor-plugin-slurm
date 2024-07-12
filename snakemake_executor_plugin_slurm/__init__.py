@@ -32,7 +32,9 @@ class ExecutorSettings(ExecutorSettingsBase):
     init_seconds_before_status_checks: Optional[int] = field(
         default=40,
         metadata={
-            "help": "Defines the time in seconds before the first status check is performed after job submission.",
+            "help": """
+                    Defines the time in seconds before the first status 
+                    check is performed after job submission.""",
             "env_var": False,
             "required": False,
         },
