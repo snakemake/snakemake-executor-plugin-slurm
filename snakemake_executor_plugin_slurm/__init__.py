@@ -77,9 +77,6 @@ class Executor(RemoteExecutor):
         self._fallback_partition = None
         # providing a short-hand, even if subsequent calls seem redundant
         self.settings: ExecutorSettings = self.workflow.executor_settings
-        self.common_settings.init_seconds_before_status_checks = (
-            self.settings.init_seconds_before_status_checks
-        )
 
     def warn_on_jobcontext(self, done=None):
         if not done:
