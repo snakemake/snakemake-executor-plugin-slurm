@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.7.0...v0.8.0) (2024-07-12)
+
+
+### Features
+
+* cli  ([#111](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/111)) ([b56837e](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/b56837efb61e3da89a2a5d0520e6d969ebf69137)), closes [#73](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/73)
+
 ## [0.7.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.6.0...v0.7.0) (2024-06-25)
 
 
