@@ -162,7 +162,7 @@ class Executor(RemoteExecutor):
         if job.resources.get("nodes", False):
             call += f" --nodes={job.resources.get('nodes', 1)}"
 
-        # fixes #40 - set ntasks regarlless of mpi, because
+        # fixes #40 - set ntasks regardless of mpi, because
         # SLURM v22.05 will require it for all jobs
         call += f" --ntasks={job.resources.get('tasks', 1)}"
         # MPI job
