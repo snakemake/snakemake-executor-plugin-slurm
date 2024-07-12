@@ -31,6 +31,8 @@ Usually, it is advisable to persist such settings via a
 [configuration profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles), which
 can be provided system-wide, per user, and in addition per workflow.
 
+The executor waits per default 40 seconds for its first check of the job status. Using `--slurm-init-seconds-before-status-checks=<time in seconds>` this behaviour can be altered.
+
 ## Ordinary SMP jobs
 
 Most jobs will be carried out by programs that are either single-core
