@@ -16,7 +16,8 @@ import uuid
 from snakemake_interface_executor_plugins.executors.base import SubmittedJobInfo
 from snakemake_interface_executor_plugins.executors.remote import RemoteExecutor
 from snakemake_interface_executor_plugins.settings import (
-    ExecutorSettingsBase, CommonSettings
+    ExecutorSettingsBase,
+    CommonSettings,
 )
 from snakemake_interface_executor_plugins.settings import CommonSettings
 from snakemake_interface_executor_plugins.jobs import (
@@ -24,6 +25,7 @@ from snakemake_interface_executor_plugins.jobs import (
 )
 from snakemake_interface_common.exceptions import WorkflowError
 from snakemake_executor_plugin_slurm_jobstep import get_cpus_per_task
+
 
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
@@ -35,6 +37,7 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
+
 
 # Required:
 # Specify common settings shared by various executors.
@@ -72,30 +75,21 @@ class Executor(RemoteExecutor):
         self._fallback_partition = None
         # providing a short-hand, even if subsequent calls seem redundant
         self.settings: ExecutorSettings = self.workflow.executor_settings
-        self.common_settings.init_seconds_before_status_checks = self.settings.init_seconds_before_status_checks
+        self.common_settings.init_seconds_before_status_checks = (
+            self.settings.init_seconds_before_status_checks
+        )
 
-<<<<<<< HEAD
-    def warn_on_jobcontext(self):
-        if "SLURM_JOB_ID" in os.environ:
-            self.logger.warning(
-                "You are running snakemake in a SLURM job context. "
-                "This is not recommended, as it may lead to unexpected behavior."
-                "Please run Snakemake directly on the login node."
-            )
-        
-=======
     def warn_on_jobcontext(self, done=None):
         if not done:
             if "SLURM_JOB_ID" in os.environ:
                 self.logger.warning(
-                    "Running Snakemake in a SLURM within a job may lead"
-                    " to unexpected behavior. Please run Snakemake directly"
-                    " on the head node."
+                    "You are running snakemake in a SLURM job context. "
+                    "This is not recommended, as it may lead to unexpected behavior."
+                    "Please run Snakemake directly on the login node."
                 )
                 time.sleep(5)
         done = True
 
->>>>>>> 257e830 (feat: warning if run in job (#78))
     def additional_general_args(self):
         return "--executor slurm-jobstep --jobs 1"
 
@@ -222,7 +216,7 @@ class Executor(RemoteExecutor):
     async def check_active_jobs(
         self, active_jobs: List[SubmittedJobInfo]
     ) -> Generator[SubmittedJobInfo, None, None]:
-        # Check the status of active jobs.        
+        # Check the status of active jobs.
         # You have to iterate over the given list active_jobs.
         # For jobs that have finished successfully, you have to call
         # self.report_job_success(job).
