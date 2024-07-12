@@ -32,8 +32,9 @@ class ExecutorSettings(ExecutorSettingsBase):
         default=40,
         metadata={
             "help": """
-                    Defines the time in seconds before the first status 
-                    check is performed after job submission.""",
+                    Defines the time in seconds before the first status
+                    check is performed after job submission.
+                    """,
             "env_var": False,
             "required": False,
         },
