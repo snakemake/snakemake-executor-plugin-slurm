@@ -130,7 +130,7 @@ class Executor(RemoteExecutor):
             comment_str = f"rule_{job.name}_wildcards_{wildcard_str}"
         call = (
             f"sbatch --job-name {self.run_uuid} --output {slurm_logfile} --export=ALL "
-            f"--comment {comment_str}"
+            f"--comment `{comment_str}`"
         )
 
         call += self.get_account_arg(job)
