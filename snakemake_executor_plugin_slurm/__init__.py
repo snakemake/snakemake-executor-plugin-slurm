@@ -129,7 +129,7 @@ class Executor(RemoteExecutor):
         else:
             comment_str = f"rule_{job.name}_wildcards_{wildcard_str}"
         call = (
-            f"sbatch --job-name {self.run_uuid} --output {slurm_logfile} --export=ALL "
+            f"sbatch --parsable --job-name {self.run_uuid} --output {slurm_logfile} --export=ALL "
             f"--comment {comment_str}"
         )
 
@@ -200,7 +200,8 @@ class Executor(RemoteExecutor):
                 f"SLURM job submission failed. The error message was {e.output}"
             )
 
-        slurm_jobid = out.split(" ")[-1]
+        # Slurm output with --parsable JOBID;CLUSTERNAME or just JOBID
+        slurm_jobid = out.split(";")[0]
         slurm_logfile = slurm_logfile.replace("%j", slurm_jobid)
         self.logger.info(
             f"Job {job.jobid} has been submitted with SLURM jobid {slurm_jobid} "
