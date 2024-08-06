@@ -119,6 +119,7 @@ You can use the following specifications:
 | `--ntasks`     | `tasks`    | number of concurrent tasks / ranks    |
 | `--cpus-per-task`       | `cpus_per_task`      | number of cpus per task (in case of SMP, rather use `threads`)   |
 | `--nodes` | `nodes`    | number of nodes                       |
+| `--clusters` | `cluster` | comma separated string of clusters |
 
 Each of these can be part of a rule, e.g.:
 
@@ -158,6 +159,10 @@ set-resources:
         mem_mb_per_cpu: 1800
         cpus_per_task: 40
 ```
+
+## Multicluster Support
+
+For reasons of scheduling multicluster support is provided by the `clusters` flag in resources sections. Note, that you have to write `clusters`, not `cluster`! 
 
 ## Additional Custom Job Configuration
 
@@ -322,6 +327,57 @@ Be sure to use sensible settings for your cluster and make use of parallel execu
 Some environments provide a shell within a SLURM job, for instance, IDEs started in on-demand context. If Snakemake attempts to use this plugin to spawn jobs on the cluster, this may work just as intended. Or it might not: depending on cluster settings or individual settings, submitted jobs may be ill-parameterized or will not find the right environment.
 
 If the plugin detects to be running within a job, it will therefore issue a warning and stop for 5 seconds.
+
+## Retries - Or Trying again when a Job failed
+
+Some cluster jobs may fail. In this case Snakemake can be instructed to try another submit before the entire workflow fails, in this example up to 3 times:
+
+```console
+snakemake --retries=3
+```
+
+If a workflow fails entirely (e.g. when there are cluster failures), it can be resumed as any other Snakemake workflow:
+
+```console
+snakemake --rerun-incomplete
+```
+
+To prevent failures due to faulty parameterization, we can dynamically adjust the runtime behaviour:
+
+## Dynamic Parameterization
+
+Using dynamic parameterization we can react on different different inputs and prevent our HPC jobs from failing.
+
+### Adjusting Memory Requirements
+
+Input size of files may vary. [If we have an estimate for the RAM requirement due to varying input file sizes, we can use this to dynamically adjust our jobs.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources)
+
+### Adjusting Runtime
+
+Runtime adjustments can be made in a Snakefile:
+
+```Python
+def get_time(wildcards, attempt):
+    return f"{1 * attempt}h"
+
+rule foo:
+    input: ...
+    output: ...
+    resources:
+        runtime=get_time
+    ...
+```
+
+or in a workflow profile
+
+```YAML
+set-resources:
+    foo:
+        runtime: f"{1 * attempt}h"
+```
+
+Be sure to use sensible settings for your cluster and make use of parallel execution (e.g. threads) and [global profiles](#using-profiles) to avoid I/O contention. 
+
 
 ## Summary:
 

@@ -7,6 +7,7 @@ import csv
 from io import StringIO
 import os
 import re
+import shlex
 import subprocess
 import time
 from dataclasses import dataclass, field
@@ -136,6 +137,9 @@ class Executor(RemoteExecutor):
         call += self.get_account_arg(job)
         call += self.get_partition_arg(job)
 
+        if job.resources.get("clusters"):
+            call += f" --clusters {job.resources.clusters}"
+
         if job.resources.get("runtime"):
             call += f" -t {job.resources.runtime}"
         else:
@@ -200,7 +204,11 @@ class Executor(RemoteExecutor):
                 f"SLURM job submission failed. The error message was {e.output}"
             )
 
-        slurm_jobid = out.split(" ")[-1]
+        # multicluster submissions yield submission infos like
+        # "Submitted batch job <id> on cluster <name>".
+        # To extract the job id in this case we need to match any number
+        # in between a string - which might change in future versions of SLURM.
+        slurm_jobid = re.search(r"\d+", out).group()
         slurm_logfile = slurm_logfile.replace("%j", slurm_jobid)
         self.logger.info(
             f"Job {job.jobid} has been submitted with SLURM jobid {slurm_jobid} "
@@ -264,15 +272,22 @@ class Executor(RemoteExecutor):
         # in line 218 - once v20.11 is definitively not in use any more,
         # the more readable version ought to be re-adapted
 
+        # -X: only show main job, no substeps
+        sacct_command = f"""sacct -X --parsable2 \
+                        --clusters all \
+                        --noheader --format=JobIdRaw,State \
+                        --starttime {sacct_starttime} \
+                        --endtime now --name {self.run_uuid}"""
+
+        # for better redability in verbose output
+        sacct_command = " ".join(shlex.split(sacct_command))
+
         # this code is inspired by the snakemake profile:
         # https://github.com/Snakemake-Profiles/slurm
         for i in range(status_attempts):
             async with self.status_rate_limiter:
                 (status_of_jobs, sacct_query_duration) = await self.job_stati(
-                    # -X: only show main job, no substeps
-                    f"sacct -X --parsable2 --noheader --format=JobIdRaw,State "
-                    f"--starttime {sacct_starttime} "
-                    f"--endtime now --name {self.run_uuid}"
+                    sacct_command
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
                     self.logger.debug(f"could not check status of job {self.run_uuid}")
@@ -364,8 +379,10 @@ class Executor(RemoteExecutor):
                 # about 30 sec, but can be longer in extreme cases.
                 # Under 'normal' circumstances, 'scancel' is executed in
                 # virtually no time.
+                scancel_command = f"scancel {jobids} --clusters=all"
+
                 subprocess.check_output(
-                    f"scancel {jobids}",
+                    scancel_command,
                     text=True,
                     shell=True,
                     timeout=60,
