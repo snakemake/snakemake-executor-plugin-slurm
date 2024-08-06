@@ -10,17 +10,36 @@ import re
 import shlex
 import subprocess
 import time
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import List, Generator
+from typing import List, Generator, Optional
 import uuid
 from snakemake_interface_executor_plugins.executors.base import SubmittedJobInfo
 from snakemake_interface_executor_plugins.executors.remote import RemoteExecutor
-from snakemake_interface_executor_plugins.settings import CommonSettings
+from snakemake_interface_executor_plugins.settings import (
+    ExecutorSettingsBase,
+    CommonSettings,
+)
 from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
 from snakemake_interface_common.exceptions import WorkflowError
 from snakemake_executor_plugin_slurm_jobstep import get_cpus_per_task
+
+
+@dataclass
+class ExecutorSettings(ExecutorSettingsBase):
+    init_seconds_before_status_checks: Optional[int] = field(
+        default=40,
+        metadata={
+            "help": """
+                    Defines the time in seconds before the first status
+                    check is performed after job submission.
+                    """,
+            "env_var": False,
+            "required": False,
+        },
+    )
 
 
 # Required:
@@ -57,14 +76,16 @@ class Executor(RemoteExecutor):
         self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
         self._fallback_partition = None
+        # providing a short-hand, even if subsequent calls seem redundant
+        self.settings: ExecutorSettings = self.workflow.executor_settings
 
     def warn_on_jobcontext(self, done=None):
         if not done:
             if "SLURM_JOB_ID" in os.environ:
                 self.logger.warning(
-                    "Running Snakemake in a SLURM within a job may lead"
-                    " to unexpected behavior. Please run Snakemake directly"
-                    " on the head node."
+                    "You are running snakemake in a SLURM job context. "
+                    "This is not recommended, as it may lead to unexpected behavior."
+                    "Please run Snakemake directly on the login node."
                 )
                 time.sleep(5)
         done = True
@@ -144,7 +165,7 @@ class Executor(RemoteExecutor):
         if job.resources.get("nodes", False):
             call += f" --nodes={job.resources.get('nodes', 1)}"
 
-        # fixes #40 - set ntasks regarlless of mpi, because
+        # fixes #40 - set ntasks regardless of mpi, because
         # SLURM v22.05 will require it for all jobs
         call += f" --ntasks={job.resources.get('tasks', 1)}"
         # MPI job
@@ -203,7 +224,6 @@ class Executor(RemoteExecutor):
         self, active_jobs: List[SubmittedJobInfo]
     ) -> Generator[SubmittedJobInfo, None, None]:
         # Check the status of active jobs.
-
         # You have to iterate over the given list active_jobs.
         # For jobs that have finished successfully, you have to call
         # self.report_job_success(job).
@@ -526,10 +546,10 @@ class Executor(RemoteExecutor):
         jobname = re.compile(r"--job-name[=?|\s+]|-J\s?")
         if re.search(jobname, job.resources.slurm_extra):
             raise WorkflowError(
-                "The '--job-name' option is not allowed in the 'slurm_extra' "
+                "The --job-name option is not allowed in the 'slurm_extra' "
                 "parameter. The job name is set by snakemake and must not be "
-                "overwritten. It is internally used to check the stati of all "
-                "submitted jobs by this workflow."
+                "overwritten. It is internally used to check the stati of the "
+                "all submitted jobs by this workflow."
                 "Please consult the documentation if you are unsure how to "
                 "query the status of your jobs."
             )
