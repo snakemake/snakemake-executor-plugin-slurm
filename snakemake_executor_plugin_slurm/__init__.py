@@ -7,19 +7,39 @@ import csv
 from io import StringIO
 import os
 import re
+import shlex
 import subprocess
 import time
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import List, Generator
+from typing import List, Generator, Optional
 import uuid
 from snakemake_interface_executor_plugins.executors.base import SubmittedJobInfo
 from snakemake_interface_executor_plugins.executors.remote import RemoteExecutor
-from snakemake_interface_executor_plugins.settings import CommonSettings
+from snakemake_interface_executor_plugins.settings import (
+    ExecutorSettingsBase,
+    CommonSettings,
+)
 from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
 from snakemake_interface_common.exceptions import WorkflowError
 from snakemake_executor_plugin_slurm_jobstep import get_cpus_per_task
+
+
+@dataclass
+class ExecutorSettings(ExecutorSettingsBase):
+    init_seconds_before_status_checks: Optional[int] = field(
+        default=40,
+        metadata={
+            "help": """
+                    Defines the time in seconds before the first status
+                    check is performed after job submission.
+                    """,
+            "env_var": False,
+            "required": False,
+        },
+    )
 
 
 # Required:
@@ -50,10 +70,25 @@ common_settings = CommonSettings(
 # Implementation of your executor
 class Executor(RemoteExecutor):
     def __post_init__(self):
+        # run check whether we are running in a SLURM job context
+        self.warn_on_jobcontext()
         self.run_uuid = str(uuid.uuid4())
         self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
         self._fallback_partition = None
+        # providing a short-hand, even if subsequent calls seem redundant
+        self.settings: ExecutorSettings = self.workflow.executor_settings
+
+    def warn_on_jobcontext(self, done=None):
+        if not done:
+            if "SLURM_JOB_ID" in os.environ:
+                self.logger.warning(
+                    "You are running snakemake in a SLURM job context. "
+                    "This is not recommended, as it may lead to unexpected behavior."
+                    "Please run Snakemake directly on the login node."
+                )
+                time.sleep(5)
+        done = True
 
     def additional_general_args(self):
         return "--executor slurm-jobstep --jobs 1"
@@ -102,6 +137,9 @@ class Executor(RemoteExecutor):
         call += self.get_account_arg(job)
         call += self.get_partition_arg(job)
 
+        if job.resources.get("clusters"):
+            call += f" --clusters {job.resources.clusters}"
+
         if job.resources.get("runtime"):
             call += f" -t {job.resources.runtime}"
         else:
@@ -127,7 +165,7 @@ class Executor(RemoteExecutor):
         if job.resources.get("nodes", False):
             call += f" --nodes={job.resources.get('nodes', 1)}"
 
-        # fixes #40 - set ntasks regarlless of mpi, because
+        # fixes #40 - set ntasks regardless of mpi, because
         # SLURM v22.05 will require it for all jobs
         call += f" --ntasks={job.resources.get('tasks', 1)}"
         # MPI job
@@ -166,7 +204,11 @@ class Executor(RemoteExecutor):
                 f"SLURM job submission failed. The error message was {e.output}"
             )
 
-        slurm_jobid = out.split(" ")[-1]
+        # multicluster submissions yield submission infos like
+        # "Submitted batch job <id> on cluster <name>".
+        # To extract the job id in this case we need to match any number
+        # in between a string - which might change in future versions of SLURM.
+        slurm_jobid = re.search(r"\d+", out).group()
         slurm_logfile = slurm_logfile.replace("%j", slurm_jobid)
         self.logger.info(
             f"Job {job.jobid} has been submitted with SLURM jobid {slurm_jobid} "
@@ -182,7 +224,6 @@ class Executor(RemoteExecutor):
         self, active_jobs: List[SubmittedJobInfo]
     ) -> Generator[SubmittedJobInfo, None, None]:
         # Check the status of active jobs.
-
         # You have to iterate over the given list active_jobs.
         # For jobs that have finished successfully, you have to call
         # self.report_job_success(job).
@@ -231,15 +272,22 @@ class Executor(RemoteExecutor):
         # in line 218 - once v20.11 is definitively not in use any more,
         # the more readable version ought to be re-adapted
 
+        # -X: only show main job, no substeps
+        sacct_command = f"""sacct -X --parsable2 \
+                        --clusters all \
+                        --noheader --format=JobIdRaw,State \
+                        --starttime {sacct_starttime} \
+                        --endtime now --name {self.run_uuid}"""
+
+        # for better redability in verbose output
+        sacct_command = " ".join(shlex.split(sacct_command))
+
         # this code is inspired by the snakemake profile:
         # https://github.com/Snakemake-Profiles/slurm
         for i in range(status_attempts):
             async with self.status_rate_limiter:
                 (status_of_jobs, sacct_query_duration) = await self.job_stati(
-                    # -X: only show main job, no substeps
-                    f"sacct -X --parsable2 --noheader --format=JobIdRaw,State "
-                    f"--starttime {sacct_starttime} "
-                    f"--endtime now --name {self.run_uuid}"
+                    sacct_command
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
                     self.logger.debug(f"could not check status of job {self.run_uuid}")
@@ -331,8 +379,10 @@ class Executor(RemoteExecutor):
                 # about 30 sec, but can be longer in extreme cases.
                 # Under 'normal' circumstances, 'scancel' is executed in
                 # virtually no time.
+                scancel_command = f"scancel {jobids} --clusters=all"
+
                 subprocess.check_output(
-                    f"scancel {jobids}",
+                    scancel_command,
                     text=True,
                     shell=True,
                     timeout=60,
@@ -393,6 +443,7 @@ class Executor(RemoteExecutor):
                 account = self.get_account()
                 if account:
                     self.logger.warning(f"Guessed SLURM account: {account}")
+                    self.test_account(f"{account}")
                     self._fallback_account_arg = f" -A {account}"
                 else:
                     self.logger.warning(
@@ -430,7 +481,7 @@ class Executor(RemoteExecutor):
             sacct_out = subprocess.check_output(
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
-            return sacct_out.strip()
+            return sacct_out.replace("(null)", "").strip()
         except subprocess.CalledProcessError as e:
             self.logger.warning(
                 f"No account was given, not able to get a SLURM account via sacct: "
@@ -495,10 +546,10 @@ class Executor(RemoteExecutor):
         jobname = re.compile(r"--job-name[=?|\s+]|-J\s?")
         if re.search(jobname, job.resources.slurm_extra):
             raise WorkflowError(
-                "The '--job-name' option is not allowed in the 'slurm_extra' "
+                "The --job-name option is not allowed in the 'slurm_extra' "
                 "parameter. The job name is set by snakemake and must not be "
-                "overwritten. It is internally used to check the stati of all "
-                "submitted jobs by this workflow."
+                "overwritten. It is internally used to check the stati of the "
+                "all submitted jobs by this workflow."
                 "Please consult the documentation if you are unsure how to "
                 "query the status of your jobs."
             )

@@ -31,6 +31,8 @@ Usually, it is advisable to persist such settings via a
 [configuration profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles), which
 can be provided system-wide, per user, and in addition per workflow.
 
+The executor waits per default 40 seconds for its first check of the job status. Using `--slurm-init-seconds-before-status-checks=<time in seconds>` this behaviour can be altered.
+
 ## Ordinary SMP jobs
 
 Most jobs will be carried out by programs that are either single-core
@@ -117,6 +119,7 @@ You can use the following specifications:
 | `--ntasks`     | `tasks`    | number of concurrent tasks / ranks    |
 | `--cpus-per-task`       | `cpus_per_task`      | number of cpus per task (in case of SMP, rather use `threads`)   |
 | `--nodes` | `nodes`    | number of nodes                       |
+| `--clusters` | `cluster` | comma separated string of clusters |
 
 Each of these can be part of a rule, e.g.:
 
@@ -157,6 +160,10 @@ set-resources:
         cpus_per_task: 40
 ```
 
+## Multicluster Support
+
+For reasons of scheduling multicluster support is provided by the `clusters` flag in resources sections. Note, that you have to write `clusters`, not `cluster`! 
+
 ## Additional Custom Job Configuration
 
 SLURM installations can support custom plugins, which may add support
@@ -174,17 +181,46 @@ rule myrule:
 
 Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles) to specify such resources.
 
+## Software Recommendations
+
+### Conda, Mamba
+
+While Snakemake mainly relies on Conda for reproducible execution, many clusters impose file number limits in their "HOME" directory. In this case, run `mamba clean -a` occasionally for persisting environments.
+
+Note, `snakemake --sdm conda ...` works as intended.
+
+To ensure that this plugin is working, install it in your base environment for the desired workflow.
+
+
+### Using Cluster Environment:  Modules
+
+HPC clusters provide so-called environment modules. Some clusters do not allow using Conda (and its derivatives). In this case, or when a particular software is not provided by a Conda channel, Snakemake can be instructed to use environment modules. The `--sdm env-modules` flag will trigger loading modules defined for a specific rule, e.g.:
+
+```
+rule ...:
+   ...
+   envmodules:
+       "bio/VinaLC"
+```
+
+This will, internally, trigger a `module load bio`/VinaLC` immediately prior to execution. 
+
+Note, that 
+- environment modules are best specified in a configuration file.
+- Using environment modules can be combined with conda and apptainer (`--sdm env-modules conda apptainer`), which will then be only used as a fallback for rules not defining environment modules.
+For running jobs, the `squeue` command:
+
 ## Inquiring about Job Information and Adjusting the Rate Limiter
 
 The executor plugin for SLURM uses unique job names to inquire about job status. It ensures inquiring about job status for the series of jobs of a workflow does not put too much strain on the batch system's database. Human readable information is stored in the comment of a particular job. It is a combination of the rule name and wildcards. You can ask for it with the `sacct` or `squeue` commands, e.g.:
 
-``` console
+``` console 
 sacct -o JobID,State,Comment%40
 ```
 
 Note, the "%40" after `Comment` ensures a width of 40 characters. This setting may be changed at will. If the width is too small, SLURM will abbreviate the column with a `+` sign.
 
-For running jobs, the `squeue` command:
+For running jobs, you can use the squeue command:
 
 ``` console
 squeue -u $USER -o %i,%P,%.10j,%.40k
@@ -234,6 +270,63 @@ export SNAKEMAKE_PROFILE="$HOME/.config/snakemake"
 ```
 
 ==This is ongoing development. Eventually you will be able to annotate different file access patterns.==
+
+## Retries - Or Trying again when a Job failed
+
+Some cluster jobs may fail. In this case Snakemake can be instructed to try another submit before the entire workflow fails, in this example up to 3 times:
+
+```console
+snakemake --retries=3
+```
+
+If a workflow fails entirely (e.g. when there are cluster failures), it can be resumed as any other Snakemake workflow:
+
+```console
+snakemake --rerun-incomplete
+```
+
+To prevent failures due to faulty parameterization, we can dynamically adjust the runtime behaviour:
+
+## Dynamic Parameterization
+
+Using dynamic parameterization we can react on different different inputs and prevent our HPC jobs from failing.
+
+### Adjusting Memory Requirements
+
+Input size of files may vary. [If we have an estimate for the RAM requirement due to varying input file sizes, we can use this to dynamically adjust our jobs.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources)
+
+### Adjusting Runtime
+
+Runtime adjustments can be made in a Snakefile:
+
+```Python
+def get_time(wildcards, attempt):
+    return f"{1 * attempt}h"
+
+rule foo:
+    input: ...
+    output: ...
+    resources:
+        runtime=get_time
+    ...
+```
+
+or in a workflow profile
+
+```YAML
+set-resources:
+    foo:
+        runtime: f"{1 * attempt}h"
+```
+
+Be sure to use sensible settings for your cluster and make use of parallel execution (e.g. threads) and [global profiles](#using-profiles) to avoid I/O contention. 
+
+
+## Nesting Jobs (or Running this Plugin within a Job)
+
+Some environments provide a shell within a SLURM job, for instance, IDEs started in on-demand context. If Snakemake attempts to use this plugin to spawn jobs on the cluster, this may work just as intended. Or it might not: depending on cluster settings or individual settings, submitted jobs may be ill-parameterized or will not find the right environment.
+
+If the plugin detects to be running within a job, it will therefore issue a warning and stop for 5 seconds.
 
 ## Retries - Or Trying again when a Job failed
 
