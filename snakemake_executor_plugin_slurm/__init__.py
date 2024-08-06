@@ -130,7 +130,7 @@ class Executor(RemoteExecutor):
         else:
             comment_str = f"rule_{job.name}_wildcards_{wildcard_str}"
         call = (
-            f"sbatch --job-name {self.run_uuid} --output {slurm_logfile} --export=ALL "
+            f"sbatch --parsable --job-name {self.run_uuid} --output {slurm_logfile} --export=ALL "
             f"--comment {comment_str}"
         )
 
@@ -205,10 +205,11 @@ class Executor(RemoteExecutor):
             )
 
         # multicluster submissions yield submission infos like
-        # "Submitted batch job <id> on cluster <name>".
-        # To extract the job id in this case we need to match any number
-        # in between a string - which might change in future versions of SLURM.
-        slurm_jobid = re.search(r"\d+", out).group()
+        # "Submitted batch job <id> on cluster <name>" by default, but with the
+        # --parsable option it simply yields "<id>;<name>".
+        # To extract the job id we split by semicolon and take the first element
+        # (this also works if not cluster name was provided)
+        slurm_jobid = out.split(";")[0]
         slurm_logfile = slurm_logfile.replace("%j", slurm_jobid)
         self.logger.info(
             f"Job {job.jobid} has been submitted with SLURM jobid {slurm_jobid} "
