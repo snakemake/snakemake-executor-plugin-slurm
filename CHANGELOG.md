@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.8.0...v0.9.0) (2024-08-06)
+
+
+### Features
+
+* multicluster ([#56](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/56)) ([c0f8fee](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/c0f8feea745a4a97f44898a68effccb2b99834df))
+
+
+### Bug Fixes
+
+* fixed string for constraints - see issue [#58](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/58) ([#64](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/64)) ([89e10ff](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/89e10ff14d5705bb522efa74ed847e6a518da672))
+
 ## [0.8.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.7.0...v0.8.0) (2024-07-12)
 
 
