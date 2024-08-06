@@ -208,7 +208,7 @@ class Executor(RemoteExecutor):
         # "Submitted batch job <id> on cluster <name>" by default, but with the
         # --parsable option it simply yields "<id>;<name>".
         # To extract the job id we split by semicolon and take the first element
-        # (this also works if not cluster name was provided)
+        # (this also works if no cluster name was provided)
         slurm_jobid = out.split(";")[0]
         slurm_logfile = slurm_logfile.replace("%j", slurm_jobid)
         self.logger.info(

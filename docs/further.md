@@ -119,7 +119,7 @@ You can use the following specifications:
 | `--ntasks`     | `tasks`    | number of concurrent tasks / ranks    |
 | `--cpus-per-task`       | `cpus_per_task`      | number of cpus per task (in case of SMP, rather use `threads`)   |
 | `--nodes` | `nodes`    | number of nodes                       |
-| `--clusters` | `cluster` | comma separated string of clusters |
+| `--clusters` | `clusters` | comma separated string of clusters |
 
 Each of these can be part of a rule, e.g.:
 
