@@ -130,7 +130,11 @@ class Executor(RemoteExecutor):
         else:
             comment_str = f"rule_{job.name}_wildcards_{wildcard_str}"
         call = (
-            f"sbatch --parsable --job-name {self.run_uuid} --output {slurm_logfile} --export=ALL "
+            f"sbatch "
+            f"--parsable "
+            f"--job-name {self.run_uuid} "
+            f"--output {slurm_logfile} "
+            f"--export=ALL "
             f"--comment {comment_str}"
         )
 
