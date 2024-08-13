@@ -248,7 +248,6 @@ class Executor(RemoteExecutor):
             "FAILED",
             "NODE_FAIL",
             "OUT_OF_MEMORY",
-            "PREEMPTED",
             "TIMEOUT",
             "ERROR",
         )
@@ -348,6 +347,13 @@ class Executor(RemoteExecutor):
                     self.report_job_success(j)
                     any_finished = True
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
+                elif status == "PREEMPTED":
+                    self.logger.warning(
+                        f"""
+Job preemption for job '{j.external_jobid}' occured. 
+Leave Snakemake running, if possible. Otherwise Snakemake 
+needs to restart this job upon a Snakemake restart."""
+                    )
                 elif status == "UNKNOWN":
                     # the job probably does not exist anymore, but 'sacct' did not work
                     # so we assume it is finished
