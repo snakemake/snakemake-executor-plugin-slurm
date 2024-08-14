@@ -352,8 +352,8 @@ class Executor(RemoteExecutor):
                     self._preemption_warning = True
                     self.logger.warning(
                         """
-===== A Job preemption  occured! ===== 
-Leave Snakemake running, if possible. Otherwise Snakemake 
+===== A Job preemption  occured! =====
+Leave Snakemake running, if possible. Otherwise Snakemake
 needs to restart this job upon a Snakemake restart.
 
 We leave it to SLURM to resume your job(s)"""
