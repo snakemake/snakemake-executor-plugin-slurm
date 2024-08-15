@@ -45,7 +45,8 @@ class ExecutorSettings(ExecutorSettingsBase):
         metadata={
             "help": """
                     Allow requeuing preempted of failed jobs,
-                    if no cluster default.
+                    if no cluster default. Results in `sbatch ... --requeue ...`
+                    This flag has no effect, if not set.
                     """,
             "env_var": False,
             "required": False,
