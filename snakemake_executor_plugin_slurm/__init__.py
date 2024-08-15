@@ -40,6 +40,17 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
+    requeue: Optional[bool] = field(
+        default=False,
+        metadata={
+            "help": """
+                    Allow requeuing preempted of failed jobs,
+                    if no cluster default.
+                    """,
+            "env_var": False,
+            "required": False,
+        },
+    )
 
 
 # Required:
@@ -141,6 +152,9 @@ class Executor(RemoteExecutor):
 
         call += self.get_account_arg(job)
         call += self.get_partition_arg(job)
+        
+        if self.settings.requeue:
+            call += " --requeue"
 
         if job.resources.get("clusters"):
             call += f" --clusters {job.resources.clusters}"
