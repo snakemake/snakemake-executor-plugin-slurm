@@ -40,7 +40,7 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
-    requeue: Optional[bool] = field(
+    requeue: bool = field(
         default=False,
         metadata={
             "help": """
