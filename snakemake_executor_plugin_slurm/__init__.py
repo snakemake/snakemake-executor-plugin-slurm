@@ -76,6 +76,7 @@ class Executor(RemoteExecutor):
         self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
         self._fallback_partition = None
+        self._preemption_warning = False  # no preemption warning has been issued
         # providing a short-hand, even if subsequent calls seem redundant
         self.settings: ExecutorSettings = self.workflow.executor_settings
 
@@ -248,7 +249,6 @@ class Executor(RemoteExecutor):
             "FAILED",
             "NODE_FAIL",
             "OUT_OF_MEMORY",
-            "PREEMPTED",
             "TIMEOUT",
             "ERROR",
         )
@@ -348,6 +348,16 @@ class Executor(RemoteExecutor):
                     self.report_job_success(j)
                     any_finished = True
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
+                elif status == "PREEMPTED" and not self._preemption_warning:
+                    self._preemption_warning = True
+                    self.logger.warning(
+                        """
+===== A Job preemption  occured! =====
+Leave Snakemake running, if possible. Otherwise Snakemake
+needs to restart this job upon a Snakemake restart.
+
+We leave it to SLURM to resume your job(s)"""
+                    )
                 elif status == "UNKNOWN":
                     # the job probably does not exist anymore, but 'sacct' did not work
                     # so we assume it is finished
