@@ -152,7 +152,7 @@ class Executor(RemoteExecutor):
 
         call += self.get_account_arg(job)
         call += self.get_partition_arg(job)
-        
+
         if self.settings.requeue:
             call += " --requeue"
 
