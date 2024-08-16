@@ -9,7 +9,7 @@ def delete_slurm_environment():
     still have the this environment. Needed to
     submit within a SLURM job context to avoid
     conflicting environments.
-    """"
+    """
     for var in os.environ:
         if 'SLURM' in var:
             os.unsetenv(var)
