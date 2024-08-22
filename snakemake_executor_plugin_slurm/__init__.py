@@ -26,7 +26,7 @@ from snakemake_interface_executor_plugins.jobs import (
 from snakemake_interface_common.exceptions import WorkflowError
 from snakemake_executor_plugin_slurm_jobstep import get_cpus_per_task
 
-from utils import delete_slurm_environment
+from .utils import delete_slurm_environment
 
 
 @dataclass
