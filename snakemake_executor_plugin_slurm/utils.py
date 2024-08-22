@@ -12,5 +12,5 @@ def delete_slurm_environment():
     conflicting environments.
     """
     for var in os.environ:
-        if "SLURM" in var:
+        if var.startswith("SLURM_"):
             del os.environ[var]
