@@ -40,6 +40,18 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
+    cancel_workflow_upon_failure: bool = field(
+        default=False,
+        metadata={
+            "help": """
+                    Negates the `--keep-going` flag in Snakemake.
+                    If set to True, the entire workflow will be canceled
+                    upon recognition of a failed job.
+                    """,
+            "env_var": False,
+            "required": False,
+        },
+    )
 
 
 # Required:
@@ -373,6 +385,8 @@ We leave it to SLURM to resume your job(s)"""
                     )
                     self.report_job_error(j, msg=msg, aux_logs=[j.aux["slurm_logfile"]])
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
+                    if self.settings.cancel_workflow_upon_failure:
+                        self.cancel_jobs(active_jobs)
                 else:  # still running?
                     yield j
 
