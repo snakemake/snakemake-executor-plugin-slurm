@@ -26,6 +26,8 @@ from snakemake_interface_executor_plugins.jobs import (
 from snakemake_interface_common.exceptions import WorkflowError
 from snakemake_executor_plugin_slurm_jobstep import get_cpus_per_task
 
+from .utils import delete_slurm_environment
+
 
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
@@ -97,10 +99,11 @@ class Executor(RemoteExecutor):
             if "SLURM_JOB_ID" in os.environ:
                 self.logger.warning(
                     "You are running snakemake in a SLURM job context. "
-                    "This is not recommended, as it may lead to unexpected behavior."
+                    "This is not recommended, as it may lead to unexpected behavior. "
                     "Please run Snakemake directly on the login node."
                 )
                 time.sleep(5)
+                delete_slurm_environment()
         done = True
 
     def additional_general_args(self):
