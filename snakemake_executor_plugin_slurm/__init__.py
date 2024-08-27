@@ -137,7 +137,7 @@ class Executor(RemoteExecutor):
             f"sbatch "
             f"--parsable "
             f"--job-name {self.run_uuid} "
-            f"--output {slurm_logfile} "
+            f"--output '{slurm_logfile}' "
             f"--export=ALL "
             f"--comment {comment_str}"
         )
