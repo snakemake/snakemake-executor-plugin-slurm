@@ -31,8 +31,6 @@ Usually, it is advisable to persist such settings via a
 [configuration profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles), which
 can be provided system-wide, per user, and in addition per workflow.
 
-The executor waits per default 40 seconds for its first check of the job status. Using `--slurm-init-seconds-before-status-checks=<time in seconds>` this behaviour can be altered.
-
 ## Ordinary SMP jobs
 
 Most jobs will be carried out by programs that are either single-core
@@ -180,6 +178,12 @@ rule myrule:
 ```
 
 Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles) to specify such resources.
+
+## Configuring Run Time Behaviour
+
+The executor waits per default 40 seconds for its first check of the job status. Using `--slurm-init-seconds-before-status-checks=<time in seconds>` this behaviour can be altered.
+
+Snakemake will abort local runs upon failure. Using the `--keep-going` flag, Snakemake will proceed to submit independent jobs, if a job fails. This plugin offers an additional flag to cancel the entire workflow, when a job fails - this might be helpful during development: `--slurm-cancel-workflow-upon-failure`. Note, that you can use `--rerun-incomplete`/`--ri` to proceed after a failed workflow (and fixing parameters), as usual.
 
 ## Software Recommendations
 
