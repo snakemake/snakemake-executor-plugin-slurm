@@ -408,6 +408,13 @@ We leave it to SLURM to resume your job(s)"""
                 )
             except subprocess.TimeoutExpired:
                 self.logger.warning("Unable to cancel jobs within a minute.")
+            except subprocess.CalledProcessError as e:
+                msg = e.stderr.decode().strip()
+                if msg:
+                    msg = f": {msg}"
+                raise WorkflowError(
+                    f"Unable to cancel jobs with scancel (exit code {e.returncode}){msg}"
+                )
 
     async def job_stati(self, command):
         """Obtain SLURM job status of all submitted jobs with sacct
