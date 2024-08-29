@@ -409,7 +409,7 @@ We leave it to SLURM to resume your job(s)"""
             except subprocess.TimeoutExpired:
                 self.logger.warning("Unable to cancel jobs within a minute.")
             except subprocess.CalledProcessError as e:
-                msg = e.stderr.decode().strip()
+                msg = e.stderr.strip()
                 if msg:
                     msg = f": {msg}"
                 raise WorkflowError(
