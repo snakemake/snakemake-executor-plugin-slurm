@@ -413,7 +413,8 @@ We leave it to SLURM to resume your job(s)"""
                 if msg:
                     msg = f": {msg}"
                 raise WorkflowError(
-                    f"Unable to cancel jobs with scancel (exit code {e.returncode}){msg}"
+                    "Unable to cancel jobs with scancel "
+                    f"(exit code {e.returncode}){msg}"
                 )
 
     async def job_stati(self, command):
