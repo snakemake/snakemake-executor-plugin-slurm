@@ -415,7 +415,7 @@ We leave it to SLURM to resume your job(s)"""
                 raise WorkflowError(
                     "Unable to cancel jobs with scancel "
                     f"(exit code {e.returncode}){msg}"
-                )
+                ) from e
 
     async def job_stati(self, command):
         """Obtain SLURM job status of all submitted jobs with sacct
