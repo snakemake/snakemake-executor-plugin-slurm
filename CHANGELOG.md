@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.10.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.9.0...v0.10.0) (2024-08-23)
+
+
+### Features
+
+* in job stability ([#137](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/137)) ([c27f5f8](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/c27f5f8b4dcf7c2d9bc34fd4870d13ff24c0dfae))
+
+
+### Bug Fixes
+
+* add --parsable to sbatch call for a more robust output parsing ([#125](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/125)) ([5e41d05](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/5e41d0577593909f8f0f255c8de29141bfd0bbe3))
+* issue [#109](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/109) - preemption is no longer considered a failed status ([#132](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/132)) ([6dad273](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6dad273b2f09ed8f10e3c26b92e2963c382e9fb8))
+
 ## [0.9.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.8.0...v0.9.0) (2024-08-06)
 
 
