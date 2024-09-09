@@ -149,7 +149,7 @@ class Executor(RemoteExecutor):
             f"sbatch "
             f"--parsable "
             f"--job-name {self.run_uuid} "
-            f"--output {slurm_logfile} "
+            f"--output '{slurm_logfile}' "
             f"--export=ALL "
             f"--comment {comment_str}"
         )
@@ -422,6 +422,14 @@ We leave it to SLURM to resume your job(s)"""
                 )
             except subprocess.TimeoutExpired:
                 self.logger.warning("Unable to cancel jobs within a minute.")
+            except subprocess.CalledProcessError as e:
+                msg = e.stderr.strip()
+                if msg:
+                    msg = f": {msg}"
+                raise WorkflowError(
+                    "Unable to cancel jobs with scancel "
+                    f"(exit code {e.returncode}){msg}"
+                ) from e
 
     async def job_stati(self, command):
         """Obtain SLURM job status of all submitted jobs with sacct
