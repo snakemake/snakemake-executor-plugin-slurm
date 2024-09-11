@@ -376,6 +376,7 @@ needs to restart this job upon a Snakemake restart.
 
 We leave it to SLURM to resume your job(s)"""
                     )
+                    yield j
                 elif status == "UNKNOWN":
                     # the job probably does not exist anymore, but 'sacct' did not work
                     # so we assume it is finished
