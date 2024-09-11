@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.10.0...v0.10.1) (2024-09-07)
+
+
+### Bug Fixes
+
+* logfile quoting and scancel error handling ([#140](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/140)) ([cb5d656](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/cb5d6568dfdfa3c2235bfe89a1e6ef294ab3ad8d))
+
 ## [0.10.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.9.0...v0.10.0) (2024-08-23)
 
 
