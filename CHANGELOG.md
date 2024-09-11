@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.10.1...v0.10.2) (2024-09-11)
+
+
+### Bug Fixes
+
+* added forgotten yield in case of job preemption ([#148](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/148)) ([95e5fb7](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/95e5fb7cbeb6b874a83571328537b85493e10d97))
+
 ## [0.10.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.10.0...v0.10.1) (2024-09-07)
 
 
