@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.10.2...v0.11.0) (2024-09-27)
+
+
+### Features
+
+* added requeue option to client ([#136](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/136)) ([b0ff160](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/b0ff160533536e2d82f738ad6e9e1a268ba616cb))
+
 ## [0.10.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.10.1...v0.10.2) (2024-09-11)
 
 
