@@ -42,6 +42,18 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
+    requeue: bool = field(
+        default=False,
+        metadata={
+            "help": """
+                    Allow requeuing preempted of failed jobs,
+                    if no cluster default. Results in `sbatch ... --requeue ...`
+                    This flag has no effect, if not set.
+                    """,
+            "env_var": False,
+            "required": False,
+        },
+    )
 
 
 # Required:
@@ -79,8 +91,6 @@ class Executor(RemoteExecutor):
         self._fallback_account_arg = None
         self._fallback_partition = None
         self._preemption_warning = False  # no preemption warning has been issued
-        # providing a short-hand, even if subsequent calls seem redundant
-        self.settings: ExecutorSettings = self.workflow.executor_settings
 
     def warn_on_jobcontext(self, done=None):
         if not done:
@@ -144,6 +154,9 @@ class Executor(RemoteExecutor):
 
         call += self.get_account_arg(job)
         call += self.get_partition_arg(job)
+
+        if self.workflow.executor_settings.requeue:
+            call += " --requeue"
 
         if job.resources.get("clusters"):
             call += f" --clusters {job.resources.clusters}"
