@@ -91,8 +91,6 @@ class Executor(RemoteExecutor):
         self._fallback_account_arg = None
         self._fallback_partition = None
         self._preemption_warning = False  # no preemption warning has been issued
-        # providing a short-hand, even if subsequent calls seem redundant
-        self.settings: ExecutorSettings = self.workflow.executor_settings
 
     def warn_on_jobcontext(self, done=None):
         if not done:
@@ -157,7 +155,7 @@ class Executor(RemoteExecutor):
         call += self.get_account_arg(job)
         call += self.get_partition_arg(job)
 
-        if self.settings.requeue:
+        if self.workflow.settings.requeue:
             call += " --requeue"
 
         if job.resources.get("clusters"):
