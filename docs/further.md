@@ -292,6 +292,8 @@ If a workflow fails entirely (e.g. when there are cluster failures), it can be r
 
 ```console
 snakemake ... --rerun-incomplete
+# or the short-hand version
+snakemake ... --ri
 ```
 
 The "requeue" option allows jobs to be resubmitted automatically if they fail or are preempted. This might be the default on your cluster, already. You can check your cluster's requeue settings with 
