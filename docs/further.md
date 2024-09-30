@@ -203,7 +203,7 @@ rule ...:
        "bio/VinaLC"
 ```
 
-This will, internally, trigger a `module load bio`/VinaLC` immediately prior to execution. 
+This will, internally, trigger a `module load bio VinaLC` immediately prior to execution. 
 
 Note, that 
 - environment modules are best specified in a configuration file.
