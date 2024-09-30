@@ -160,6 +160,15 @@ set-resources:
         cpus_per_task: 40
 ```
 
+### Additional Command Line Flags
+
+This plugin defines additional command line flags. As always the can be used on the command line or in a profile.
+
+| Flag        | Meaning  |
+|-------------|----------|
+| `--slurm_init_seconds_before_status_checks`| will modify the default time (40 seconds) before the initial status check - usefull for development purposes|
+| `--slurm_requeue` | allows jobs to be resubmitted automatically if they fail or are preempted. See the [section "retries" for details](#retries)|
+
 ## Multicluster Support
 
 For reasons of scheduling multicluster support is provided by the `clusters` flag in resources sections. Note, that you have to write `clusters`, not `cluster`! 
@@ -271,7 +280,7 @@ export SNAKEMAKE_PROFILE="$HOME/.config/snakemake"
 
 ==This is ongoing development. Eventually you will be able to annotate different file access patterns.==
 
-## Retries - Or Trying again when a Job failed
+## <a name="retries"></a> Retries - Or Trying again when a Job failed
 
 Some cluster jobs may fail. In this case Snakemake can be instructed to try another submit before the entire workflow fails, in this example up to 3 times:
 
@@ -282,7 +291,19 @@ snakemake --retries=3
 If a workflow fails entirely (e.g. when there are cluster failures), it can be resumed as any other Snakemake workflow:
 
 ```console
-snakemake --rerun-incomplete
+snakemake ... --rerun-incomplete
+```
+
+The "requeue" option allows jobs to be resubmitted automatically if they fail or are preempted. This might be the default on your cluster, already. You can check your cluster's requeue settings with 
+
+```console
+scontrol show config | grep Requeue
+```
+
+This requeue feature is integrated into the SLURM submission command, adding the --requeue parameter to allow requeuing after node failure or preemption using:
+
+```console
+snakemake --slurm-requeue ...
 ```
 
 To prevent failures due to faulty parameterization, we can dynamically adjust the runtime behaviour:
