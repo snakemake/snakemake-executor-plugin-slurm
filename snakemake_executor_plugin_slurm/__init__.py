@@ -31,6 +31,41 @@ from .utils import delete_slurm_environment
 
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
+    logdir: Optional[str] = field(
+        metadata=(
+            "help"="""
+                   Per default the SLURM log directory (writing output is required by SLURM)
+                   is '.snakemake/slurm_logs', relative to the `--directory` setting
+                   of Snakemake. This flag allows to set an alternative directory prefix.
+                   """,
+            "env_var": False,
+            "required": False,
+        )
+    ),
+    keep_successful_logs: bool = field(
+        metadata=(
+            "help"="""
+                   Per default SLURM log files will be deleted upon sucessful completion
+                   of a job. Whenever a SLURM job fails, its log file will be preserved.
+                   This flag allows to keep all SLURM log files. 
+                   """
+            "env_var": False,
+            "required": False,
+        )
+    ),
+    delete_logfiles_older_than: Optional[int] = field(
+        default=10,
+        metadata=(
+            "help"="""
+                   Per default SLURM log files in the SLURM log directory of a workflow
+                   will be deleted after 10 days. Setting this flag allows to change this behaviour.
+                   If set to '0', no old files will be deleted.
+                   Setting `--slurm_logdir` (or `slurm_logdir` in a profile), allows
+                   to gather all logfiles at a central directory and limits the number of
+                   small files, considerably.
+                   """
+        )
+    ),
     init_seconds_before_status_checks: Optional[int] = field(
         default=40,
         metadata={
@@ -41,7 +76,7 @@ class ExecutorSettings(ExecutorSettingsBase):
             "env_var": False,
             "required": False,
         },
-    )
+    ),
     requeue: bool = field(
         default=False,
         metadata={
