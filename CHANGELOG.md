@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.11.0...v0.11.1) (2024-10-21)
+
+
+### Documentation
+
+* requeue ([#153](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/153)) ([d91ee5f](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/d91ee5f2c757424510cb0d600e916bde66d8261f))
+
 ## [0.11.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.10.2...v0.11.0) (2024-09-27)
 
 
