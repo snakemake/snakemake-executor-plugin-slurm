@@ -281,7 +281,7 @@ export SNAKEMAKE_PROFILE="$HOME/.config/snakemake"
 
 ==This is ongoing development. Eventually you will be able to annotate different file access patterns.==
 
-## <a name="retries"></a> Retries - Or Trying again when a Job failed
+## Retries - Or Trying again when a Job failed
 
 Some cluster jobs may fail. In this case Snakemake can be instructed to try another submit before the entire workflow fails, in this example up to 3 times:
 
