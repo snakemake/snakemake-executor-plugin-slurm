@@ -162,7 +162,8 @@ set-resources:
 
 ### Additional Command Line Flags
 
-This plugin defines additional command line flags. As always the can be used on the command line or in a profile.
+This plugin defines additional command line flags.
+As always, these can be set on the command line or in a profile.
 
 | Flag        | Meaning  |
 |-------------|----------|
