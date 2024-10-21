@@ -160,6 +160,16 @@ set-resources:
         cpus_per_task: 40
 ```
 
+### Additional Command Line Flags
+
+This plugin defines additional command line flags.
+As always, these can be set on the command line or in a profile.
+
+| Flag        | Meaning  |
+|-------------|----------|
+| `--slurm_init_seconds_before_status_checks`| modify time before initial job status check; the default of 40 seconds avoids load on querying slurm databases, but shorter wait times are for example useful during workflow development |
+| `--slurm_requeue` | allows jobs to be resubmitted automatically if they fail or are preempted. See the [section "retries" for details](#retries)|
+
 ## Multicluster Support
 
 For reasons of scheduling multicluster support is provided by the `clusters` flag in resources sections. Note, that you have to write `clusters`, not `cluster`! 
@@ -203,7 +213,7 @@ rule ...:
        "bio/VinaLC"
 ```
 
-This will, internally, trigger a `module load bio`/VinaLC` immediately prior to execution. 
+This will, internally, trigger a `module load bio VinaLC` immediately prior to execution. 
 
 Note, that 
 - environment modules are best specified in a configuration file.
@@ -282,7 +292,21 @@ snakemake --retries=3
 If a workflow fails entirely (e.g. when there are cluster failures), it can be resumed as any other Snakemake workflow:
 
 ```console
-snakemake --rerun-incomplete
+snakemake ... --rerun-incomplete
+# or the short-hand version
+snakemake ... --ri
+```
+
+The "requeue" option allows jobs to be resubmitted automatically if they fail or are preempted. This is similar to Snakemake's `--retries`, except a SLURM job will not be considered failed and priority may be accumulated during pending. This might be the default on your cluster, already. You can check your cluster's requeue settings with 
+
+```console
+scontrol show config | grep Requeue
+```
+
+This requeue feature is integrated into the SLURM submission command, adding the --requeue parameter to allow requeuing after node failure or preemption using:
+
+```console
+snakemake --slurm-requeue ...
 ```
 
 To prevent failures due to faulty parameterization, we can dynamically adjust the runtime behaviour:
