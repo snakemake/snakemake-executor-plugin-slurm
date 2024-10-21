@@ -167,7 +167,7 @@ As always, these can be set on the command line or in a profile.
 
 | Flag        | Meaning  |
 |-------------|----------|
-| `--slurm_init_seconds_before_status_checks`| will modify the default time (40 seconds) before the initial status check - usefull for development purposes|
+| `--slurm_init_seconds_before_status_checks`| modify time before initial job status check; the default of 40 seconds avoids load on querying slurm databases, but shorter wait times are for example useful during workflow development |
 | `--slurm_requeue` | allows jobs to be resubmitted automatically if they fail or are preempted. See the [section "retries" for details](#retries)|
 
 ## Multicluster Support
