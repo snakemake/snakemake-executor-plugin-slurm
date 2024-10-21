@@ -297,7 +297,7 @@ snakemake ... --rerun-incomplete
 snakemake ... --ri
 ```
 
-The "requeue" option allows jobs to be resubmitted automatically if they fail or are preempted. This might be the default on your cluster, already. You can check your cluster's requeue settings with 
+The "requeue" option allows jobs to be resubmitted automatically if they fail or are preempted. This is similar to Snakemake's `--retries`, except a SLURM job will not be considered failed and priority may be accumulated during pending. This might be the default on your cluster, already. You can check your cluster's requeue settings with 
 
 ```console
 scontrol show config | grep Requeue
