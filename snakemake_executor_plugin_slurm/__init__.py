@@ -31,59 +31,51 @@ from .utils import delete_slurm_environment
 
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
-    logdir: Optional[str] = (
-        field(
+    logdir: Optional[str] = field(
+            default=f"/home/{os.environ['USER']}/.snakemake/slurm_logs",
             metadata={
                 "help": """
                    Per default the SLURM log directory (writing output is required by SLURM)
-                   is '.snakemake/slurm_logs', relative to the `--directory` setting
-                   of Snakemake. This flag allows to set an alternative directory prefix.
+                   is '~/.snakemake/slurm_logs'. This flag allows to set an alternative 
+                   directory prefix.
                    """,
                 "env_var": False,
                 "required": False,
             }
-        ),
     )
-    keep_successful_logs: bool = (
-        field(
+    keep_successful_logs: bool = field(
+            default=False,
             metadata={
                 "help": """
                    Per default SLURM log files will be deleted upon sucessful completion
                    of a job. Whenever a SLURM job fails, its log file will be preserved.
-                   This flag allows to keep all SLURM log files. 
+                   This flag allows to keep all SLURM log files, even those of successful
+                   jobs.
                    """,
                 "env_var": False,
                 "required": False,
-            }
-        ),
-    )
-    delete_logfiles_older_than: Optional[int] = (
-        field(
-            default=10,
-            metadata={
-                "help": """
-                   Per default SLURM log files in the SLURM log directory of a workflow
-                   will be deleted after 10 days. Setting this flag allows to change this behaviour.
-                   If set to '0', no old files will be deleted.
-                   Setting `--slurm_logdir` (or `slurm_logdir` in a profile), allows
-                   to gather all logfiles at a central directory and limits the number of
-                   small files, considerably.
-                   """
             },
-        ),
     )
-    init_seconds_before_status_checks: Optional[int] = (
-        field(
-            default=40,
-            metadata={
-                "help": """
-                    Defines the time in seconds before the first status
-                    check is performed after job submission.
-                    """,
-                "env_var": False,
-                "required": False,
-            },
-        ),
+    delete_logfiles_older_than: Optional[int] = field(
+        default=10,
+        metadata={
+            "help": """
+                Per default SLURM log files in the SLURM log directory of a workflow
+                will be deleted after 10 days. Setting this flag allows to change this behaviour.
+                If set to '0', no old files will be deleted.
+                """
+        },
+    )
+    init_seconds_before_status_checks: Optional[int] = field(
+        default=40,
+        metadata={
+            "help": """
+                Defines the time in seconds before the first status
+                check is performed after job submission.
+                """,
+            "env_var": False,
+            "required": False,
+        },
     )
     requeue: bool = field(
         default=False,
@@ -166,8 +158,10 @@ class Executor(RemoteExecutor):
         except AttributeError:
             wildcard_str = ""
 
+        # may be the default in home
+        log_prefix = self.workflow.executor_settings.logdir
         slurm_logfile = os.path.abspath(
-            f".snakemake/slurm_logs/{group_or_rule}/{wildcard_str}/%j.log"
+            f"{log_prefix}/{group_or_rule}/{wildcard_str}/%j.log"
         )
         logdir = os.path.dirname(slurm_logfile)
         # this behavior has been fixed in slurm 23.02, but there might be plenty of
