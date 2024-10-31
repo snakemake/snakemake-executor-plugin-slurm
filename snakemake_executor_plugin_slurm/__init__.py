@@ -217,7 +217,7 @@ class Executor(RemoteExecutor):
 
         self.logger.debug(f"sbatch call: {call}")
         try:
-            process = subprocess.Popen(call, hell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            process = subprocess.Popen(call, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = process.communicate()
             if process.returncode != 0:
                 raise subprocess.CalledProcessError(
