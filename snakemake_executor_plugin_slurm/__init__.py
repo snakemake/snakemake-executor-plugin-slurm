@@ -244,6 +244,8 @@ class Executor(RemoteExecutor):
         # To extract the job id we split by semicolon and take the first element
         # (this also works if no cluster name was provided)
         slurm_jobid = out.strip().split(";")[0]
+        if not slurm_jobid:
+            raise WorkflowError("Failed to retrieve SLURM job ID from sbatch output.")
         slurm_logfile = slurm_logfile.replace("%j", slurm_jobid)
         self.logger.info(
             f"Job {job.jobid} has been submitted with SLURM jobid {slurm_jobid} "
