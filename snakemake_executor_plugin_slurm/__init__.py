@@ -217,12 +217,25 @@ class Executor(RemoteExecutor):
 
         self.logger.debug(f"sbatch call: {call}")
         try:
-            out = subprocess.check_output(
-                call, shell=True, text=True, stderr=subprocess.STDOUT
-            ).strip()
+            process = subprocess.Popen(
+                call,
+                shell=True,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            out, err = process.communicate()
+            if process.returncode != 0:
+                raise subprocess.CalledProcessError(
+                    process.returncode, call, output=err
+                )
         except subprocess.CalledProcessError as e:
             raise WorkflowError(
                 f"SLURM job submission failed. The error message was {e.output}"
+            )
+        if err:  # any other error message?
+            raise WorkflowError(
+                f"SLURM job submission failed. The error message was {err}"
             )
 
         # multicluster submissions yield submission infos like
@@ -230,7 +243,9 @@ class Executor(RemoteExecutor):
         # --parsable option it simply yields "<id>;<name>".
         # To extract the job id we split by semicolon and take the first element
         # (this also works if no cluster name was provided)
-        slurm_jobid = out.split(";")[0]
+        slurm_jobid = out.strip().split(";")[0]
+        if not slurm_jobid:
+            raise WorkflowError("Failed to retrieve SLURM job ID from sbatch output.")
         slurm_logfile = slurm_logfile.replace("%j", slurm_jobid)
         self.logger.info(
             f"Job {job.jobid} has been submitted with SLURM jobid {slurm_jobid} "
