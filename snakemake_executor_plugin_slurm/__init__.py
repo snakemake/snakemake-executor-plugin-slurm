@@ -233,7 +233,7 @@ class Executor(RemoteExecutor):
             raise WorkflowError(
                 f"SLURM job submission failed. The error message was {e.output}"
             )
-        if err:  # any other error message?
+        if "submission failed" in err:  # any other error message indicating failure?
             raise WorkflowError(
                 f"SLURM job submission failed. The error message was {err}"
             )
