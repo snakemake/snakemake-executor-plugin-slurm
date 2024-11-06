@@ -2,8 +2,13 @@ name: Post to Mastodon on PR Merge
 
 on:
   pull_request:
+    branches:
+      - main
     types:
       - closed
+
+permissions:
+  pull-request: read
 
 jobs:
   post_to_mastodon:
