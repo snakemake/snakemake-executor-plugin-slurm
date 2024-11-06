@@ -11,7 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Post to Mastodon
-        run: |
+      - uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 2
+          max_attempts: 3
+          command: |
           curl -X POST -H "Authorization: Bearer ${{ secrets.MASTODON_ACCESS_TOKEN }}" \
           -F "status=Pull request #${{ github.event.pull_request.number }} merged: ${{ github.event.pull_request.title }}" \
-          https://fediscience.org/api/v1/statuses
+          https://fediscience.org/api/v1/statuses \
+          -w "\nResponse code: %{http_code}\n" \
+          -f || {
+            echo "Failed to post to Mastodon"
+            exit 1
+          }
