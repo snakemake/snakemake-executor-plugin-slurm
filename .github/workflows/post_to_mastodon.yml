@@ -8,7 +8,7 @@ on:
       - closed
 
 permissions:
-  pull-request: read
+  pull-requests: read
 
 jobs:
   post_to_mastodon:
