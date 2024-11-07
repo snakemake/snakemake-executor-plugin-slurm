@@ -1,10 +1,8 @@
-# The Executor Plugin for HPC Clusters using the SLURM Batch System
-
-## The general Idea
+### The general Idea
 
 To use this plugin, log in to your cluster's head node (sometimes called the "login" node), activate your environment as usual, and start Snakemake. Snakemake will then submit your jobs as cluster jobs.
 
-## Specifying Account and Partition
+### Specifying Account and Partition
 
 Most SLURM clusters have two mandatory resource indicators for
 accounting and scheduling, the account and a
@@ -61,7 +59,7 @@ rule a:
 ```
 instead of the `threads` parameter. Parameters in the `resources` section will take precedence.
 
-## MPI jobs
+### MPI jobs
 
 Snakemake\'s SLURM backend also supports MPI jobs, see
 `snakefiles-mpi`{.interpreted-text role="ref"} for details. When using
@@ -100,7 +98,7 @@ To label a rule as a non-cluster rule, use the `localrules` directive. Place it 
 localrules: <rule_a>, <rule_b>
 ```
 
-## Advanced Resource Specifications
+### Advanced Resource Specifications
 
 A workflow rule may support several
 [resource specifications](https://snakemake.readthedocs.io/en/latest/snakefiles/rules.html#resources).
@@ -160,7 +158,7 @@ set-resources:
         cpus_per_task: 40
 ```
 
-### Additional Command Line Flags
+#### Additional Command Line Flags
 
 This plugin defines additional command line flags.
 As always, these can be set on the command line or in a profile.
@@ -403,7 +401,7 @@ set-resources:
 Be sure to use sensible settings for your cluster and make use of parallel execution (e.g. threads) and [global profiles](#using-profiles) to avoid I/O contention. 
 
 
-## Summary:
+### Summary:
 
 When put together, a frequent command line looks like:
 
