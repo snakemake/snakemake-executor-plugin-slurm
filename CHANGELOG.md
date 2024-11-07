@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.11.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.11.1...v0.11.2) (2024-11-07)
+
+
+### Bug Fixes
+
+* sbatch stderr parsing ([#161](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/161)) ([0368197](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/0368197001afad828d810edb40a02fc4515a3d8f))
+* sbatch stderr parsing [#2](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/2) ([#165](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/165)) ([348e537](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/348e537c62bf5792643acaac0a75689c37774b25))
+
+## [0.11.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.11.0...v0.11.1) (2024-10-21)
+
+
+### Documentation
+
+* requeue ([#153](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/153)) ([d91ee5f](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/d91ee5f2c757424510cb0d600e916bde66d8261f))
+
 ## [0.11.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.10.2...v0.11.0) (2024-09-27)
 
 
