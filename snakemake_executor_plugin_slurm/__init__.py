@@ -231,7 +231,7 @@ class Executor(RemoteExecutor):
                 )
         except subprocess.CalledProcessError as e:
             raise WorkflowError(
-                f"sbatch command failure. The error message was {e.output}."
+                f"SLURM sbatch failed. The error message was {e.output}"
             )
         # any other error message indicating failure?
         if "submission failed" in err:
