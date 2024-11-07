@@ -12,6 +12,7 @@ import subprocess
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+import pathlib
 from typing import List, Generator, Optional
 import uuid
 from snakemake_interface_executor_plugins.executors.base import SubmittedJobInfo
@@ -31,8 +32,8 @@ from .utils import delete_slurm_environment
 
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
-    logdir: Optional[str] = field(
-            default=f"/home/{os.environ['USER']}/.snakemake/slurm_logs",
+    logprefix: Optional[str] = field(
+            default=f"/home/{os.environ['USER']}",
             metadata={
                 "help": """
                    Per default the SLURM log directory (writing output is required by SLURM)
@@ -158,11 +159,12 @@ class Executor(RemoteExecutor):
         except AttributeError:
             wildcard_str = ""
 
-        # may be the default in home
-        log_prefix = self.workflow.executor_settings.logdir
-        slurm_logfile = os.path.abspath(
-            f"{log_prefix}/{group_or_rule}/{wildcard_str}/%j.log"
-        )
+        log_prefix = self.workflow.executor_settings.logprefix
+        log_path = pathlib.Path(log_prefix) / ".snakemake/slurm_logs/{log_path}/{group_or_rule}/{wildcard_str}/%j.log"
+        slurm_logfile = log_path.resolve()
+        self.logger.debug(f"SLURM log file: {slurm_logfile}")
+        sys.exit()
+        
         logdir = os.path.dirname(slurm_logfile)
         # this behavior has been fixed in slurm 23.02, but there might be plenty of
         # older versions around, hence we should rather be conservative here.
@@ -417,6 +419,9 @@ class Executor(RemoteExecutor):
                     self.report_job_success(j)
                     any_finished = True
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
+                    if not self.workflow.executor_settings.keep_successful_logs:
+                        # delete the log file of a successful job
+                        os.remove(j.aux["slurm_logfile"])
                 elif status == "PREEMPTED" and not self._preemption_warning:
                     self._preemption_warning = True
                     self.logger.warning(
