@@ -168,11 +168,11 @@ As always, these can be set on the command line or in a profile.
 | `--slurm_init_seconds_before_status_checks`| modify time before initial job status check; the default of 40 seconds avoids load on querying slurm databases, but shorter wait times are for example useful during workflow development |
 | `--slurm_requeue` | allows jobs to be resubmitted automatically if they fail or are preempted. See the [section "retries" for details](#retries)|
 
-### Multicluster Support
+#### Multicluster Support
 
 For reasons of scheduling multicluster support is provided by the `clusters` flag in resources sections. Note, that you have to write `clusters`, not `cluster`! 
 
-### Additional Custom Job Configuration
+#### Additional Custom Job Configuration
 
 SLURM installations can support custom plugins, which may add support
 for additional flags to `sbatch`. In addition, there are various batch options not directly supported via the resource definitions
