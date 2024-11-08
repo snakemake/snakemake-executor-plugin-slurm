@@ -22,7 +22,7 @@ jobs:
           max_attempts: 3
           command: |
           curl -X POST -H "Authorization: Bearer ${{ secrets.MASTODON_ACCESS_TOKEN }}" \
-          -F "status=Pull request #${{ github.event.pull_request.number }} merged: ${{ github.event.pull_request.title }}" \
+          -F "status=New release in Snakemake project '${{ github.event.repository.full_name }}' for pull request '#${{ github.event.pull_request.number }}' merged: '${{ github.event.pull_request.title }}'. Get the latest release from #Bioconda or #Pypi." \
           https://fediscience.org/api/v1/statuses \
           -w "\nResponse code: %{http_code}\n" \
           -f || {
