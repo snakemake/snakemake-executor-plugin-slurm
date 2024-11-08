@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.11.2...v0.12.0) (2024-11-08)
+
+
+### Features
+
+* experimenting with automated release post to Mastodon ([#166](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/166)) ([c06325d](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/c06325d5fae1ebd0940a6edd0136533b4de37711))
+
 ## [0.11.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.11.1...v0.11.2) (2024-11-07)
 
 
