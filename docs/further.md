@@ -358,7 +358,7 @@ When put together, a frequent command line looks like:
 ```console
 $ snakemake --workflow-profile <path> \
 > -j unlimited \ # assuming an unlimited number of jobs
-> --worflow-profile <profile directory with a `config.yaml`>
+> --workflow-profile <profile directory with a `config.yaml`>
 > --configfile config/config.yaml \
 > --directory <path> # assuming a data path on a different file system than the workflow
 ```
