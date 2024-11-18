@@ -12,7 +12,6 @@ import subprocess
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-import pathlib
 from typing import List, Generator, Optional
 import uuid
 from snakemake_interface_executor_plugins.executors.base import SubmittedJobInfo
