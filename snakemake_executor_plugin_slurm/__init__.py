@@ -27,35 +27,35 @@ from snakemake_interface_executor_plugins.jobs import (
 from snakemake_interface_common.exceptions import WorkflowError
 from snakemake_executor_plugin_slurm_jobstep import get_cpus_per_task
 
-from .utils import delete_slurm_environment
+from .utils import delete_slurm_environment, clean_old_logs
 
 
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
-    logprefix: Optional[str] = field(
-            default=f"/home/{os.environ['USER']}",
-            metadata={
-                "help": """
+    logdir: Optional[str] = field(
+        default=f"/home/{os.environ['USER']}/.snakemake/slurm_logs",
+        metadata={
+            "help": """
                    Per default the SLURM log directory (writing output is required by SLURM)
                    is '~/.snakemake/slurm_logs'. This flag allows to set an alternative 
-                   directory prefix.
+                   directory.
                    """,
-                "env_var": False,
-                "required": False,
-            }
+            "env_var": False,
+            "required": False,
+        },
     )
     keep_successful_logs: bool = field(
-            default=False,
-            metadata={
-                "help": """
+        default=False,
+        metadata={
+            "help": """
                    Per default SLURM log files will be deleted upon sucessful completion
                    of a job. Whenever a SLURM job fails, its log file will be preserved.
                    This flag allows to keep all SLURM log files, even those of successful
                    jobs.
                    """,
-                "env_var": False,
-                "required": False,
-            },
+            "env_var": False,
+            "required": False,
+        },
     )
     delete_logfiles_older_than: Optional[int] = field(
         default=10,
@@ -128,6 +128,13 @@ class Executor(RemoteExecutor):
         self._fallback_partition = None
         self._preemption_warning = False  # no preemption warning has been issued
 
+    def __del__(self):
+        # the logger attribute is not available in this destructor!
+        clean_old_logs(
+            self.workflow.executor_settings.logdir,
+            self.workflow.executor_settings.delete_logfiles_older_than,
+        )
+
     def warn_on_jobcontext(self, done=None):
         if not done:
             if "SLURM_JOB_ID" in os.environ:
@@ -139,6 +146,9 @@ class Executor(RemoteExecutor):
                 time.sleep(5)
                 delete_slurm_environment()
         done = True
+
+    # def delete_old_logs(self):
+    #    self.workflow.executor_settings.delete_logfiles_older_than
 
     def additional_general_args(self):
         return "--executor slurm-jobstep --jobs 1"
@@ -159,21 +169,21 @@ class Executor(RemoteExecutor):
         except AttributeError:
             wildcard_str = ""
 
-        log_prefix = self.workflow.executor_settings.logprefix
-        log_path = pathlib.Path(log_prefix) / ".snakemake/slurm_logs/{log_path}/{group_or_rule}/{wildcard_str}/%j.log"
-        slurm_logfile = log_path.resolve()
-        self.logger.debug(f"SLURM log file: {slurm_logfile}")
-        sys.exit()
-        
-        logdir = os.path.dirname(slurm_logfile)
+        slurm_logfile = (
+            self.workflow.executor_settings.logdir
+            + os.path.sep
+            + "{log_path}/{group_or_rule}/{wildcard_str}/%j.log"
+        )
+
+        slurm_logdir = os.path.dirname(slurm_logfile)
         # this behavior has been fixed in slurm 23.02, but there might be plenty of
         # older versions around, hence we should rather be conservative here.
-        assert "%j" not in logdir, (
+        assert "%j" not in slurm_logdir, (
             "bug: jobid placeholder in parent dir of logfile. This does not work as "
             "we have to create that dir before submission in order to make sbatch "
             "happy. Otherwise we get silent fails without logfiles being created."
         )
-        os.makedirs(logdir, exist_ok=True)
+        os.makedirs(slurm_logdir, exist_ok=True)
 
         # generic part of a submission string:
         # we use a run_uuid as the job-name, to allow `--name`-based
@@ -420,7 +430,9 @@ class Executor(RemoteExecutor):
                     any_finished = True
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
                     if not self.workflow.executor_settings.keep_successful_logs:
-                        # delete the log file of a successful job
+                        self.logger.debug(
+                            f"removing log for successful job with SLURM ID '{j.external_jobid}'"
+                        )
                         os.remove(j.aux["slurm_logfile"])
                 elif status == "PREEMPTED" and not self._preemption_warning:
                     self._preemption_warning = True
