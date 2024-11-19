@@ -462,7 +462,13 @@ class Executor(RemoteExecutor):
                             f"""removing log for successful job
                                 with SLURM ID '{j.external_jobid}'"""
                         )
-                        os.remove(j.aux["slurm_logfile"])
+                        try:
+                            if os.path.exists(j.aux["slurm_logfile"]):
+                                os.remove(j.aux["slurm_logfile"])
+                        except (OSError, FileNotFoundError) as e:
+                            self.logger.warning(
+                                f"Could not remove log file {j.aux['slurm_logfile']}: {e}"
+                            )
                 elif status == "PREEMPTED" and not self._preemption_warning:
                     self._preemption_warning = True
                     self.logger.warning(
