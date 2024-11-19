@@ -1,7 +1,6 @@
 # utility functions for the SLURM executor plugin
 
 import os
-import time
 import logging
 
 logger = logging.getLogger(__name__)
