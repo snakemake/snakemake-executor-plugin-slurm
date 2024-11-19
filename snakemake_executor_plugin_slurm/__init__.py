@@ -36,9 +36,9 @@ class ExecutorSettings(ExecutorSettingsBase):
         default=f"/home/{os.environ['USER']}/.snakemake/slurm_logs",
         metadata={
             "help": """
-                   Per default the SLURM log directory (writing output is required by SLURM)
-                   is '~/.snakemake/slurm_logs'. This flag allows to set an alternative 
-                   directory.
+                   Per default the SLURM log directory (writing output is
+                   required by SLURM) is '~/.snakemake/slurm_logs'.
+                   This flag allows to set an alternative directory.
                    """,
             "env_var": False,
             "required": False,
@@ -48,10 +48,11 @@ class ExecutorSettings(ExecutorSettingsBase):
         default=False,
         metadata={
             "help": """
-                   Per default SLURM log files will be deleted upon sucessful completion
-                   of a job. Whenever a SLURM job fails, its log file will be preserved.
-                   This flag allows to keep all SLURM log files, even those of successful
-                   jobs.
+                   Per default SLURM log files will be deleted upon sucessful
+                   completion of a job. Whenever a SLURM job fails, its log
+                   file will be preserved.
+                   This flag allows to keep all SLURM log files, even those
+                   of successful jobs.
                    """,
             "env_var": False,
             "required": False,
@@ -61,9 +62,11 @@ class ExecutorSettings(ExecutorSettingsBase):
         default=10,
         metadata={
             "help": """
-                Per default SLURM log files in the SLURM log directory of a workflow
-                will be deleted after 10 days. Setting this flag allows to change this behaviour.
-                If set to '0', no old files will be deleted.
+                Per default SLURM log files in the SLURM log directory
+                of a workflow will be deleted after 10 days. For this,
+                best leave the default log directory unaltered.
+                Setting this flag allows to change this behaviour.
+                If set to <=0, no old files will be deleted.
                 """
         },
     )
@@ -83,7 +86,8 @@ class ExecutorSettings(ExecutorSettingsBase):
         metadata={
             "help": """
                     Allow requeuing preempted of failed jobs,
-                    if no cluster default. Results in `sbatch ... --requeue ...`
+                    if no cluster default. Results in 
+                    `sbatch ... --requeue ...`
                     This flag has no effect, if not set.
                     """,
             "env_var": False,
