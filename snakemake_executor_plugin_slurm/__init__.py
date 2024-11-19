@@ -86,7 +86,7 @@ class ExecutorSettings(ExecutorSettingsBase):
         metadata={
             "help": """
                     Allow requeuing preempted of failed jobs,
-                    if no cluster default. Results in 
+                    if no cluster default. Results in
                     `sbatch ... --requeue ...`
                     This flag has no effect, if not set.
                     """,
@@ -458,7 +458,8 @@ class Executor(RemoteExecutor):
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
                     if not self.workflow.executor_settings.keep_successful_logs:
                         self.logger.debug(
-                            f"removing log for successful job with SLURM ID '{j.external_jobid}'"
+                            f"""removing log for successful job 
+                                with SLURM ID '{j.external_jobid}'"""
                         )
                         os.remove(j.aux["slurm_logfile"])
                 elif status == "PREEMPTED" and not self._preemption_warning:
