@@ -458,7 +458,7 @@ class Executor(RemoteExecutor):
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
                     if not self.workflow.executor_settings.keep_successful_logs:
                         self.logger.debug(
-                            f"""removing log for successful job 
+                            f"""removing log for successful job
                                 with SLURM ID '{j.external_jobid}'"""
                         )
                         os.remove(j.aux["slurm_logfile"])
