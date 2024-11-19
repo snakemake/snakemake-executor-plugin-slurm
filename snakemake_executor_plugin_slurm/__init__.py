@@ -133,7 +133,8 @@ class Executor(RemoteExecutor):
         # shorthands:
         age_cutoff = self.workflow.executor_settings.delete_logfiles_older_than
         logdir = self.workflow.executor_settings.logdir
-        if age_cutoff <= 0:
+        keep_all = self.workflow.executor_settings.keep_successful_logs
+        if age_cutoff <= 0 or keep_all:
             return
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
