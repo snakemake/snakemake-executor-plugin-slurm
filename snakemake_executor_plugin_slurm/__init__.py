@@ -470,7 +470,7 @@ class Executor(RemoteExecutor):
                                 os.remove(j.aux["slurm_logfile"])
                         except (OSError, FileNotFoundError) as e:
                             self.logger.warning(
-                                f"""Could not remove log file 
+                                f"""Could not remove log file
                                 {j.aux['slurm_logfile']}: {e}"""
                             )
                 elif status == "PREEMPTED" and not self._preemption_warning:
