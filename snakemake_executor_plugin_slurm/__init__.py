@@ -196,10 +196,11 @@ class Executor(RemoteExecutor):
         except AttributeError:
             wildcard_str = ""
 
-        slurm_logfile = (
-            self.workflow.executor_settings.logdir
-            + os.path.sep
-            + f"{group_or_rule}/{wildcard_str}/%j.log"
+        slurm_logfile = os.path.join(
+            self.workflow.executor_settings.logdir,
+            group_or_rule,
+            wildcard_str,
+            "%j.log"
         )
 
         slurm_logdir = os.path.dirname(slurm_logfile)
