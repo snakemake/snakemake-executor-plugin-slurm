@@ -33,7 +33,7 @@ from .utils import delete_slurm_environment
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
     logdir: Optional[str] = field(
-        default=os.path.join(os.path.expanduser('~'), ".snakemake", "slurm_logs"),
+        default=os.path.join(os.path.expanduser("~"), ".snakemake", "slurm_logs"),
         metadata={
             "help": """
                    Per default the SLURM log directory (writing output is
@@ -200,7 +200,7 @@ class Executor(RemoteExecutor):
             self.workflow.executor_settings.logdir,
             group_or_rule,
             wildcard_str,
-            "%j.log"
+            "%j.log",
         )
 
         slurm_logdir = os.path.dirname(slurm_logfile)
@@ -467,7 +467,8 @@ class Executor(RemoteExecutor):
                                 os.remove(j.aux["slurm_logfile"])
                         except (OSError, FileNotFoundError) as e:
                             self.logger.warning(
-                                f"Could not remove log file {j.aux['slurm_logfile']}: {e}"
+                                f"""Could not remove log file 
+                                {j.aux['slurm_logfile']}: {e}"""
                             )
                 elif status == "PREEMPTED" and not self._preemption_warning:
                     self._preemption_warning = True
