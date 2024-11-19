@@ -33,7 +33,7 @@ from .utils import delete_slurm_environment
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
     logdir: Optional[str] = field(
-        default=f"/home/{os.environ['USER']}/.snakemake/slurm_logs",
+        default=os.path.join(os.path.expanduser('~'), ".snakemake", "slurm_logs"),
         metadata={
             "help": """
                    Per default the SLURM log directory (writing output is
