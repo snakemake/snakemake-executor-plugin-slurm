@@ -165,8 +165,12 @@ As always, these can be set on the command line or in a profile.
 
 | Flag        | Meaning  |
 |-------------|----------|
-| `--slurm_init_seconds_before_status_checks`| modify time before initial job status check; the default of 40 seconds avoids load on querying slurm databases, but shorter wait times are for example useful during workflow development |
-| `--slurm_requeue` | allows jobs to be resubmitted automatically if they fail or are preempted. See the [section "retries" for details](#retries)|
+| `--slurm-logdir` | can change the default directory for SLURM logs, which is `~/.snakemake/slurm_logs/`|
+| `--slurm-keep-successful-logs` | per default all SLURM logs of successful jobs will be deleted upon job completion, these are just too many files too keep. The flag will overwrite this behaviour.|
+| `--slurm-delete-logfiles-older-than` | all log files in `--slurm-logdir` will be deleted after some time (default is after 10 days). If set to <= 0 this deletion will be skipped. The flag allows to change the default.|
+| `--slurm-init-seconds-before-status-checks`| modify time before initial job status check; the default of 40 seconds avoids load on querying slurm databases, but shorter wait times are for example useful during workflow development |
+| `--slurm-requeue` | allows jobs to be resubmitted automatically if they fail or are preempted. See the [section "retries" for details](#retries)|
+
 
 #### Multicluster Support
 

@@ -3,6 +3,7 @@ __copyright__ = "Copyright 2023, David Lähnemann, Johannes Köster, Christian M
 __email__ = "johannes.koester@uni-due.de"
 __license__ = "MIT"
 
+import atexit
 import csv
 from io import StringIO
 import os
@@ -31,13 +32,51 @@ from .utils import delete_slurm_environment
 
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
+    logdir: Optional[str] = field(
+        default=os.path.join(os.path.expanduser("~"), ".snakemake", "slurm_logs"),
+        metadata={
+            "help": """
+                   Per default the SLURM log directory (writing output is
+                   required by SLURM) is '~/.snakemake/slurm_logs'.
+                   This flag allows to set an alternative directory.
+                   """,
+            "env_var": False,
+            "required": False,
+        },
+    )
+    keep_successful_logs: bool = field(
+        default=False,
+        metadata={
+            "help": """
+                   Per default SLURM log files will be deleted upon sucessful
+                   completion of a job. Whenever a SLURM job fails, its log
+                   file will be preserved.
+                   This flag allows to keep all SLURM log files, even those
+                   of successful jobs.
+                   """,
+            "env_var": False,
+            "required": False,
+        },
+    )
+    delete_logfiles_older_than: Optional[int] = field(
+        default=10,
+        metadata={
+            "help": """
+                Per default SLURM log files in the SLURM log directory
+                of a workflow will be deleted after 10 days. For this,
+                best leave the default log directory unaltered.
+                Setting this flag allows to change this behaviour.
+                If set to <=0, no old files will be deleted.
+                """
+        },
+    )
     init_seconds_before_status_checks: Optional[int] = field(
         default=40,
         metadata={
             "help": """
-                    Defines the time in seconds before the first status
-                    check is performed after job submission.
-                    """,
+                Defines the time in seconds before the first status
+                check is performed after job submission.
+                """,
             "env_var": False,
             "required": False,
         },
@@ -47,7 +86,8 @@ class ExecutorSettings(ExecutorSettingsBase):
         metadata={
             "help": """
                     Allow requeuing preempted of failed jobs,
-                    if no cluster default. Results in `sbatch ... --requeue ...`
+                    if no cluster default. Results in
+                    `sbatch ... --requeue ...`
                     This flag has no effect, if not set.
                     """,
             "env_var": False,
@@ -83,6 +123,38 @@ common_settings = CommonSettings(
 # Required:
 # Implementation of your executor
 class Executor(RemoteExecutor):
+    def clean_old_logs(self) -> None:
+        """Delete files older than specified age from the SLURM log directory.
+
+        Args:
+            logdir: Path to the log directory
+            age_cutoff: Number of days after which files should be deleted
+        """
+        # shorthands:
+        age_cutoff = self.workflow.executor_settings.delete_logfiles_older_than
+        logdir = self.workflow.executor_settings.logdir
+        keep_all = self.workflow.executor_settings.keep_successful_logs
+        if age_cutoff <= 0 or keep_all:
+            return
+        cutoff_secs = age_cutoff * 86400
+        current_time = time.time()
+        self.logger.info(f"Cleaning up log files older than {age_cutoff} day(s)")
+        for root, _, files in os.walk(logdir, topdown=False):
+            for fname in files:
+                file_path = os.path.join(root, fname)
+                try:
+                    file_age = current_time - os.stat(file_path).st_mtime
+                    if file_age > cutoff_secs:
+                        os.remove(file_path)
+                except (OSError, FileNotFoundError) as e:
+                    self.logger.warning(f"Could not delete file {file_path}: {e}")
+            # remove empty rule top dir, if empty
+            try:
+                if len(os.listdir(root)) == 0:
+                    os.rmdir(root)
+            except (OSError, FileNotFoundError) as e:
+                self.logger.warning(f"Could not remove empty directory {root}: {e}")
+
     def __post_init__(self):
         # run check whether we are running in a SLURM job context
         self.warn_on_jobcontext()
@@ -91,6 +163,8 @@ class Executor(RemoteExecutor):
         self._fallback_account_arg = None
         self._fallback_partition = None
         self._preemption_warning = False  # no preemption warning has been issued
+
+        atexit.register(self.clean_old_logs)
 
     def warn_on_jobcontext(self, done=None):
         if not done:
@@ -103,6 +177,9 @@ class Executor(RemoteExecutor):
                 time.sleep(5)
                 delete_slurm_environment()
         done = True
+
+    # def delete_old_logs(self):
+    #    self.workflow.executor_settings.delete_logfiles_older_than
 
     def additional_general_args(self):
         return "--executor slurm-jobstep --jobs 1"
@@ -123,18 +200,22 @@ class Executor(RemoteExecutor):
         except AttributeError:
             wildcard_str = ""
 
-        slurm_logfile = os.path.abspath(
-            f".snakemake/slurm_logs/{group_or_rule}/{wildcard_str}/%j.log"
+        slurm_logfile = os.path.join(
+            self.workflow.executor_settings.logdir,
+            group_or_rule,
+            wildcard_str,
+            "%j.log",
         )
-        logdir = os.path.dirname(slurm_logfile)
+
+        slurm_logdir = os.path.dirname(slurm_logfile)
         # this behavior has been fixed in slurm 23.02, but there might be plenty of
         # older versions around, hence we should rather be conservative here.
-        assert "%j" not in logdir, (
+        assert "%j" not in slurm_logdir, (
             "bug: jobid placeholder in parent dir of logfile. This does not work as "
             "we have to create that dir before submission in order to make sbatch "
             "happy. Otherwise we get silent fails without logfiles being created."
         )
-        os.makedirs(logdir, exist_ok=True)
+        os.makedirs(slurm_logdir, exist_ok=True)
 
         # generic part of a submission string:
         # we use a run_uuid as the job-name, to allow `--name`-based
@@ -380,6 +461,19 @@ class Executor(RemoteExecutor):
                     self.report_job_success(j)
                     any_finished = True
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
+                    if not self.workflow.executor_settings.keep_successful_logs:
+                        self.logger.debug(
+                            f"""removing log for successful job
+                                with SLURM ID '{j.external_jobid}'"""
+                        )
+                        try:
+                            if os.path.exists(j.aux["slurm_logfile"]):
+                                os.remove(j.aux["slurm_logfile"])
+                        except (OSError, FileNotFoundError) as e:
+                            self.logger.warning(
+                                f"""Could not remove log file
+                                {j.aux['slurm_logfile']}: {e}"""
+                            )
                 elif status == "PREEMPTED" and not self._preemption_warning:
                     self._preemption_warning = True
                     self.logger.warning(
