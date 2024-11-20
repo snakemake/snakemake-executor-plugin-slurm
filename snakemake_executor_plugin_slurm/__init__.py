@@ -185,6 +185,16 @@ class Executor(RemoteExecutor):
 
         if job.resources.get("nodes", False):
             call += f" --nodes={job.resources.get('nodes', 1)}"
+        
+        gpu_count = job.resources.get("gpu", job.resources.get("nvidia_gpu", -1))
+        if gpu_count != -1:
+            call += f" --gres=gpu:{gpu_count}"
+
+            if job.resources.get("gpu_model"):
+                gpu = job.resources.gpu_model
+                if gpu[:7] == "nvidia-":
+                    gpu = gpu[7:]
+                call += ":" + gpu
 
         # fixes #40 - set ntasks regardless of mpi, because
         # SLURM v22.05 will require it for all jobs
