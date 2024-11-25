@@ -158,6 +158,9 @@ class Executor(RemoteExecutor):
         if self.workflow.executor_settings.requeue:
             call += " --requeue"
 
+        if job.resources.get("gres"):
+            call += f" --gres={job.resources.gres}"
+
         if job.resources.get("clusters"):
             call += f" --clusters {job.resources.clusters}"
 

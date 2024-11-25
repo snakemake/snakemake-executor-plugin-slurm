@@ -118,8 +118,9 @@ You can use the following specifications:
 | `--cpus-per-task`       | `cpus_per_task`      | number of cpus per task (in case of SMP, rather use `threads`)   |
 | `--nodes` | `nodes`    | number of nodes                       |
 | `--clusters` | `clusters` | comma separated string of clusters |
+| `--gres`  | `gres` | generic resource specification, e.g. `gres=gpu:1`, allows for arbitray strings after the `=` |
 
-Each of these can be part of a rule, e.g.:
+Each of these can be part of a rule, e.g.: 
 
 ``` python
 rule:
