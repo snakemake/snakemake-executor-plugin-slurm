@@ -158,6 +158,16 @@ class Executor(RemoteExecutor):
         if self.workflow.executor_settings.requeue:
             call += " --requeue"
 
+        if job.resources.get("gres"):
+            # Validate GRES format (e.g., "gpu:1", "gpu:tesla:2")
+            gres = job.resources.gres
+            if not re.match(r"^[a-zA-Z0-9]+:([a-zA-Z0-9]+:)?\d+$", gres):
+                raise WorkflowError(
+                    f"Invalid GRES format: {gres}. Expected format: "
+                    "'<name>:<number>' or '<name>:<type>:<number>'"
+                )
+            call += f" --gres={job.resources.gres}"
+
         if job.resources.get("clusters"):
             call += f" --clusters {job.resources.clusters}"
 
