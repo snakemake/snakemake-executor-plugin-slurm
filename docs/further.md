@@ -104,22 +104,7 @@ A workflow rule may support several
 [resource specifications](https://snakemake.readthedocs.io/en/latest/snakefiles/rules.html#resources).
 For a SLURM cluster, a mapping between Snakemake and SLURM needs to be performed.
 
-You can use the following specifications:
-
-| SLURM        | Snakemake  | Description              |
-|----------------|------------|---------------------------------------|
-| `--partition`  | `slurm_partition`    | the partition a rule/job is to use |
-| `--time`  | `runtime`  | the walltime per job in minutes       |
-| `--constraint`   | `constraint`        | may hold features on some clusters    |
-| `--mem`        | `mem`, `mem_mb`   | memory a cluster node must      |
-|                |            | provide (`mem`: string with unit), `mem_mb`: i                               |
-| `--mem-per-cpu`              | `mem_mb_per_cpu`     | memory per reserved CPU               |
-| `--ntasks`     | `tasks`    | number of concurrent tasks / ranks    |
-| `--cpus-per-task`       | `cpus_per_task`      | number of cpus per task (in case of SMP, rather use `threads`)   |
-| `--nodes` | `nodes`    | number of nodes                       |
-| `--clusters` | `clusters` | comma separated string of clusters |
-
-Each of these can be part of a rule, e.g.:
+Each of the listed command line flags can be part of a rule, e.g.:
 
 ``` python
 rule:
