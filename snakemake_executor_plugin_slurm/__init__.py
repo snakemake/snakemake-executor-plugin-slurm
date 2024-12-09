@@ -7,6 +7,7 @@ import atexit
 import csv
 from io import StringIO
 import os
+from pathlib import Path
 import re
 import shlex
 import subprocess
@@ -124,36 +125,26 @@ common_settings = CommonSettings(
 # Implementation of your executor
 class Executor(RemoteExecutor):
     def clean_old_logs(self) -> None:
-        """Delete files older than specified age from the SLURM log directory.
-
-        Args:
-            logdir: Path to the log directory
-            age_cutoff: Number of days after which files should be deleted
-        """
+        """Delete files older than specified age from the SLURM log directory."""
         # shorthands:
         age_cutoff = self.workflow.executor_settings.delete_logfiles_older_than
-        logdir = self.workflow.executor_settings.logdir
+        logdir_path = Path(self.workflow.executor_settings.logdir)
         keep_all = self.workflow.executor_settings.keep_successful_logs
         if age_cutoff <= 0 or keep_all:
             return
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
         self.logger.info(f"Cleaning up log files older than {age_cutoff} day(s)")
-        for root, _, files in os.walk(logdir, topdown=False):
-            for fname in files:
-                file_path = os.path.join(root, fname)
-                try:
-                    file_age = current_time - os.stat(file_path).st_mtime
-                    if file_age > cutoff_secs:
-                        os.remove(file_path)
-                except (OSError, FileNotFoundError) as e:
-                    self.logger.warning(f"Could not delete file {file_path}: {e}")
-            # remove empty rule top dir, if empty
+        for path in logdir_path.rglob("*"):
             try:
-                if len(os.listdir(root)) == 0:
-                    os.rmdir(root)
+                if path.is_file():
+                    file_age = current_time - path.stat().st_mtime
+                    if file_age > cutoff_secs:
+                        path.unlink()
+                    elif path.is_dir() and not any(path.iterdir()):
+                        path.rmdir()
             except (OSError, FileNotFoundError) as e:
-                self.logger.warning(f"Could not remove empty directory {root}: {e}")
+                self.logger.warning(f"Could not delete file {path}: {e}")
 
     def __post_init__(self):
         # run check whether we are running in a SLURM job context
