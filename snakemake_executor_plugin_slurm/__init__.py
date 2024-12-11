@@ -555,10 +555,15 @@ We leave it to SLURM to resume your job(s)"""
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
         except subprocess.CalledProcessError as e:
-            raise WorkflowError(
-                f"Unable to test the validity of the given or guessed SLURM account "
-                f"'{account}' with sacctmgr: {e.stderr}"
-            )
+            sacctmgr_report = f"Unable to test the validity of the given or guessed SLURM account '{account}' with sacctmgr: {e.stderr}."
+            try:
+                cmd = "sshare -U --format Account --noheader"
+                accounts = subprocess.check_output(
+                    cmd, shell=True, text=True, stderr=subprocess.PIPE
+                )
+            except subprocess.CalledProcessError as e:
+                sshare_report = "Unable to test the validity of the given or guessed SLURM account '{account}' with sshare: {e.stderr}."
+                raise WorkflowError(sacctmgr_report + " - and - " + sshare_report)
 
         # The set() has been introduced during review to eliminate
         # duplicates. They are not harmful, but disturbing to read.
