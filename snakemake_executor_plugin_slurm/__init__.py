@@ -109,7 +109,8 @@ class Executor(RemoteExecutor):
         return "--executor slurm-jobstep --jobs 1"
 
     def run_jobs(self, jobs: List[JobExecutorInterface]):
-        for _, same_rule_jobs in groupby(jobs, key=lambda job: job.rule.name):
+        for rule_name, group in groupby(jobs, key=lambda job: job.rule.name):
+            same_rule_jobs = list(group)  # Materialize the generator
             if len(same_rule_jobs) == 1:
                 self.run_job(same_rule_jobs[0])
             else:
@@ -121,7 +122,6 @@ class Executor(RemoteExecutor):
                 # more efficient array jobs. This should be somehow tunable, because
                 # it might contradict other efficiency goals.
                 ...
-
     def run_job(self, job: JobExecutorInterface):
         # Implement here how to run a job.
         # You can access the job's resources, etc.
