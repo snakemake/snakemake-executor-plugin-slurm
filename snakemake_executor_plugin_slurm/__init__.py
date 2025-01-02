@@ -83,6 +83,9 @@ common_settings = CommonSettings(
 # Required:
 # Implementation of your executor
 class Executor(RemoteExecutor):
+    gres_re = re.compile(r"^[a-zA-Z0-9_]+:([a-zA-Z0-9_]+:)?\d+$")
+    gpu_model_re = re.compile(r"^[a-zA-Z0-9_]+$")
+
     def __post_init__(self):
         # run check whether we are running in a SLURM job context
         self.warn_on_jobcontext()
@@ -161,17 +164,17 @@ class Executor(RemoteExecutor):
         if job.resources.get("gres"):
             # Validate GRES format (e.g., "gpu:1", "gpu:tesla:2")
             gres = job.resources.gres
-            if not re.match(r"^[a-zA-Z0-9]+:([a-zA-Z0-9]+:)?\d+$", gres):
+            if not Executor.gres_re.match(r"^[a-zA-Z0-9]+:([a-zA-Z0-9]+:)?\d+$", gres):
                 raise WorkflowError(
                     f"Invalid GRES format: {gres}. Expected format: "
                     "'<name>:<number>' or '<name>:<type>:<number>'"
                 )
-            call += f" --gres={job.resources.gres}"
-        if job.resources.get("gpu") and job.resources.get("gpu_model"):
+            gres_string = f" --gres={job.resources.gres}"
+        if job.resources.get("gpu"):
             # ensure that gres is not set, if gpu and gpu_model are set
             if job.resources.get("gres"):
                 raise WorkflowError(
-                    "GRES and GPU model are set. Please only set one of them."
+                    "GRES and GPU are set. Please only set one of them."
                 )
             # ensure that 'gpu' is an integer
             if not isinstance(job.resources.gpu, int):
@@ -179,7 +182,22 @@ class Executor(RemoteExecutor):
                     "The 'gpu' resource must be an integer. "
                     f"Got: {job.resources.gpu} ({type(job.resources.gpu)})."
                 )
-            call += f" --gres=gpu:{job.resources.gpu_model}:{job.resources.gpu}"
+            gres_string = f" --gres=gpu:{job.resources.gpu}"
+        if job.resources.get("gpu_model") and job.resources.get("gpu"):
+            # validate GPU model format
+            if not Executor.gpu_model_re.match(job.resources.gpu_model):
+                raise WorkflowError(
+                    f"Invalid GPU model format: {job.resources.gpu_model}. "
+                    "Expected format: '<name>'"
+                )
+            gres_string = f" --gres=gpu:{job.resources.gpu_model}:{job.resources.gpu}"
+        elif job.resources.get("gpu_model") and not job.resources.get("gpu"):
+            raise WorkflowError(
+                "GPU model is set, but no GPU number is given. Please set 'gpu' as well."
+            )
+        call += (
+            gres_string if job.resources.get("gres") or job.resources.get("gpu") else ""
+        )
 
         if job.resources.get("clusters"):
             call += f" --clusters {job.resources.clusters}"
