@@ -1,9 +1,6 @@
 # utility functions for the SLURM executor plugin
 
 import os
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 def delete_slurm_environment():
