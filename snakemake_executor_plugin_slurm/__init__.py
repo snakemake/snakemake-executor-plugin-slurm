@@ -169,9 +169,6 @@ class Executor(RemoteExecutor):
                 delete_slurm_environment()
         done = True
 
-    # def delete_old_logs(self):
-    #    self.workflow.executor_settings.delete_logfiles_older_than
-
     def additional_general_args(self):
         return "--executor slurm-jobstep --jobs 1"
 
