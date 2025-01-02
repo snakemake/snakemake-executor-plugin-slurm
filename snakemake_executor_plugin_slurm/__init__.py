@@ -454,16 +454,16 @@ class Executor(RemoteExecutor):
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
                     if not self.workflow.executor_settings.keep_successful_logs:
                         self.logger.debug(
-                            f"""removing log for successful job
-                                with SLURM ID '{j.external_jobid}'"""
+                            "removing log for successful job "
+                            f"with SLURM ID '{j.external_jobid}'"
                         )
                         try:
                             if os.path.exists(j.aux["slurm_logfile"]):
                                 os.remove(j.aux["slurm_logfile"])
                         except (OSError, FileNotFoundError) as e:
                             self.logger.warning(
-                                f"""Could not remove log file
-                                {j.aux['slurm_logfile']}: {e}"""
+                                "Could not remove log file"
+                                f" {j.aux['slurm_logfile']}: {e}"
                             )
                 elif status == "PREEMPTED" and not self._preemption_warning:
                     self._preemption_warning = True
