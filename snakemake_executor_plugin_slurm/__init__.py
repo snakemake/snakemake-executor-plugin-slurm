@@ -164,7 +164,7 @@ class Executor(RemoteExecutor):
         if job.resources.get("gres"):
             # Validate GRES format (e.g., "gpu:1", "gpu:tesla:2")
             gres = job.resources.gres
-            if not Executor.gres_re.match(r"^[a-zA-Z0-9]+:([a-zA-Z0-9]+:)?\d+$", gres):
+            if not Executor.gres_re.match(gres):
                 raise WorkflowError(
                     f"Invalid GRES format: {gres}. Expected format: "
                     "'<name>:<number>' or '<name>:<type>:<number>'"
