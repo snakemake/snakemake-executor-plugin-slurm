@@ -124,6 +124,17 @@ common_settings = CommonSettings(
 # Required:
 # Implementation of your executor
 class Executor(RemoteExecutor):
+    def __post_init__(self):
+        # run check whether we are running in a SLURM job context
+        self.warn_on_jobcontext()
+        self.run_uuid = str(uuid.uuid4())
+        self.logger.info(f"SLURM run ID: {self.run_uuid}")
+        self._fallback_account_arg = None
+        self._fallback_partition = None
+        self._preemption_warning = False  # no preemption warning has been issued
+
+        atexit.register(self.clean_old_logs)
+
     def clean_old_logs(self) -> None:
         """Delete files older than specified age from the SLURM log directory."""
         # shorthands:
@@ -145,17 +156,6 @@ class Executor(RemoteExecutor):
                         path.rmdir()
             except (OSError, FileNotFoundError) as e:
                 self.logger.warning(f"Could not delete file {path}: {e}")
-
-    def __post_init__(self):
-        # run check whether we are running in a SLURM job context
-        self.warn_on_jobcontext()
-        self.run_uuid = str(uuid.uuid4())
-        self.logger.info(f"SLURM run ID: {self.run_uuid}")
-        self._fallback_account_arg = None
-        self._fallback_partition = None
-        self._preemption_warning = False  # no preemption warning has been issued
-
-        atexit.register(self.clean_old_logs)
 
     def warn_on_jobcontext(self, done=None):
         if not done:
