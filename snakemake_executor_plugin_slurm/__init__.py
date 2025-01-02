@@ -167,6 +167,19 @@ class Executor(RemoteExecutor):
                     "'<name>:<number>' or '<name>:<type>:<number>'"
                 )
             call += f" --gres={job.resources.gres}"
+        if job.resources.get("gpu") and job.resources.get("gpu_model"):
+            # ensure that gres is not set, if gpu and gpu_model are set
+            if job.resources.get("gres"):
+                raise WorkflowError(
+                    "GRES and GPU model are set. Please only set one of them."
+                )
+            # ensure that 'gpu' is an integer
+            if not isinstance(job.resources.gpu, int):
+                raise WorkflowError(
+                    "The 'gpu' resource must be an integer. "
+                    f"Got: {job.resources.gpu} ({type(job.resources.gpu)})."
+                )
+            call += f" --gres=gpu:{job.resources.gpu_model}:{job.resources.gpu}"
 
         if job.resources.get("clusters"):
             call += f" --clusters {job.resources.clusters}"
