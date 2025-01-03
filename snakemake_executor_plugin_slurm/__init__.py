@@ -193,7 +193,8 @@ class Executor(RemoteExecutor):
             gres_string = f" --gres=gpu:{job.resources.gpu_model}:{job.resources.gpu}"
         elif job.resources.get("gpu_model") and not job.resources.get("gpu"):
             raise WorkflowError(
-                "GPU model is set, but no GPU number is given. Please set 'gpu' as well."
+                "GPU model is set, but no GPU number is given. "
+                "Please set 'gpu' as well."
             )
         call += (
             gres_string if job.resources.get("gres") or job.resources.get("gpu") else ""
