@@ -34,11 +34,11 @@ from .utils import delete_slurm_environment
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
     logdir: Optional[str] = field(
-        default=os.path.join(os.path.expanduser("~"), ".snakemake", "slurm_logs"),
+        default=None,
         metadata={
-            "help": "Per default the SLURM log directory (writing output is "
-            "required by SLURM) is '~/.snakemake/slurm_logs'. "
-            "This flag allows to set an alternative directory. ",
+            "help": "Per default the SLURM log directory is relative to "
+            "the working directory."
+            "This flag allows to set an alternative directory.",
             "env_var": False,
             "required": False,
         },
@@ -122,21 +122,20 @@ class Executor(RemoteExecutor):
         self._fallback_account_arg = None
         self._fallback_partition = None
         self._preemption_warning = False  # no preemption warning has been issued
-
+        self.slurm_logdir = None
         atexit.register(self.clean_old_logs)
 
     def clean_old_logs(self) -> None:
         """Delete files older than specified age from the SLURM log directory."""
         # shorthands:
         age_cutoff = self.workflow.executor_settings.delete_logfiles_older_than
-        logdir_path = Path(self.workflow.executor_settings.logdir)
         keep_all = self.workflow.executor_settings.keep_successful_logs
         if age_cutoff <= 0 or keep_all:
             return
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
         self.logger.info(f"Cleaning up log files older than {age_cutoff} day(s)")
-        for path in logdir_path.rglob("*"):
+        for path in self.slurm_logdir.rglob("*"):
             try:
                 if path.is_file():
                     file_age = current_time - path.stat().st_mtime
@@ -178,22 +177,27 @@ class Executor(RemoteExecutor):
         except AttributeError:
             wildcard_str = ""
 
-        slurm_logfile = os.path.join(
-            self.workflow.executor_settings.logdir,
-            group_or_rule,
-            wildcard_str,
-            "%j.log",
-        )
+        if self.workflow.executor_settings.logdir:
+            slurm_logfile = os.path.join(
+                self.workflow.executor_settings.logdir,
+                group_or_rule,
+                wildcard_str,
+                "%j.log",
+            )
+        else:
+            slurm_logfile = os.path.abspath(
+                f".snakemake/slurm_logs/{group_or_rule}/{wildcard_str}/%j.log"
+            )
 
-        slurm_logdir = os.path.dirname(slurm_logfile)
+        self.slurm_logdir = Path(slurm_logfile).parent
         # this behavior has been fixed in slurm 23.02, but there might be plenty of
         # older versions around, hence we should rather be conservative here.
-        assert "%j" not in slurm_logdir, (
+        assert "%j" not in str(self.slurm_logdir), (
             "bug: jobid placeholder in parent dir of logfile. This does not work as "
             "we have to create that dir before submission in order to make sbatch "
             "happy. Otherwise we get silent fails without logfiles being created."
         )
-        os.makedirs(slurm_logdir, exist_ok=True)
+        self.slurm_logdir.mkdir(parents=True, exist_ok=True)
 
         # generic part of a submission string:
         # we use a run_uuid as the job-name, to allow `--name`-based
