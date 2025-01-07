@@ -254,6 +254,18 @@ export SNAKEMAKE_PROFILE="$HOME/.config/snakemake"
 
 ==This is ongoing development. Eventually you will be able to annotate different file access patterns.==
 
+### Log Files - Getting Information on Failures
+
+Snakemake, via this SLURM executor, submits itself as a job. This ensures that all features are preserved in the job context. SLURM requires a logfile to be written for _every_ job. This is redundant information and only contains the Snakemake output already printed on the terminal. If a rule is equipped with a `log` directive, SLURM logs only contain Snakemake's output.
+
+This executor will remove SLURM logs of sucessful jobs immediately when they are finished. You can change this behaviour with the flag `--slurm-keep-successful-logs`. A log file for a failed job will be preserved per default for 10 days. You may change this value using the `--slurm-delete-logfiles-older-than` flag.
+
+The default location of Snakemake log files are relative to the directory where the workflow is started or relative to the directory indicated with `--directory`. SLURM logs, produced by Snakemake, can be redirected using `--slurm-logdir`. If you want avoid that log files accumulate in different directories, you can store them in your home directory. Best put the parameter in your profile then, e.g.:
+
+```YAML
+slurm-logdir: "/home/<username>/.snakemake/slurm_logs"
+```
+
 ### Retries - Or Trying again when a Job failed
 
 Some cluster jobs may fail. In this case Snakemake can be instructed to try another submit before the entire workflow fails, in this example up to 3 times:
