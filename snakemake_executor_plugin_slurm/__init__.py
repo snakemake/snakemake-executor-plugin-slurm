@@ -28,7 +28,7 @@ from snakemake_interface_executor_plugins.jobs import (
 from snakemake_interface_common.exceptions import WorkflowError
 from snakemake_executor_plugin_slurm_jobstep import get_cpus_per_task
 
-from .utils import delete_slurm_environment
+from .utils import delete_slurm_environment, delete_empty_dirs
 
 
 @dataclass
@@ -135,16 +135,19 @@ class Executor(RemoteExecutor):
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
         self.logger.info(f"Cleaning up log files older than {age_cutoff} day(s)")
-        for path in self.slurm_logdir.rglob("*"):
-            try:
-                if path.is_file():
+        for path in self.slurm_logdir.rglob("*.log"):
+            if path.is_file():
+                try:
                     file_age = current_time - path.stat().st_mtime
                     if file_age > cutoff_secs:
                         path.unlink()
-                    elif path.is_dir() and not any(path.iterdir()):
-                        path.rmdir()
-            except (OSError, FileNotFoundError) as e:
-                self.logger.warning(f"Could not delete file {path}: {e}")
+                except (OSError, FileNotFoundError) as e:
+                    self.logger.warning(f"Could not delete logfile {path}: {e}")
+        # we need a 2nd iteration to remove putatively empty directories
+        try:
+            delete_empty_dirs(self.slurm_logdir)
+        except (OSError, FileNotFoundError) as e:
+            self.logger.warning(f"Could not delete empty directory {path}: {e}")
 
     def warn_on_jobcontext(self, done=None):
         if not done:
@@ -177,19 +180,15 @@ class Executor(RemoteExecutor):
         except AttributeError:
             wildcard_str = ""
 
-        if self.workflow.executor_settings.logdir:
-            slurm_logfile = os.path.join(
-                self.workflow.executor_settings.logdir,
-                group_or_rule,
-                wildcard_str,
-                "%j.log",
-            )
-        else:
-            slurm_logfile = os.path.abspath(
-                f".snakemake/slurm_logs/{group_or_rule}/{wildcard_str}/%j.log"
-            )
+        self.slurm_logdir = (
+            Path(self.workflow.executor_settings.logdir)
+            if self.workflow.executor_settings.logdir
+            else Path(".snakemake/slurm_logs").resolve()
+        )
 
-        self.slurm_logdir = Path(slurm_logfile).parent
+        self.slurm_logdir.mkdir(parents=True, exist_ok=True)
+        slurm_logfile = self.slurm_logdir / group_or_rule / wildcard_str / "%j.log"
+        slurm_logfile.parent.mkdir(parents=True, exist_ok=True)
         # this behavior has been fixed in slurm 23.02, but there might be plenty of
         # older versions around, hence we should rather be conservative here.
         assert "%j" not in str(self.slurm_logdir), (
@@ -197,7 +196,6 @@ class Executor(RemoteExecutor):
             "we have to create that dir before submission in order to make sbatch "
             "happy. Otherwise we get silent fails without logfiles being created."
         )
-        self.slurm_logdir.mkdir(parents=True, exist_ok=True)
 
         # generic part of a submission string:
         # we use a run_uuid as the job-name, to allow `--name`-based
@@ -310,7 +308,9 @@ class Executor(RemoteExecutor):
         slurm_jobid = out.strip().split(";")[0]
         if not slurm_jobid:
             raise WorkflowError("Failed to retrieve SLURM job ID from sbatch output.")
-        slurm_logfile = slurm_logfile.replace("%j", slurm_jobid)
+        slurm_logfile = slurm_logfile.with_name(
+            slurm_logfile.name.replace("%j", slurm_jobid)
+        )
         self.logger.info(
             f"Job {job.jobid} has been submitted with SLURM jobid {slurm_jobid} "
             f"(log: {slurm_logfile})."
@@ -449,12 +449,12 @@ class Executor(RemoteExecutor):
                             f"with SLURM ID '{j.external_jobid}'"
                         )
                         try:
-                            if os.path.exists(j.aux["slurm_logfile"]):
-                                os.remove(j.aux["slurm_logfile"])
+                            if j.aux["slurm_logfile"].exists():
+                                j.aux["slurm_logfile"].unlink()
                         except (OSError, FileNotFoundError) as e:
                             self.logger.warning(
                                 "Could not remove log file"
-                                f" {j.aux['slurm_logfile']}: {e}"
+                                f" {j.aux['slurm_logfile']._str}: {e}"
                             )
                 elif status == "PREEMPTED" and not self._preemption_warning:
                     self._preemption_warning = True
@@ -480,7 +480,9 @@ We leave it to SLURM to resume your job(s)"""
                         # with a new sentence
                         f"'{status}'. "
                     )
-                    self.report_job_error(j, msg=msg, aux_logs=[j.aux["slurm_logfile"]])
+                    self.report_job_error(
+                        j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
+                    )
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
                 else:  # still running?
                     yield j
