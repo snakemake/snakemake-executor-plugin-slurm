@@ -27,7 +27,9 @@ def delete_empty_dirs(path: Path) -> list:
     """
 
     # get a list of all directorys in path and subpaths
-    def get_dirs(path: Path, result=[]):
+    def get_dirs(path: Path, result=None):
+        if result is None:
+            result = []
         for p in path.iterdir():
             if p.is_dir():
                 result.append(p)
