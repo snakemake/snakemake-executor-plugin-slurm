@@ -243,7 +243,7 @@ class Executor(RemoteExecutor):
                     "The 'gpu' resource must be an integer. "
                     f"Got: {job.resources.gpu} ({type(job.resources.gpu)})."
                 )
-            gres_string = f" --gres=gpu:{job.resources.gpu}"
+            gres_string = f" --gpus={job.resources.gpu}"
         if job.resources.get("gpu_model") and job.resources.get("gpu"):
             # validate GPU model format
             if not Executor.gpu_model_re.match(job.resources.gpu_model):
@@ -251,7 +251,7 @@ class Executor(RemoteExecutor):
                     f"Invalid GPU model format: {job.resources.gpu_model}. "
                     "Expected format: '<name>'"
                 )
-            gres_string = f" --gres=gpu:{job.resources.gpu_model}:{job.resources.gpu}"
+            gres_string = f" --gpus:{job.resources.gpu_model}:{job.resources.gpu}"
         elif job.resources.get("gpu_model") and not job.resources.get("gpu"):
             raise WorkflowError(
                 "GPU model is set, but no GPU number is given. "
