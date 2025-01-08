@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.12.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.11.2...v0.12.0) (2025-01-08)
+
+
+### Features
+
+* custom log file behaviour ([#159](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/159)) ([cc3d21b](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/cc3d21b98034e06ceab2572294fc8923616dbf55))
+* experimenting with automated release post to Mastodon ([#166](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/166)) ([c06325d](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/c06325d5fae1ebd0940a6edd0136533b4de37711))
+
+
+### Documentation
+
+* fix headings in further.md ([#168](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/168)) ([531ebc6](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/531ebc672fec4c579c701add9d29d178125644e6))
+
 ## [0.11.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.11.1...v0.11.2) (2024-11-07)
 
 
