@@ -17,7 +17,7 @@ def delete_slurm_environment():
             del os.environ[var]
 
 
-def delete_empty_dirs(path: Path) -> list:
+def delete_empty_dirs(path: Path) -> None:
     """
     Function to delete all empty directories in a given path.
     This is needed to clean up the working directory after
@@ -25,29 +25,18 @@ def delete_empty_dirs(path: Path) -> list:
     the shutil.rmtree() function does not delete empty
     directories.
     """
+    if not path.is_dir():
+        return
 
-    # get a list of all directorys in path and subpaths
-    def get_dirs(path: Path, result=None):
-        if result is None:
-            result = []
-        for p in path.iterdir():
-            if p.is_dir():
-                result.append(p)
-                if any(p.iterdir()):
-                    get_dirs(p)
-        return result
+    # Process subdirectories first (bottom-up)
+    for child in path.iterdir():
+        if child.is_dir():
+            delete_empty_dirs(child)
 
-    # keep trying to delete empty folders until none are left
-    dirs = get_dirs(path)
-    done = False
-    while not done:
-        done = True
-        for p in dirs:
-            try:
-                if not any(p.iterdir()):  # if directory is empty
-                    p.rmdir()
-            except (OSError, FileNotFoundError) as e:
-                raise e  # re-raise exception
-            finally:
-                done = False
-                dirs.remove(p)
+    try:
+        # Check if directory is now empty after processing children
+        if not any(path.iterdir()):
+            path.rmdir()
+    except (OSError, FileNotFoundError) as e:
+        # Provide more context in the error message
+        raise OSError(f"Failed to remove empty directory {path}: {e}") from e
