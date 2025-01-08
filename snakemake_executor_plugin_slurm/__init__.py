@@ -33,7 +33,7 @@ from .utils import delete_slurm_environment, delete_empty_dirs
 
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
-    logdir: Optional[str] = field(
+    logdir: Optional[Path] = field(
         default=None,
         metadata={
             "help": "Per default the SLURM log directory is relative to "
