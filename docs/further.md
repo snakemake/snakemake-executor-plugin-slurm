@@ -104,22 +104,7 @@ A workflow rule may support several
 [resource specifications](https://snakemake.readthedocs.io/en/latest/snakefiles/rules.html#resources).
 For a SLURM cluster, a mapping between Snakemake and SLURM needs to be performed.
 
-You can use the following specifications:
-
-| SLURM        | Snakemake  | Description              |
-|----------------|------------|---------------------------------------|
-| `--partition`  | `slurm_partition`    | the partition a rule/job is to use |
-| `--time`  | `runtime`  | the walltime per job in minutes       |
-| `--constraint`   | `constraint`        | may hold features on some clusters    |
-| `--mem`        | `mem`, `mem_mb`   | memory a cluster node must      |
-|                |            | provide (`mem`: string with unit), `mem_mb`: i                               |
-| `--mem-per-cpu`              | `mem_mb_per_cpu`     | memory per reserved CPU               |
-| `--ntasks`     | `tasks`    | number of concurrent tasks / ranks    |
-| `--cpus-per-task`       | `cpus_per_task`      | number of cpus per task (in case of SMP, rather use `threads`)   |
-| `--nodes` | `nodes`    | number of nodes                       |
-| `--clusters` | `clusters` | comma separated string of clusters |
-
-Each of these can be part of a rule, e.g.:
+Each of the listed command line flags can be part of a rule, e.g.:
 
 ``` python
 rule:
@@ -157,16 +142,6 @@ set-resources:
         mem_mb_per_cpu: 1800
         cpus_per_task: 40
 ```
-
-#### Additional Command Line Flags
-
-This plugin defines additional command line flags.
-As always, these can be set on the command line or in a profile.
-
-| Flag        | Meaning  |
-|-------------|----------|
-| `--slurm_init_seconds_before_status_checks`| modify time before initial job status check; the default of 40 seconds avoids load on querying slurm databases, but shorter wait times are for example useful during workflow development |
-| `--slurm_requeue` | allows jobs to be resubmitted automatically if they fail or are preempted. See the [section "retries" for details](#retries)|
 
 #### Multicluster Support
 
@@ -278,6 +253,18 @@ export SNAKEMAKE_PROFILE="$HOME/.config/snakemake"
 ```
 
 ==This is ongoing development. Eventually you will be able to annotate different file access patterns.==
+
+### Log Files - Getting Information on Failures
+
+Snakemake, via this SLURM executor, submits itself as a job. This ensures that all features are preserved in the job context. SLURM requires a logfile to be written for _every_ job. This is redundant information and only contains the Snakemake output already printed on the terminal. If a rule is equipped with a `log` directive, SLURM logs only contain Snakemake's output.
+
+This executor will remove SLURM logs of sucessful jobs immediately when they are finished. You can change this behaviour with the flag `--slurm-keep-successful-logs`. A log file for a failed job will be preserved per default for 10 days. You may change this value using the `--slurm-delete-logfiles-older-than` flag.
+
+The default location of Snakemake log files are relative to the directory where the workflow is started or relative to the directory indicated with `--directory`. SLURM logs, produced by Snakemake, can be redirected using `--slurm-logdir`. If you want avoid that log files accumulate in different directories, you can store them in your home directory. Best put the parameter in your profile then, e.g.:
+
+```YAML
+slurm-logdir: "/home/<username>/.snakemake/slurm_logs"
+```
 
 ### Retries - Or Trying again when a Job failed
 
