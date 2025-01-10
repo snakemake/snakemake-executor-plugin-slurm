@@ -294,7 +294,7 @@ class Executor(RemoteExecutor):
         gpu_job = job.resources.get("gpus") or "gpu" in job.resources.get("gres", "")
         if gpu_job:
             call += f" --ntasks-per-gpu={job.resources.get('tasks', 1)}"
-        else
+        else:
             call += f" --ntasks={job.resources.get('tasks', 1)}"
         # MPI job
         if job.resources.get("mpi", False):
