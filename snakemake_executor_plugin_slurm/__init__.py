@@ -26,9 +26,9 @@ from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
 from snakemake_interface_common.exceptions import WorkflowError
-from snakemake_executor_plugin_slurm_jobstep import get_cpus_per_task
+from snakemake_executor_plugin_slurm_jobstep import get_cpu_setting
 
-from .utils import delete_slurm_environment, delete_empty_dirs
+from .utils import delete_slurm_environment, delete_empty_dirs, set_gres_string
 
 
 @dataclass
@@ -114,9 +114,6 @@ common_settings = CommonSettings(
 # Required:
 # Implementation of your executor
 class Executor(RemoteExecutor):
-    gres_re = re.compile(r"^[a-zA-Z0-9_]+:([a-zA-Z0-9_]+:)?\d+$")
-    gpu_model_re = re.compile(r"^[a-zA-Z0-9_]+$")
-
     def __post_init__(self):
         # run check whether we are running in a SLURM job context
         self.warn_on_jobcontext()
@@ -222,44 +219,7 @@ class Executor(RemoteExecutor):
         if self.workflow.executor_settings.requeue:
             call += " --requeue"
 
-        if job.resources.get("gres"):
-            # Validate GRES format (e.g., "gpu:1", "gpu:tesla:2")
-            gres = job.resources.gres
-            if not Executor.gres_re.match(gres):
-                raise WorkflowError(
-                    f"Invalid GRES format: {gres}. Expected format: "
-                    "'<name>:<number>' or '<name>:<type>:<number>'"
-                )
-            gres_string = f" --gres={job.resources.gres}"
-        if job.resources.get("gpu"):
-            # ensure that gres is not set, if gpu and gpu_model are set
-            if job.resources.get("gres"):
-                raise WorkflowError(
-                    "GRES and GPU are set. Please only set one of them."
-                )
-            # ensure that 'gpu' is an integer
-            if not isinstance(job.resources.gpu, int):
-                raise WorkflowError(
-                    "The 'gpu' resource must be an integer. "
-                    f"Got: {job.resources.gpu} ({type(job.resources.gpu)})."
-                )
-            gres_string = f" --gpus={job.resources.gpu}"
-        if job.resources.get("gpu_model") and job.resources.get("gpu"):
-            # validate GPU model format
-            if not Executor.gpu_model_re.match(job.resources.gpu_model):
-                raise WorkflowError(
-                    f"Invalid GPU model format: {job.resources.gpu_model}. "
-                    "Expected format: '<name>'"
-                )
-            gres_string = f" --gpus:{job.resources.gpu_model}:{job.resources.gpu}"
-        elif job.resources.get("gpu_model") and not job.resources.get("gpu"):
-            raise WorkflowError(
-                "GPU model is set, but no GPU number is given. "
-                "Please set 'gpu' as well."
-            )
-        call += (
-            gres_string if job.resources.get("gres") or job.resources.get("gpu") else ""
-        )
+        call += set_gres_string(job)
 
         if job.resources.get("clusters"):
             call += f" --clusters {job.resources.clusters}"
@@ -308,7 +268,7 @@ class Executor(RemoteExecutor):
                 )
         # we need to set cpus-per-task OR cpus-per-gpu, the function
         # will return a string with the corresponding value
-        call += f" {get_cpus_per_task(job, gpu_job)}"
+        call += f" {get_cpu_setting(job, gpu_job)}"
 
         if job.resources.get("slurm_extra"):
             self.check_slurm_extra(job)
