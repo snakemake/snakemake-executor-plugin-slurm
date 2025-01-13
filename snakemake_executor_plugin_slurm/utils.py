@@ -9,6 +9,7 @@ from snakemake_interface_executor_plugins.jobs import (
 )
 from snakemake_interface_common.exceptions import WorkflowError
 
+
 def delete_slurm_environment():
     """
     Function to delete all environment variables
@@ -70,18 +71,8 @@ def set_gres_string(job: JobExecutorInterface) -> str:
                 "(e.g., 'gpu:1' or 'gpu:tesla:2')"
             )
         gres_string = f" --gres={job.resources.gres}"
-    if job.resources.get("gpu"):
-        # ensure that gres is not set, if gpu and gpu_model are set
-        if job.resources.get("gres"):
-            raise WorkflowError("GRES and GPU are set. Please only set one of them.")
-        # ensure that 'gpu' is an integer
-        if not isinstance(job.resources.gpu, int):
-            raise WorkflowError(
-                "The 'gpu' resource must be an integer. "
-                f"Got: {job.resources.gpu} ({type(job.resources.gpu)})."
-            )
-        gres_string = f" --gpus={job.resources.gpu}"
-    if job.resources.get("gpu"):
+
+    if job.resources.get("gpus"):
         # ensure that gres is not set, if gpu and gpu_model are set
         if job.resources.get("gres"):
             raise WorkflowError("GRES and GPU are set. Please only set one" " of them.")
