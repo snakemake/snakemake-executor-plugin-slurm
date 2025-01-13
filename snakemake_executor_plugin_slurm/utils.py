@@ -7,7 +7,7 @@ from pathlib import Path
 from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
-
+from snakemake_interface_common.exceptions import WorkflowError
 
 def delete_slurm_environment():
     """
