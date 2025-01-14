@@ -647,7 +647,7 @@ We leave it to SLURM to resume your job(s)"""
                     "Unable to test the validity of the given or guessed"
                     f" SLURM account '{account}' with sshare: {e2.stderr}."
                 )
-                raise WorkflowError(sacctmgr_report + " - and - " + sshare_report)
+                raise WorkflowError(f"{sacctmgr_report} {sshare_report}")
 
         # The set() has been introduced during review to eliminate
         # duplicates. They are not harmful, but disturbing to read.
