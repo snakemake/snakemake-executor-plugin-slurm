@@ -17,16 +17,20 @@ MAX_TOOT_LENGTH=500
 
 
 read -d '\n' message << EndOfText
-Beep, Beepi - I am the #Snakemake release bot
+Beep, Beep - I am your friendly #Snakemake release announcement bot
 
-I have a new release in for the Snakemake executor for #SLURM on #HPC systems. The version now is '${version}'.
+There is a new release of the Snakemake executor for #SLURM on #HPC systems. Its version is '${version}'!
 
 See ${changelog//\'/\\\'}for details.
 
-Get the latest release from #Bioconda or #Pypi. Be sure to give it some time to be released there, too.
+Give us some time and you will automatically find it on #Bioconda and #Pypi.
 
-#OpenScience #ReproducibleResearch #ReproducibleComputing
+If you want to discuss the release you will find the maintainers here on Mastodon!
+@rupdecat@fediscience.org and @johanneskoester@fosstodon.org
 
+If you find any issues, please report them on https://github.com/snakemake/snakemake-executor-plugin-slurm/issues
+
+#Snakemake #HPC #ReproducibleComputing #ReproducibleResearch #OpenScience
 EndOfText
 
 # Validate message length
