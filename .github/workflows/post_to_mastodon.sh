@@ -21,7 +21,7 @@ Beep, Beep - I am your friendly #Snakemake release announcement bot
 
 There is a new release of the Snakemake executor for #SLURM on #HPC systems. Its version is '${version}'!
 
-See ${changelog//\'/\\\'}for details.
+See ${changelog//\'/\\\'} for details.
 
 Give us some time and you will automatically find it on #Bioconda and #Pypi.
 
