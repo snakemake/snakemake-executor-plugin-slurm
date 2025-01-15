@@ -1,4 +1,4 @@
-#!bin/bash
+#!/bin/bash
 
 version="${${{ github.event.pull_request.title }}##* }"
 changelog="https://github.com/snakemake/snakemake-executor-plugin-slurm/releases/tag/v${version}"
