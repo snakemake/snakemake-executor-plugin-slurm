@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.12.0...v0.12.1) (2025-01-15)
+
+
+### Bug Fixes
+
+* sshare testing as an alternative to sacctmgr account tests ([#178](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/178)) ([38fa919](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/38fa919ead6554c804e95424a61170e4967c9d63))
+
 ## [0.12.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.11.2...v0.12.0) (2025-01-08)
 
 
