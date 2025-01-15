@@ -13,7 +13,7 @@ fi
 changelog="https://github.com/snakemake/snakemake-executor-plugin-slurm/releases/tag/v${version}"
 
 # Maximum character limit for Mastodon posts (on Fediscience: 1500 characters)
-MAX_TOOT_LENGTH=500
+MAX_TOOT_LENGTH=1500
 
 
 read -d '\n' message << EndOfText
