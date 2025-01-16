@@ -88,6 +88,31 @@ $ snakemake --set-resources calc_pi:mpi="mpiexec" ...
 
 To submit "ordinary" MPI jobs, submitting with `tasks` (the MPI ranks) is sufficient. Alternatively, on some clusters, it might be convenient to just configure `nodes`. Consider using a combination of `tasks` and `cpus_per_task` for hybrid applications (those that use ranks (multiprocessing) and threads). A detailed topology layout can be achieved using the `slurm_extra` parameter (see below) using further flags like `--distribution`.
 
+### GPU Jobs
+
+SLURM allows to specify GPU request with the `--gres` or `--gpus` flags, Snakemake takes a similar approach. Resources can be asked for with
+
+- `gres`, e.g. `gres=gpu:1` or `gres=gpu:tesla:2`, hence `<string>:<number>` or `<string>:<model>:<number>`
+- alternatively, the resource `gpus` can be requested, e.g. `gpu=2`. This can be combined with `gpu_model`.
+
+Additionally, `cpus_per_gpu` can be set - Snakemakes `threads` settings will otherwise be used to set `cpus_per_gpu`. If `cpus_per_gpu` is lower or equal to zero, no CPU is requested from SLURM (and cluster defaults will kick in, if any).
+
+A sample workflow profile might look like:
+
+```YAML
+set-resources:
+    gres_request_rule:
+        gres: "gpu:1"
+
+    multi_gpu_rule:
+        gpus: 2
+        cpus_per_gpu: 4
+
+    no_cpu_gpu_rule:
+        gpus: 1
+        cpus_per_gpu: -1
+```
+
 ### Running Jobs locally
 
 Not all Snakemake workflows are adapted for heterogeneous environments, particularly clusters. Users might want to avoid the submission of _all_ rules as cluster jobs. Non-cluster jobs should usually include _short_ jobs, e.g. internet downloads or plotting rules.
