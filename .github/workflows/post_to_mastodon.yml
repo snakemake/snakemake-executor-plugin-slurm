@@ -20,7 +20,7 @@ jobs:
         with:
           timeout_minutes: 2
           max_attempts: 3
-          run: |
+          command: |
             git checkout ${{ github.event.pull_request.head.sha }}
             export MASTODONBOT="${{ secrets.MASTODONBOT }}"
             export PR_TITLE="${{ github.event.pull_request.title }}"
