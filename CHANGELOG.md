@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.12.1...v0.13.0) (2025-01-16)
+
+
+### Features
+
+* Improved Mastodon Bot ([#183](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/183)) ([151b0fb](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/151b0fbb8e402d5817f8b67a744d4a0205ed38f6))
+
 ## [0.12.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.12.0...v0.12.1) (2025-01-15)
 
 
