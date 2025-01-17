@@ -24,4 +24,4 @@ jobs:
             git checkout ${{ github.event.pull_request.head.sha }}
             export MASTODONBOT="${{ secrets.MASTODONBOT }}"
             export PR_TITLE="${{ github.event.pull_request.title }}"
-            ./post_to_mastodon.sh
+            $(pwd)/post_to_mastodon.sh
