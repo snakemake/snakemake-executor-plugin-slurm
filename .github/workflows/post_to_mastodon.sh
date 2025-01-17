@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Extract version from PR title passed as environment variable
-version="${PR_TITLE##* }"
+# Extract version from PR tag passed as environment variable
+version="${PR_TITLE#v}"
 
 # Validate version format
 if ! [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
