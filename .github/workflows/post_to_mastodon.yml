@@ -16,12 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Post to Mastodon
+        uses: actions/checkout@v4
         uses: nick-fields/retry@v2
         with:
           timeout_minutes: 2
           max_attempts: 3
           command: |
-            git checkout ${{ github.event.pull_request.head.sha }}
             export MASTODONBOT="${{ secrets.MASTODONBOT }}"
-            export PR_TITLE="${{ github.event.pull_request.title }}"
-            $(pwd)/post_to_mastodon.sh
+            export PR_TITLE="${{ github.event.release.tag_name }}"
+            $GITHUB_WORKSPACE/post_to_mastodon.sh
