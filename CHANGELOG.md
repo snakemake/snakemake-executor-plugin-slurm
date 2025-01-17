@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.14.0...v0.14.1) (2025-01-17)
+
+
+### Bug Fixes
+
+* mastodonbot ([#187](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/187)) ([9c2fd03](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/9c2fd036e8ef682eedc5bc96f173d79d981f9831))
+
 ## [0.14.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.13.0...v0.14.0) (2025-01-16)
 
 
