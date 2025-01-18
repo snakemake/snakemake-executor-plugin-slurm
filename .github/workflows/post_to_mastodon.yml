@@ -1,11 +1,11 @@
 name: Post to Mastodon on PR Merge
 
 on:
-  push:
-    branches:
-      - main
+  pull_request:
     types:
       - closed
+    branches:
+      - main
 
 permissions:
   pull-requests: read
