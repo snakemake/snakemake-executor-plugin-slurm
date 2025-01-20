@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.14.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.14.1...v0.14.2) (2025-01-20)
+
+
+### Bug Fixes
+
+* ci runner ought to start now upon merge to main ([#189](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/189)) ([90c6bf9](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/90c6bf92a050b029bf3a32f9b6b61525dfc515b8))
+* path to access the posting script ([#191](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/191)) ([d7dcbbb](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/d7dcbbb4706a8f4a81570c89cdf619f1a039a4b7))
+* path to posting script ([#193](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/193)) ([d0fb3cd](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/d0fb3cd8353cca6ba6e4ccc1fa64817c57908fc1))
+
 ## [0.14.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.14.0...v0.14.1) (2025-01-17)
 
 
