@@ -24,4 +24,4 @@ jobs:
           command: |
             export MASTODONBOT="${{ secrets.MASTODONBOT }}"
             export PR_TITLE="${{ github.event.release.tag_name }}"
-            $GITHUB_ACTION_PATH/post_to_mastodon.sh
+            $GITHUB_WORKSPACE/.github/workflows/post_to_mastodon.sh
