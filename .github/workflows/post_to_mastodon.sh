@@ -1,6 +1,10 @@
 #!/bin/bash
 
 # Extract version from PR tag passed as environment variable
+if [ -z "${PR_TITLE}" ]; then # apparently unset, workflow broken?
+    echo "Error: 'PR_TITLE' environemnt variable is not set."
+    exit 1
+fi
 version="${PR_TITLE##* }"
 
 # Validate version format
@@ -15,15 +19,14 @@ changelog="https://github.com/snakemake/snakemake-executor-plugin-slurm/releases
 # Maximum character limit for Mastodon posts (on Fediscience: 1500 characters)
 MAX_TOOT_LENGTH=1500
 
-
 read -d '\n' message << EndOfText
-Beep, Beep - I am your friendly #Snakemake release announcement bot
+Beep, Beep - I am your friendly #Snakemake release announcement bot.
 
 There is a new release of the Snakemake executor for #SLURM on #HPC systems. Its version is '${version}'!
 
 See ${changelog//\'/\\\'} for details.
 
-Give us some time and you will automatically find it on #Bioconda and #Pypi.
+Give us some time and you will automatically find the plugin on #Bioconda and #Pypi.
 
 If you want to discuss the release you will find the maintainers here on Mastodon!
 @rupdecat@fediscience.org and @johanneskoester@fosstodon.org
