@@ -23,6 +23,6 @@ jobs:
           max_attempts: 3
           command: |
             export MASTODONBOT="${{ secrets.MASTODONBOT }}"
-            export PR_TITLE="${{ github.event.release.tag_name }}"
+            export PR_TITLE="${{ github.event.pull_request.title }}"
             chmod +x $GITHUB_WORKSPACE/.github/workflows/post_to_mastodon.sh
             $GITHUB_WORKSPACE/.github/workflows/post_to_mastodon.sh
