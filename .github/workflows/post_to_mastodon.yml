@@ -12,7 +12,9 @@ permissions:
 
 jobs:
   post_to_mastodon:
-    if: github.event.pull_request.merged == true
+    if: |
+      github.event.pull_request.merged == true &&
+      (startsWith(github.event.pull_request.title, 'release') || contains(github.event.pull_request.title, ' v'))    
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
