@@ -13,7 +13,7 @@ permissions:
 jobs:
   post_to_mastodon:
     if: |
-      github.event.pull_request.merged == true &&
+      ${{ github.event.pull_request.merged }} &&
       (contains(github.event.pull_request.title, 'release') || contains(github.event.pull_request.title, ' v') || contains(github.event.pull_request.title, 'version'))
     runs-on: ubuntu-latest
     steps:
