@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.14.2...v0.14.3) (2025-01-22)
+
+
+### Bug Fixes
+
+* ci runner ought to start now upon merge to main ([#199](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/199)) ([363f130](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/363f130782f557c56bbbd80ec47a9f732818e6b4))
+
 ## [0.14.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.14.1...v0.14.2) (2025-01-20)
 
 
