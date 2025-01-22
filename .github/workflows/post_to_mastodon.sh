@@ -13,8 +13,12 @@ if [[ ! "${PR_TITLE}" =~ ^chore\(main\):\ release ]]; then
 fi
 
 # Extract version (everything after "release ")
-version="${PR_TITLE#*release }"
-
+if [[ "${PR_TITLE}" =~ [Rr]elease[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+    version="${BASH_REMATCH[1]}"
+else
+    echo "Error: Could not extract version number from PR title"
+    exit 1
+fi
 
 # Validate version format
 if ! [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
