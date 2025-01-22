@@ -12,7 +12,9 @@ permissions:
 
 jobs:
   post_to_mastodon:
-    if: github.event.pull_request.merged == true
+    if: |
+      github.event.pull_request.merged == true &&
+      (contains(github.event.pull_request.title, 'release') || contains(github.event.pull_request.title, ' v') || contains(github.event.pull_request.title, 'version'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,5 +25,6 @@ jobs:
           max_attempts: 3
           command: |
             export MASTODONBOT="${{ secrets.MASTODONBOT }}"
-            export PR_TITLE="${{ github.event.release.tag_name }}"
-            $GITHUB_WORKSPACE/post_to_mastodon.sh
+            export PR_TITLE="${{ github.event.pull_request.title }}"
+            chmod +x $GITHUB_WORKSPACE/.github/workflows/post_to_mastodon.sh
+            $GITHUB_WORKSPACE/.github/workflows/post_to_mastodon.sh
