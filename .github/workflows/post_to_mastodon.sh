@@ -1,11 +1,20 @@
 #!/bin/bash
 
 # Extract version from PR tag passed as environment variable
-if [ -z "${PR_TITLE}" ]; then # apparently unset, workflow broken?
+if [ -z "${PR_TITLE}" ]; then
     echo "Error: 'PR_TITLE' environment variable is not set."
     exit 1
 fi
-version="${PR_TITLE##* }"
+
+# Check if this is a release PR
+if [[ ! "${PR_TITLE}" =~ ^chore\(main\):\ release ]]; then
+    echo "Not a release PR, skipping Mastodon post"
+    exit 0
+fi
+
+# Extract version (everything after "release ")
+version="${PR_TITLE#*release }"
+
 
 # Validate version format
 if ! [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
