@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.15.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.14.3...v0.15.0) (2025-01-23)
+
+
+### Features
+
+* disallowing blank reports ([#204](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/204)) ([6dd0105](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6dd0105ddf0ac37cd8074b51e5b1f3329b04ae3e))
+
+
+### Bug Fixes
+
+* initializing self.slurm_logdir ([#206](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/206)) ([b00e520](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/b00e520a1c3b4707b9ee87765a44c2da23559650))
+
 ## [0.14.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.14.2...v0.14.3) (2025-01-22)
 
 
