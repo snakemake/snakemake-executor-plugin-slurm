@@ -3,10 +3,12 @@ __copyright__ = "Copyright 2023, David Lähnemann, Johannes Köster, Christian M
 __email__ = "johannes.koester@uni-due.de"
 __license__ = "MIT"
 
+import atexit
 import csv
 from io import StringIO
 from itertools import groupby
 import os
+from pathlib import Path
 import re
 import shlex
 import subprocess
@@ -27,18 +29,48 @@ from snakemake_interface_executor_plugins.jobs import (
 from snakemake_interface_common.exceptions import WorkflowError
 from snakemake_executor_plugin_slurm_jobstep import get_cpus_per_task
 
-from .utils import delete_slurm_environment
+from .utils import delete_slurm_environment, delete_empty_dirs
 
 
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
+    logdir: Optional[Path] = field(
+        default=None,
+        metadata={
+            "help": "Per default the SLURM log directory is relative to "
+            "the working directory."
+            "This flag allows to set an alternative directory.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    keep_successful_logs: bool = field(
+        default=False,
+        metadata={
+            "help": "Per default SLURM log files will be deleted upon sucessful "
+            "completion of a job. Whenever a SLURM job fails, its log "
+            "file will be preserved. "
+            "This flag allows to keep all SLURM log files, even those "
+            "of successful jobs.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    delete_logfiles_older_than: Optional[int] = field(
+        default=10,
+        metadata={
+            "help": "Per default SLURM log files in the SLURM log directory "
+            "of a workflow will be deleted after 10 days. For this, "
+            "best leave the default log directory unaltered. "
+            "Setting this flag allows to change this behaviour. "
+            "If set to <=0, no old files will be deleted. ",
+        },
+    )
     init_seconds_before_status_checks: Optional[int] = field(
         default=40,
         metadata={
-            "help": """
-                    Defines the time in seconds before the first status
-                    check is performed after job submission.
-                    """,
+            "help": "Defines the time in seconds before the first status "
+            "check is performed after job submission.",
             "env_var": False,
             "required": False,
         },
@@ -46,11 +78,10 @@ class ExecutorSettings(ExecutorSettingsBase):
     requeue: bool = field(
         default=False,
         metadata={
-            "help": """
-                    Allow requeuing preempted of failed jobs,
-                    if no cluster default. Results in `sbatch ... --requeue ...`
-                    This flag has no effect, if not set.
-                    """,
+            "help": "Allow requeuing preempted of failed jobs, "
+            "if no cluster default. Results in "
+            "`sbatch ... --requeue ...` "
+            "This flag has no effect, if not set.",
             "env_var": False,
             "required": False,
         },
@@ -92,6 +123,36 @@ class Executor(RemoteExecutor):
         self._fallback_account_arg = None
         self._fallback_partition = None
         self._preemption_warning = False  # no preemption warning has been issued
+        self.slurm_logdir = (
+            Path(self.workflow.executor_settings.logdir)
+            if self.workflow.executor_settings.logdir
+            else Path(".snakemake/slurm_logs").resolve()
+        )
+        atexit.register(self.clean_old_logs)
+
+    def clean_old_logs(self) -> None:
+        """Delete files older than specified age from the SLURM log directory."""
+        # shorthands:
+        age_cutoff = self.workflow.executor_settings.delete_logfiles_older_than
+        keep_all = self.workflow.executor_settings.keep_successful_logs
+        if age_cutoff <= 0 or keep_all:
+            return
+        cutoff_secs = age_cutoff * 86400
+        current_time = time.time()
+        self.logger.info(f"Cleaning up log files older than {age_cutoff} day(s)")
+        for path in self.slurm_logdir.rglob("*.log"):
+            if path.is_file():
+                try:
+                    file_age = current_time - path.stat().st_mtime
+                    if file_age > cutoff_secs:
+                        path.unlink()
+                except (OSError, FileNotFoundError) as e:
+                    self.logger.warning(f"Could not delete logfile {path}: {e}")
+        # we need a 2nd iteration to remove putatively empty directories
+        try:
+            delete_empty_dirs(self.slurm_logdir)
+        except (OSError, FileNotFoundError) as e:
+            self.logger.warning(f"Could not delete empty directory {path}: {e}")
 
     def warn_on_jobcontext(self, done=None):
         if not done:
@@ -138,18 +199,16 @@ class Executor(RemoteExecutor):
         except AttributeError:
             wildcard_str = ""
 
-        slurm_logfile = os.path.abspath(
-            f".snakemake/slurm_logs/{group_or_rule}/{wildcard_str}/%j.log"
-        )
-        logdir = os.path.dirname(slurm_logfile)
+        self.slurm_logdir.mkdir(parents=True, exist_ok=True)
+        slurm_logfile = self.slurm_logdir / group_or_rule / wildcard_str / "%j.log"
+        slurm_logfile.parent.mkdir(parents=True, exist_ok=True)
         # this behavior has been fixed in slurm 23.02, but there might be plenty of
         # older versions around, hence we should rather be conservative here.
-        assert "%j" not in logdir, (
+        assert "%j" not in str(self.slurm_logdir), (
             "bug: jobid placeholder in parent dir of logfile. This does not work as "
             "we have to create that dir before submission in order to make sbatch "
             "happy. Otherwise we get silent fails without logfiles being created."
         )
-        os.makedirs(logdir, exist_ok=True)
 
         # generic part of a submission string:
         # we use a run_uuid as the job-name, to allow `--name`-based
@@ -262,7 +321,9 @@ class Executor(RemoteExecutor):
         slurm_jobid = out.strip().split(";")[0]
         if not slurm_jobid:
             raise WorkflowError("Failed to retrieve SLURM job ID from sbatch output.")
-        slurm_logfile = slurm_logfile.replace("%j", slurm_jobid)
+        slurm_logfile = slurm_logfile.with_name(
+            slurm_logfile.name.replace("%j", slurm_jobid)
+        )
         self.logger.info(
             f"Job {job.jobid} has been submitted with SLURM jobid {slurm_jobid} "
             f"(log: {slurm_logfile})."
@@ -395,6 +456,19 @@ class Executor(RemoteExecutor):
                     self.report_job_success(j)
                     any_finished = True
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
+                    if not self.workflow.executor_settings.keep_successful_logs:
+                        self.logger.debug(
+                            "removing log for successful job "
+                            f"with SLURM ID '{j.external_jobid}'"
+                        )
+                        try:
+                            if j.aux["slurm_logfile"].exists():
+                                j.aux["slurm_logfile"].unlink()
+                        except (OSError, FileNotFoundError) as e:
+                            self.logger.warning(
+                                "Could not remove log file"
+                                f" {j.aux['slurm_logfile']}: {e}"
+                            )
                 elif status == "PREEMPTED" and not self._preemption_warning:
                     self._preemption_warning = True
                     self.logger.warning(
@@ -419,7 +493,9 @@ We leave it to SLURM to resume your job(s)"""
                         # with a new sentence
                         f"'{status}'. "
                     )
-                    self.report_job_error(j, msg=msg, aux_logs=[j.aux["slurm_logfile"]])
+                    self.report_job_error(
+                        j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
+                    )
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
                 else:  # still running?
                     yield j
@@ -570,10 +646,24 @@ We leave it to SLURM to resume your job(s)"""
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
         except subprocess.CalledProcessError as e:
-            raise WorkflowError(
-                f"Unable to test the validity of the given or guessed SLURM account "
-                f"'{account}' with sacctmgr: {e.stderr}"
+            sacctmgr_report = (
+                "Unable to test the validity of the given or guessed "
+                f"SLURM account '{account}' with sacctmgr: {e.stderr}."
             )
+            try:
+                cmd = "sshare -U --format Account --noheader"
+                accounts = subprocess.check_output(
+                    cmd, shell=True, text=True, stderr=subprocess.PIPE
+                )
+            except subprocess.CalledProcessError as e2:
+                sshare_report = (
+                    "Unable to test the validity of the given or guessed"
+                    f" SLURM account '{account}' with sshare: {e2.stderr}."
+                )
+                raise WorkflowError(
+                    f"The 'sacctmgr' reported: '{sacctmgr_report}' "
+                    f"and likewise 'sshare' reported: '{sshare_report}'."
+                )
 
         # The set() has been introduced during review to eliminate
         # duplicates. They are not harmful, but disturbing to read.
