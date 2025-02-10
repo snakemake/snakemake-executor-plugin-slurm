@@ -2,30 +2,29 @@ name: Post to Mastodon on PR Merge
 
 on:
   pull_request:
-    branches:
-      - main
     types:
       - closed
+    branches:
+      - main
 
 permissions:
   pull-requests: read
 
 jobs:
   post_to_mastodon:
-    if: github.event.pull_request.merged == true
+    if: |
+      ${{ github.event.pull_request.merged }} &&
+      (contains(github.event.pull_request.title, 'release') || contains(github.event.pull_request.title, ' v') || contains(github.event.pull_request.title, 'version'))
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Post to Mastodon
         uses: nick-fields/retry@v2
         with:
           timeout_minutes: 2
           max_attempts: 3
           command: |
-                     curl -X POST -H "Authorization: Bearer ${{ secrets.MASTODON_ACCESS_TOKEN }}" \
-                     -F "status=New release in Snakemake project '${{ github.event.repository.full_name }}' for pull request '#${{ github.event.pull_request.number }}' merged: '${{ github.event.pull_request.title }}'. Get the latest release from #Bioconda or #Pypi." \
-                     https://fediscience.org/api/v1/statuses \
-                     -w "\nResponse code: %{http_code}\n" \
-                     -f || {
-                       echo "Failed to post to Mastodon"
-                       exit 1
-                     }
+            export MASTODONBOT="${{ secrets.MASTODONBOT }}"
+            export PR_TITLE="${{ github.event.pull_request.title }}"
+            chmod +x $GITHUB_WORKSPACE/.github/workflows/post_to_mastodon.sh
+            $GITHUB_WORKSPACE/.github/workflows/post_to_mastodon.sh

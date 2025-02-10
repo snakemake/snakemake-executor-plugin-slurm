@@ -122,7 +122,11 @@ class Executor(RemoteExecutor):
         self._fallback_account_arg = None
         self._fallback_partition = None
         self._preemption_warning = False  # no preemption warning has been issued
-        self.slurm_logdir = None
+        self.slurm_logdir = (
+            Path(self.workflow.executor_settings.logdir)
+            if self.workflow.executor_settings.logdir
+            else Path(".snakemake/slurm_logs").resolve()
+        )
         atexit.register(self.clean_old_logs)
 
     def clean_old_logs(self) -> None:
@@ -179,12 +183,6 @@ class Executor(RemoteExecutor):
             wildcard_str = "_".join(job.wildcards) if job.wildcards else ""
         except AttributeError:
             wildcard_str = ""
-
-        self.slurm_logdir = (
-            Path(self.workflow.executor_settings.logdir)
-            if self.workflow.executor_settings.logdir
-            else Path(".snakemake/slurm_logs").resolve()
-        )
 
         self.slurm_logdir.mkdir(parents=True, exist_ok=True)
         slurm_logfile = self.slurm_logdir / group_or_rule / wildcard_str / "%j.log"
@@ -640,10 +638,24 @@ We leave it to SLURM to resume your job(s)"""
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
         except subprocess.CalledProcessError as e:
-            raise WorkflowError(
-                f"Unable to test the validity of the given or guessed SLURM account "
-                f"'{account}' with sacctmgr: {e.stderr}"
+            sacctmgr_report = (
+                "Unable to test the validity of the given or guessed "
+                f"SLURM account '{account}' with sacctmgr: {e.stderr}."
             )
+            try:
+                cmd = "sshare -U --format Account --noheader"
+                accounts = subprocess.check_output(
+                    cmd, shell=True, text=True, stderr=subprocess.PIPE
+                )
+            except subprocess.CalledProcessError as e2:
+                sshare_report = (
+                    "Unable to test the validity of the given or guessed"
+                    f" SLURM account '{account}' with sshare: {e2.stderr}."
+                )
+                raise WorkflowError(
+                    f"The 'sacctmgr' reported: '{sacctmgr_report}' "
+                    f"and likewise 'sshare' reported: '{sshare_report}'."
+                )
 
         # The set() has been introduced during review to eliminate
         # duplicates. They are not harmful, but disturbing to read.
