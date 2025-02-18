@@ -77,14 +77,14 @@ def set_gres_string(job: JobExecutorInterface) -> str:
         if job.resources.get("gres"):
             raise WorkflowError("GRES and GPU are set. Please only set one" " of them.")
         # validate GPU format
-        if not gpus_re.match(str(job.resources.gpu)):
+        if not gpus_re.match(str(job.resources.gpus)):
             raise WorkflowError(
-                f"Invalid GPU format: {job.resources.gpu}. "
+                f"Invalid GPU format: {job.resources.gpus}. "
                 "Expected format: '<number>' or '<name>:<number>' "
                 "(e.g., '1' or 'tesla:2')"
             )
-        gres_string = f" --gpus={job.resources.gpu}"
-    elif job.resources.get("gpu_model") and job.resources.get("gpu"):
+        gres_string = f" --gpus={job.resources.gpus}"
+    elif job.resources.get("gpu_model") and job.resources.get("gpus"):
         # validate GPU model format
         if not gpu_model_re.match(job.resources.gpu_model):
             raise WorkflowError(
@@ -92,9 +92,9 @@ def set_gres_string(job: JobExecutorInterface) -> str:
                 "Expected format: '<name>' "
                 "(e.g., 'tesla')"
             )
-        gres_string = f" --gpus:{job.resources.gpu_model}:{job.resources.gpu}"
-    elif job.resources.get("gpu_model") and not job.resources.get("gpu"):
+        gres_string = f" --gpus:{job.resources.gpu_model}:{job.resources.gpus}"
+    elif job.resources.get("gpu_model") and not job.resources.get("gpus"):
         raise WorkflowError(
             "GPU model is set, but no GPU number is given. " "Please set 'gpu' as well."
         )
-    return gres_string if job.resources.get("gres") or job.resources.get("gpu") else ""
+    return gres_string if job.resources.get("gres") or job.resources.get("gpus") else ""
