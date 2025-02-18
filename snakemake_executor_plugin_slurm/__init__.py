@@ -208,7 +208,7 @@ class Executor(RemoteExecutor):
             f"--job-name {self.run_uuid} "
             f"--output '{slurm_logfile}' "
             f"--export=ALL "
-            f"--comment {comment_str}"
+            f"--comment '{comment_str}'"
         )
 
         call += self.get_account_arg(job)
