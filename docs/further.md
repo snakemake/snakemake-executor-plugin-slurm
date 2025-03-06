@@ -93,7 +93,7 @@ To submit "ordinary" MPI jobs, submitting with `tasks` (the MPI ranks) is suffic
 SLURM allows to specify GPU request with the `--gres` or `--gpus` flags, Snakemake takes a similar approach. Resources can be asked for with
 
 - `gres`, e.g. `gres=gpu:1` or `gres=gpu:tesla:2`, hence `<string>:<number>` or `<string>:<model>:<number>`
-- alternatively, the resource `gpus` can be requested, e.g. `gpus=2`. This can be combined with `gpu_model`, e.g. `gpus=tesla:2` or independently.
+- alternatively, the resource `gpu` or `gpus` can be requested, e.g. `gpus=2` or `gpu=2`. This can be combined with `gpu_model` or `gpu_manufacturer`, e.g. `gpus=tesla:2` or independently.
 
 Additionally, `cpus_per_gpu` can be set - Snakemakes `threads` settings will otherwise be used to set `cpus_per_gpu`. If `cpus_per_gpu` is lower or equal to zero, no CPU is requested from SLURM (and cluster defaults will kick in, if any).
 
@@ -105,12 +105,14 @@ set-resources:
         gres: "gpu:1"
 
     multi_gpu_rule:
-        gpus: 2
-        gpu_model: "tesla" 
+        gpus: 2 # or 'gpu: 2'
+        gpu_model: "tesla"
+        # OR
+        gpu_manufacturer: "tesla"
         cpus_per_gpu: 4
 
     no_cpu_gpu_rule:
-        gpus: 1
+        gpu: 1 # or 'gpus: 1'
         cpus_per_gpu: 0 # Values <= 0 indicate that NO CPU request string
                         # will be issued.
 ```
