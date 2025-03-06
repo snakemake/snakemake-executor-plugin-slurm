@@ -77,7 +77,7 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     # ensure that gres is not set, if gpu and gpu_model are set
     if job.resources.get("gres") and gpu_string:
         raise WorkflowError("GRES and GPU are set. Please only set one" " of them.")
-    elif not job.resources.get("gres") and not gpu_string:
+    elif not job.resources.get("gres") and not gpu_model and not gpu_string:
         return ""
 
     if job.resources.get("gres"):
@@ -100,9 +100,7 @@ def set_gres_string(job: JobExecutorInterface) -> str:
             )
         return f" --gpus={gpu_model}:{gpu_string}"
     elif gpu_model and not gpu_string:
-        raise WorkflowError(
-            "A gpu model has been requested without specifying a gpu request."
-        )
+        raise WorkflowError("GPU model is set, but no GPU number is given")
     elif gpu_string:
         # validate GPU format
         if not gpus_re.match(gpu_string):
