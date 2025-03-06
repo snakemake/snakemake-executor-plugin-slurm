@@ -99,6 +99,10 @@ def set_gres_string(job: JobExecutorInterface) -> str:
                 " Expected format: '<name>' (e.g., 'tesla')"
             )
         return f" --gpus={gpu_model}:{gpu_string}"
+    elif gpu_model and not gpu_string:
+        raise WorkflowError(
+            "A gpu model has been requested without specifying a gpu request."
+        )
     elif gpu_string:
         # validate GPU format
         if not gpus_re.match(gpu_string):
