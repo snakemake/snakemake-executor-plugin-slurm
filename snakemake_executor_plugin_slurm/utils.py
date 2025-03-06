@@ -103,7 +103,10 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     elif gpu_model and gpu_string:
         # validate GPU model format
         if not gpu_model_re.match(job.resources.gpu_model):
+        if not gpu_model_re.match(gpu_model):
             raise WorkflowError(
+                f"Invalid GPU model format: {gpu_model}. Expected format: '<name>' (e.g., 'tesla')"
+            )
                 f"Invalid GPU model format: {gpu_model}. "
                 "Expected format: '<name>' "
                 "(e.g., 'tesla')"
