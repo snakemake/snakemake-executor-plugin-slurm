@@ -14,7 +14,7 @@ We recommend running Snakemake on the log in node. Occassionally, HPC administra
 |:------------- |:---------------|:-------------|:-------------|:-------------:|
 | (https://github.com/snakemake-workflows/transcriptome-differential-expression)[Transcriptome DiffExp + Fusion detection]        | 4        | 9:15:43      | 225.15 | 0.68
 
-If you want to contribute a similar statistics, please run `/usr/bin/time -v snakemake ...` on your cluster and contribute your stats as an (https://github.com/snakemake/snakemake-executor-plugin-slurm/issue)[issue to the plugin repo on GitHub].
+If you want to contribute similar statistics, please run `/usr/bin/time -v snakemake ...` on your cluster and submit your stats as an [issue to the plugin repo on GitHub](https://github.com/snakemake/snakemake-executor-plugin-slurm/issue).
 
 #### Reporting Bugs and Feature Requests
 
