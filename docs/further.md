@@ -1,6 +1,24 @@
-### The general Idea
+### How this Plugin works
 
-To use this plugin, log in to your cluster's head node (sometimes called the "login" node), activate your environment as usual, and start Snakemake. Snakemake will then submit your jobs as cluster jobs.
+Like with all remote executors, Snakemake will essentially submit itself. Specifically, on an HPC cluster Snakemake will be the "job script". Hence, the SLURM logfile will contain the same output, you will otherwise see for that rule. The plugin will consider this as redundant and delete this log file for successful jobs - after all, we have the rule specific logs, too.
+
+Remote executors submit Snakemake jobs, as Snakemake needs to provide its unique functionaliy (piped group jobs, running rules with wrappers, etc.) on the cluster nodes. It's memory footprint will depend on that added functionality (i.e. for rules with a `run` directive which imports modules and reads data it will be bigger).
+
+#### Usage Hints
+
+To use this plugin, you can install it into your Snakemake base environment with conda. It will install its dependency, the "jobstep" plugin (which will be used on the cluster nodes). We recommend installing the `snakemake-storage-plugin-fs` (see below) for automatic stage-in and -out procedures.
+
+We recommend running Snakemake on the log in node. Occassionally, HPC administrators are opposed to the idea of having a job sheperd running on the login node, because nobody should calculate there. We therefore provide this table of measurements:
+
+| Workflow | Number of local rules  | Total Runtime (hh:mm:ss) | CPU-Time on the login node [user + system] (s) | Fraction |
+|:------------- |:---------------|:-------------|:-------------|:-------------:|
+| (https://github.com/snakemake-workflows/transcriptome-differential-expression)[Transcriptome DiffExp + Fusion detection]        | 4        | 9:15:43      | 225.15 | 0.68
+
+If you want to contribute a similar statistics, please run `/usr/bin/time -v snakemake ...` on your cluster and contribute your stats as an (https://github.com/snakemake/snakemake-executor-plugin-slurm/issue)[issue to the plugin repo on GitHub].
+
+#### Reporting Bugs and Feature Requests
+
+We welcome bug reports and feature requests! Be sure to only report bugs related to _this_ plugin as an (https://github.com/snakemake/snakemake-executor-plugin-slurm/issue)[issue to the plugin repo on GitHub]. All other issue reports should either go to the (https://github.com/snakemake/snakemake/issues)[Snakemake main repository] or to other plugin repositories of Snakemake (or even to your friendly cluster administrator, if an issue is a cluster relate one).
 
 ### Specifying Account and Partition
 
