@@ -17,7 +17,7 @@ keywords = ["snakemake", "plugin", "executor", "cluster", "slurm"]
 python = "^3.11"
 snakemake-interface-common = "^1.13.0"
 snakemake-interface-executor-plugins = "^9.1.1"
-snakemake-executor-plugin-slurm-jobstep = "^0.2.0"
+snakemake-executor-plugin-slurm-jobstep = "^0.3.0"
 throttler = "^1.2.2"
 
 [tool.poetry.group.dev.dependencies]
