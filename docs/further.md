@@ -18,7 +18,7 @@ If you want to contribute similar statistics, please run `/usr/bin/time -v snake
 
 #### Reporting Bugs and Feature Requests
 
-We welcome bug reports and feature requests! Be sure to only report bugs related to _this_ plugin as an (https://github.com/snakemake/snakemake-executor-plugin-slurm/issue)[issue to the plugin repo on GitHub]. All other issue reports should either go to the (https://github.com/snakemake/snakemake/issues)[Snakemake main repository] or to other plugin repositories of Snakemake (or even to your friendly cluster administrator, if an issue is a cluster relate one).
+We welcome bug reports and feature requests! Please report only those bugs related to _this_ plugin as an [issue to the plugin repo on GitHub](https://github.com/snakemake/snakemake-executor-plugin-slurm/issue). All other issues should be directed either to the [Snakemake main repository](https://github.com/snakemake/snakemake/issues) or to the appropriate Snakemake plugin repository (or, if the issue is cluster‑related, to your cluster administrator).
 
 ### Specifying Account and Partition
 
