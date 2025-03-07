@@ -2,7 +2,7 @@
 
 Like with all remote executors, Snakemake will essentially submit itself. Specifically, on an HPC cluster Snakemake will be the "job script". Hence, the SLURM logfile will contain the same output, you will otherwise see for that rule. The plugin will consider this as redundant and delete this log file for successful jobs - after all, we have the rule specific logs, too.
 
-Remote executors submit Snakemake jobs, as Snakemake needs to provide its unique functionaliy (piped group jobs, running rules with wrappers, etc.) on the cluster nodes. It's memory footprint will depend on that added functionality (i.e. for rules with a `run` directive which imports modules and reads data it will be bigger).
+Remote executors submit Snakemake jobs, as Snakemake needs to provide its unique functionality (piped group jobs, running rules with wrappers, etc.) on the cluster nodes. Its memory footprint will depend on that added functionality (i.e. for rules with a `run` directive, which imports modules and reads data, it will be bigger).
 
 #### Usage Hints
 
