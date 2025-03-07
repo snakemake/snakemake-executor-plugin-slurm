@@ -8,7 +8,8 @@ Remote executors submit Snakemake jobs, as Snakemake needs to provide its unique
 
 To use this plugin, you can install it into your Snakemake base environment with conda. It will install its dependency, the "jobstep" plugin (which will be used on the cluster nodes). We recommend installing the `snakemake-storage-plugin-fs` (see below) for automatic stage-in and -out procedures.
 
-We recommend running Snakemake on the log in node. Occassionally, HPC administrators are opposed to the idea of having a job sheperd running on the login node, because nobody should calculate there. We therefore provide this table of measurements:
+We recommend running Snakemake on the login node. Occasionally, HPC administrators are opposed to having a job shepherd running on the login node, since computational tasks should not be executed there.
+We therefore provide this table of measurements:
 
 | Workflow | Number of local rules  | Total Runtime (hh:mm:ss) | CPU-Time on the login node [user + system] (s) | Fraction |
 |:------------- |:---------------|:-------------|:-------------|:-------------:|
