@@ -26,7 +26,7 @@ from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
 from snakemake_interface_common.exceptions import WorkflowError
-from snakemake_executor_plugin_slurm_jobstep import get_cpus_per_task
+from snakemake_executor_plugin_slurm_jobstep import get_cpu_setting
 
 from .utils import delete_slurm_environment, delete_empty_dirs
 
@@ -261,7 +261,7 @@ class Executor(RemoteExecutor):
                     "Probably not what you want."
                 )
 
-        call += f" --cpus-per-task={get_cpus_per_task(job)}"
+        call += f" --cpus-per-task={get_cpu_setting(job)}"
 
         if job.resources.get("slurm_extra"):
             self.check_slurm_extra(job)
