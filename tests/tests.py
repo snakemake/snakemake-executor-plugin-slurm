@@ -77,7 +77,7 @@ class TestGresString:
     def test_valid_gpu_number(self, mock_job):
         """Test with valid GPU number."""
         job = mock_job(gpu="2")
-        assert set_gres_string(job) == " --gpu=2"
+        assert set_gres_string(job) == " --gpus=2"
 
     def test_valid_gpu_with_name(self, mock_job):
         """Test with valid GPU name and number."""
