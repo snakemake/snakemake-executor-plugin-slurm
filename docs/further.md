@@ -108,7 +108,7 @@ set-resources:
         gpu: 2
         gpu_model: "tesla"
         # OR
-        gpu_manufacturer: "tesla"
+        gpu_manufacturer: "nvidia"
         cpus_per_gpu: 4
 
     no_cpu_gpu_rule:
