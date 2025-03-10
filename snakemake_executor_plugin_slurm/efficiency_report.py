@@ -113,10 +113,6 @@ def fetch_sacct_data(run_uuid, logger, efficiency_threshold=0.8):
                 f" has low CPU efficiency: {row['CPU Efficiency (%)']}%."
             )
     logfile = f"efficiency_report_{run_uuid}.log"
+    df.to_csv(logfile)
 
     logger.info(f"Saved efficiency evaluation to '{logfile}'")
-    return df
-
-
-# Example usage:
-#df = fetch_sacct_data("snakemake_workflow_uuid")  # Replace with actual UUID

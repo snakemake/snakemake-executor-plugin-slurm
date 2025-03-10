@@ -29,6 +29,7 @@ from snakemake_interface_common.exceptions import WorkflowError
 from snakemake_executor_plugin_slurm_jobstep import get_cpus_per_task
 
 from .utils import delete_slurm_environment, delete_empty_dirs
+from .efficiency_report import fetch_sacct_data
 
 
 @dataclass
@@ -124,6 +125,7 @@ class Executor(RemoteExecutor):
         self._preemption_warning = False  # no preemption warning has been issued
         self.slurm_logdir = None
         atexit.register(self.clean_old_logs)
+        atexit.register(self.fetch_sacct_data)
 
     def clean_old_logs(self) -> None:
         """Delete files older than specified age from the SLURM log directory."""
