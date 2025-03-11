@@ -92,8 +92,8 @@ To submit "ordinary" MPI jobs, submitting with `tasks` (the MPI ranks) is suffic
 
 SLURM allows to specify GPU request with the `--gres` or `--gpus` flags and Snakemake takes a similar approach. Resources can be asked for with
 
-- Using the Snakemake resours `gres`, the syntax is `<string>:<number>` or `<string>:<model>:<number>`, i.e. `gres=gpu:1` or `gres=gpu:a100:2` (assuming GPU model). 
-- alternatively, the Snakemake resource `gpu` can be used, e.g. by just requesting the number of GPUs like `gpu=2`. This can be combined with the `gpu_model` resource, i.e. `gpu_model=a100` or independently. The combination will result in a flag to `sbatch` like `--gpus=a100:2`. The Snakemake `gpu` resource has to be number. 
+- The resource `gpu` can be used, e.g. by just requesting the number of GPUs like `gpu=2`. This can be combined with the `gpu_model` resource, i.e. `gpu_model=a100` or independently. The combination will result in a flag to `sbatch` like `--gpus=a100:2`. The Snakemake `gpu` resource has to be number. 
+- Alternatively, the resource `gres`, the syntax is `<string>:<number>` or `<string>:<model>:<number>`, i.e. `gres=gpu:1` or `gres=gpu:a100:2` (assuming GPU model).
 
 .. note:: Internally, Snakemake knows the resource `gpu_manufacturer`, too. However, SLURM does not know the distinction between model and manufacturer. Essentially, the preferred way to request an accelerator will depend on your specific cluster setup.
     Also, to be consistent within Snakemake, the resource is called `gpu` not `gpus`.
