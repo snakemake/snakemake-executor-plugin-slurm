@@ -223,7 +223,7 @@ When using [profiles](https://snakemake.readthedocs.io/en/stable/executing/cli.h
 
 ```YAML
 executor: slurm
-latency-wait: 60
+latency-wait: 5
 default-storage-provider: fs
 shared-fs-usage:
   - persistence
