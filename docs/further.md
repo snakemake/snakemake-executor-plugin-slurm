@@ -133,6 +133,36 @@ set-resources:
         cpus_per_tasks: 2
 ```
 
+### GPU Jobs
+
+SLURM allows to specify GPU request with the `--gres` or `--gpus` flags and Snakemake takes a similar approach. Resources can be asked for with
+
+- The resource `gpu` can be used, e.g. by just requesting the number of GPUs like `gpu=2`. This can be combined with the `gpu_model` resource, i.e. `gpu_model=a100` or independently. The combination will result in a flag to `sbatch` like `--gpus=a100:2`. The Snakemake `gpu` resource has to be number. 
+- Alternatively, the resource `gres`, the syntax is `<string>:<number>` or `<string>:<model>:<number>`, i.e. `gres=gpu:1` or `gres=gpu:a100:2` (assuming GPU model).
+
+.. note:: Internally, Snakemake knows the resource `gpu_manufacturer`, too. However, SLURM does not know the distinction between model and manufacturer. Essentially, the preferred way to request an accelerator will depend on your specific cluster setup.
+    Also, to be consistent within Snakemake, the resource is called `gpu` not `gpus`.
+
+Additionally, `cpus_per_gpu` can be set - Snakemakes `threads` settings will otherwise be used to set `cpus_per_gpu`. If `cpus_per_gpu` is lower or equal to zero, no CPU is requested from SLURM (and cluster defaults will kick in, if any).
+
+A sample workflow profile might look like:
+
+```YAML
+set-resources:
+    gres_request_rule:
+        gres: "gpu:1"
+
+    multi_gpu_rule:
+        gpu: 2
+        gpu_model: "a100"
+        cpus_per_gpu: 4
+
+    no_cpu_gpu_rule:
+        gpu: 1
+        cpus_per_gpu: 0 # Values <= 0 indicate that NO CPU request string
+                        # will be issued.
+```
+
 ### Running Jobs locally
 
 Not all Snakemake workflows are adapted for heterogeneous environments, particularly clusters. Users might want to avoid the submission of _all_ rules as cluster jobs. Non-cluster jobs should usually include _short_ jobs, e.g. internet downloads or plotting rules.

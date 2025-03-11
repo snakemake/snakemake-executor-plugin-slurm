@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Extract version from PR tag passed as environment variable
-if [ -z "${PR_TITLE}" ]; then
-    echo "Error: 'PR_TITLE' environment variable is not set."
+if [ -z "${PR_TITLE}" ]; then # apparently unset, workflow broken?
+    >&2 echo "Error: 'PR_TITLE' environment variable is not set."
     exit 1
 fi
 
