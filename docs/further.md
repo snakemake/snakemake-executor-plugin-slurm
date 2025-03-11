@@ -90,10 +90,13 @@ To submit "ordinary" MPI jobs, submitting with `tasks` (the MPI ranks) is suffic
 
 ### GPU Jobs
 
-SLURM allows to specify GPU request with the `--gres` or `--gpus` flags, Snakemake takes a similar approach. Resources can be asked for with
+SLURM allows to specify GPU request with the `--gres` or `--gpus` flags and Snakemake takes a similar approach. Resources can be asked for with
 
-- `gres`, e.g. `gres=gpu:1` or `gres=gpu:tesla:2`, hence `<string>:<number>` or `<string>:<model>:<number>`
-- alternatively, the resource `gpu` can be requested, e.g. `gpu=2`. This can be combined with `gpu_model` or `gpu_manufacturer`, e.g. `gpu=tesla:2` or independently. (To be consistent within Snakemake, the resource is called `gpu` not `gpus`.)
+- Using the Snakemake resours `gres`, the syntax is `<string>:<number>` or `<string>:<model>:<number>`, i.e. `gres=gpu:1` or `gres=gpu:a100:2` (assuming GPU model). 
+- alternatively, the Snakemake resource `gpu` can be used, e.g. by just requesting the number of GPUs like `gpu=2`. This can be combined with the `gpu_model` resource, i.e. `gpu_model=a100` or independently. The combination will result in a flag to `sbatch` like `--gpus=a100:2`. The Snakemake `gpu` resource has to be number. 
+
+.. note:: Internally, Snakemake knows the resource `gpu_manufacturer`, too. However, SLURM does not know the distinction between model and manufacturer. Essentially, the preferred way to request an accelerator will depend on your specific cluster setup.
+    Also, to be consistent within Snakemake, the resource is called `gpu` not `gpus`.
 
 Additionally, `cpus_per_gpu` can be set - Snakemakes `threads` settings will otherwise be used to set `cpus_per_gpu`. If `cpus_per_gpu` is lower or equal to zero, no CPU is requested from SLURM (and cluster defaults will kick in, if any).
 
@@ -106,9 +109,7 @@ set-resources:
 
     multi_gpu_rule:
         gpu: 2
-        gpu_model: "tesla"
-        # OR
-        gpu_manufacturer: "nvidia"
+        gpu_model: "a100"
         cpus_per_gpu: 4
 
     no_cpu_gpu_rule:

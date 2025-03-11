@@ -58,22 +58,17 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     gres_re = re.compile(r"^[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?:\d+$")
     # gpu model arguments can be of type "string"
     gpu_model_re = re.compile(r"^[a-zA-Z0-9_]+$")
-    # gpus can be of type "int" or "string:int"
-    gpus_re = re.compile(r"^\d+$|^[a-zA-Z0-9_]+:\d+$")
+    # The Snakemake resources can be only be of type "int",
+    # hence no further regex is needed.
 
     gpu_string = None
-    if job.resources.get("gpu") or job.resources.get("gpus"):
-        if job.resources.get("gpu"):
-            gpu_string = str(job.resources.get("gpu"))
-        else:
-            gpu_string = str(job.resources.get("gpus"))
-
+    if job.resources.get("gpu"):
+        gpu_string = str(job.resources.get("gpu"))
+     
     gpu_model = None
     if job.resources.get("gpu_model"):
         gpu_model = job.resources.get("gpu_model")
-    else:
-        gpu_model = job.resources.get("gpu_manufacturer")
-
+    
     # ensure that gres is not set, if gpu and gpu_model are set
     if job.resources.get("gres") and gpu_string:
         raise WorkflowError("GRES and GPU are set. Please only set one" " of them.")
@@ -102,15 +97,6 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     elif gpu_model and not gpu_string:
         raise WorkflowError("GPU model is set, but no GPU number is given")
     elif gpu_string:
-        # validate GPU format
-        if not gpus_re.match(gpu_string):
-            raise WorkflowError(
-                f"Invalid GPU format: {gpu_string}. "
-                "Expected format: '<number>' or '<name>:<number>' "
-                "(e.g., '1' or 'tesla:2')"
-            )
+        # we assume here, that the validator ensures that the 'gpu_string'
+        # is an integer
         return f" --gpus={gpu_string}"
-    elif gpu_model and not gpu_string:
-        raise WorkflowError(
-            "GPU model is set, but no GPU number is given. " "Please set 'gpu' as well."
-        )
