@@ -251,7 +251,6 @@ class Executor(RemoteExecutor):
         # SLURM v22.05 will require it for all jobs
         gpu_job = (
             job.resources.get("gpu")
-            or job.resources.get("gpus")
             or "gpu" in job.resources.get("gres", "")
         )
         if gpu_job:
