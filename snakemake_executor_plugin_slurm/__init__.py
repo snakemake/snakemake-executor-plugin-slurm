@@ -85,6 +85,15 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
+    no_account: bool = field(
+        default=False,
+        metadata={
+            "help": "Do not use any account for submission. "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
 
 
 # Required:
@@ -213,7 +222,9 @@ class Executor(RemoteExecutor):
             f"--comment '{comment_str}'"
         )
 
-        call += self.get_account_arg(job)
+        if not self.workflow.executor_settings.no_account:
+            call += self.get_account_arg(job)
+
         call += self.get_partition_arg(job)
 
         if self.workflow.executor_settings.requeue:
