@@ -5,7 +5,20 @@ if [ -z "${PR_TITLE}" ]; then # apparently unset, workflow broken?
     >&2 echo "Error: 'PR_TITLE' environment variable is not set."
     exit 1
 fi
-version="${PR_TITLE##* }"
+
+# Check if this is a release PR
+if [[ ! "${PR_TITLE}" =~ ^chore\(main\):\ release ]]; then
+    echo "Not a release PR, skipping Mastodon post"
+    exit 0
+fi
+
+# Extract version (everything after "release ")
+if [[ "${PR_TITLE}" =~ [Rr]elease[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+    version="${BASH_REMATCH[1]}"
+else
+    echo "Error: Could not extract version number from PR title"
+    exit 1
+fi
 
 # Validate version format
 if ! [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then

@@ -26,9 +26,9 @@ from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
 from snakemake_interface_common.exceptions import WorkflowError
-from snakemake_executor_plugin_slurm_jobstep import get_cpus_per_task
+from snakemake_executor_plugin_slurm_jobstep import get_cpu_setting
 
-from .utils import delete_slurm_environment, delete_empty_dirs
+from .utils import delete_slurm_environment, delete_empty_dirs, set_gres_string
 
 
 @dataclass
@@ -122,7 +122,11 @@ class Executor(RemoteExecutor):
         self._fallback_account_arg = None
         self._fallback_partition = None
         self._preemption_warning = False  # no preemption warning has been issued
-        self.slurm_logdir = None
+        self.slurm_logdir = (
+            Path(self.workflow.executor_settings.logdir)
+            if self.workflow.executor_settings.logdir
+            else Path(".snakemake/slurm_logs").resolve()
+        )
         atexit.register(self.clean_old_logs)
 
     def clean_old_logs(self) -> None:
@@ -180,12 +184,6 @@ class Executor(RemoteExecutor):
         except AttributeError:
             wildcard_str = ""
 
-        self.slurm_logdir = (
-            Path(self.workflow.executor_settings.logdir)
-            if self.workflow.executor_settings.logdir
-            else Path(".snakemake/slurm_logs").resolve()
-        )
-
         self.slurm_logdir.mkdir(parents=True, exist_ok=True)
         slurm_logfile = self.slurm_logdir / group_or_rule / wildcard_str / "%j.log"
         slurm_logfile.parent.mkdir(parents=True, exist_ok=True)
@@ -210,7 +208,7 @@ class Executor(RemoteExecutor):
             f"--job-name {self.run_uuid} "
             f"--output '{slurm_logfile}' "
             f"--export=ALL "
-            f"--comment {comment_str}"
+            f"--comment '{comment_str}'"
         )
 
         call += self.get_account_arg(job)
@@ -218,6 +216,8 @@ class Executor(RemoteExecutor):
 
         if self.workflow.executor_settings.requeue:
             call += " --requeue"
+
+        call += set_gres_string(job)
 
         if job.resources.get("clusters"):
             call += f" --clusters {job.resources.clusters}"
@@ -249,7 +249,11 @@ class Executor(RemoteExecutor):
 
         # fixes #40 - set ntasks regardless of mpi, because
         # SLURM v22.05 will require it for all jobs
-        call += f" --ntasks={job.resources.get('tasks', 1)}"
+        gpu_job = job.resources.get("gpu") or "gpu" in job.resources.get("gres", "")
+        if gpu_job:
+            call += f" --ntasks-per-gpu={job.resources.get('tasks', 1)}"
+        else:
+            call += f" --ntasks={job.resources.get('tasks', 1)}"
         # MPI job
         if job.resources.get("mpi", False):
             if not job.resources.get("tasks_per_node") and not job.resources.get(
@@ -260,8 +264,9 @@ class Executor(RemoteExecutor):
                     "specified. Assuming 'tasks_per_node=1'."
                     "Probably not what you want."
                 )
-
-        call += f" --cpus-per-task={get_cpus_per_task(job)}"
+        # we need to set cpus-per-task OR cpus-per-gpu, the function
+        # will return a string with the corresponding value
+        call += f" {get_cpu_setting(job, gpu_job)}"
 
         if job.resources.get("slurm_extra"):
             self.check_slurm_extra(job)

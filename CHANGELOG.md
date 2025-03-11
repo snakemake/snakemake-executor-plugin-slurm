@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.15.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.15.0...v0.15.1) (2025-02-14)
+
+
+### Bug Fixes
+
+* missing quotes for the slurm comment ([#211](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/211)) ([44f2e2b](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/44f2e2b8defdaa2adc6e9d7ab92d60935bccd010))
+
+## [0.15.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.14.3...v0.15.0) (2025-01-23)
+
+
+### Features
+
+* disallowing blank reports ([#204](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/204)) ([6dd0105](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6dd0105ddf0ac37cd8074b51e5b1f3329b04ae3e))
+
+
+### Bug Fixes
+
+* initializing self.slurm_logdir ([#206](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/206)) ([b00e520](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/b00e520a1c3b4707b9ee87765a44c2da23559650))
+
+## [0.14.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.14.2...v0.14.3) (2025-01-22)
+
+
+### Bug Fixes
+
+* ci runner ought to start now upon merge to main ([#199](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/199)) ([363f130](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/363f130782f557c56bbbd80ec47a9f732818e6b4))
+
 ## [0.14.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.14.1...v0.14.2) (2025-01-20)
 
 
