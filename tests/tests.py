@@ -1,10 +1,11 @@
+import os
 from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
 from unittest.mock import MagicMock
 import pytest
 
-from snakemake_executor_plugin_slurm import ExecutorSettings
+from snakemake_executor_plugin_slurm import ExecutorSettings, Executor
 from snakemake_executor_plugin_slurm.utils import set_gres_string
 from snakemake_interface_common.exceptions import WorkflowError
 
@@ -113,7 +114,10 @@ class TestGresString:
 
 
 class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageBase):
-    """Test handling of wildcards with slashes to ensure log directories are correctly constructed."""
+    """
+    Test handling of wildcards with slashes to ensure log directories are
+    correctly constructed.
+    """
 
     __test__ = True
 
@@ -124,7 +128,10 @@ class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageB
         return ExecutorSettings(logdir="test_logdir")
 
     def test_wildcard_slash_replacement(self):
-        """Test that slashes in wildcards are correctly replaced with underscores in log directory paths."""
+        """
+        Test that slashes in wildcards are correctly replaced with
+        underscores in log directory paths.
+        """
 
         # Create a mock job with wildcards containing slashes
         class MockJob:
