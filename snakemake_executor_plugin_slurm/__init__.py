@@ -249,10 +249,7 @@ class Executor(RemoteExecutor):
 
         # fixes #40 - set ntasks regardless of mpi, because
         # SLURM v22.05 will require it for all jobs
-        gpu_job = (
-            job.resources.get("gpu")
-            or "gpu" in job.resources.get("gres", "")
-        )
+        gpu_job = job.resources.get("gpu") or "gpu" in job.resources.get("gres", "")
         if gpu_job:
             call += f" --ntasks-per-gpu={job.resources.get('tasks', 1)}"
         else:
