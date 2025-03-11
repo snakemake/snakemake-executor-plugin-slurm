@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.15.1...v1.0.0) (2025-03-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* improved GPU job support ([#173](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/173))
+
+### Features
+
+* improved GPU job support ([#173](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/173)) ([66dcdcf](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/66dcdcfed1b2185e7ffcf8d33ef70bf09e9b2f56))
+
 ## [0.15.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.15.0...v0.15.1) (2025-02-14)
 
 
