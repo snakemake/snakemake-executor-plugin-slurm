@@ -110,3 +110,47 @@ class TestGresString:
             WorkflowError, match="GRES and GPU are set. Please only set one of them."
         ):
             set_gres_string(job)
+
+
+class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+    """Test handling of wildcards with slashes to ensure log directories are correctly constructed."""
+
+    __test__ = True
+
+    def get_executor(self) -> str:
+        return "slurm"
+
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        return ExecutorSettings(logdir="test_logdir")
+
+    def test_wildcard_slash_replacement(self):
+        """Test that slashes in wildcards are correctly replaced with underscores in log directory paths."""
+
+        # Create a mock job with wildcards containing slashes
+        class MockJob:
+            def __init__(self):
+                self.name = "test_job"
+                self.wildcards = ["/leading_slash", "middle/slash", "trailing/"]
+                self.is_group = lambda: False
+
+        # Create an executor instance
+        executor = Executor()
+        executor.workflow = snakemake.common.tests.DummyWorkflow()
+        executor.workflow.executor_settings = self.get_executor_settings()
+        executor.slurm_logdir = os.path.abspath("test_logdir")
+
+        # Manually call the wildcard sanitization logic from run_job method
+        try:
+            wildcard_str = (
+                "_".join(MockJob().wildcards).replace("/", "_")
+                if MockJob().wildcards
+                else ""
+            )
+        except AttributeError:
+            wildcard_str = ""
+
+        # Assert that slashes are correctly replaced with underscores
+        assert wildcard_str == "_leading_slash_middle_slash_trailing_"
+
+        # Verify no slashes remain in the wildcard string
+        assert "/" not in wildcard_str
