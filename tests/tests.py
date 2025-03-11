@@ -1,11 +1,10 @@
-import os
 from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
 from unittest.mock import MagicMock
 import pytest
 
-from snakemake_executor_plugin_slurm import ExecutorSettings, Executor
+from snakemake_executor_plugin_slurm import ExecutorSettings
 from snakemake_executor_plugin_slurm.utils import set_gres_string
 from snakemake_interface_common.exceptions import WorkflowError
 
