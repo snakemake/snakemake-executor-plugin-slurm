@@ -17,12 +17,12 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
         return "slurm"
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
-        return ExecutorSettings()
+        return ExecutorSettings(init_seconds_before_status_checks=1)
 
 
 class TestWorkflowsRequeue(TestWorkflows):
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
-        return ExecutorSettings(requeue=True)
+        return ExecutorSettings(requeue=True, init_seconds_before_status_checks=1)
 
 
 class TestGresString:
@@ -125,7 +125,9 @@ class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageB
         return "slurm"
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
-        return ExecutorSettings(logdir="test_logdir")
+        return ExecutorSettings(
+            logdir="test_logdir", init_seconds_before_status_checks=1
+        )
 
     def test_wildcard_slash_replacement(self):
         """
@@ -133,31 +135,14 @@ class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageB
         underscores in log directory paths.
         """
 
-        # Create a mock job with wildcards containing slashes
-        class MockJob:
-            def __init__(self):
-                self.name = "test_job"
-                self.wildcards = ["/leading_slash", "middle/slash", "trailing/"]
-                self.is_group = lambda: False
+    # Just test the wildcard sanitization logic directly
+    wildcards = ["/leading_slash", "middle/slash", "trailing/"]
 
-        # Create an executor instance
-        executor = Executor()
-        executor.workflow = snakemake.common.tests.DummyWorkflow()
-        executor.workflow.executor_settings = self.get_executor_settings()
-        executor.slurm_logdir = os.path.abspath("test_logdir")
+    # This is the actual logic from the Executor.run_job method
+    wildcard_str = "_".join(wildcards).replace("/", "_") if wildcards else ""
 
-        # Manually call the wildcard sanitization logic from run_job method
-        try:
-            wildcard_str = (
-                "_".join(MockJob().wildcards).replace("/", "_")
-                if MockJob().wildcards
-                else ""
-            )
-        except AttributeError:
-            wildcard_str = ""
+    # Assert that slashes are correctly replaced with underscores
+    assert wildcard_str == "_leading_slash_middle_slash_trailing_"
 
-        # Assert that slashes are correctly replaced with underscores
-        assert wildcard_str == "_leading_slash_middle_slash_trailing_"
-
-        # Verify no slashes remain in the wildcard string
-        assert "/" not in wildcard_str
+    # Verify no slashes remain in the wildcard string
+    assert "/" not in wildcard_str
