@@ -1,20 +1,12 @@
 ### How this Plugin works
 
-Like with all remote executors, Snakemake will essentially submit itself. Specifically, on an HPC cluster Snakemake will be the "job script". Hence, the SLURM logfile will contain the same output, you will otherwise see for that rule. The plugin will consider this as redundant and delete this log file for successful jobs - after all, we have the rule specific logs, too.
+Like with all remote executors, Snakemake will essentially submit itself. Specifically, on an HPC cluster with the SLURM batch system will be the "job script". Hence, the SLURM logfile will contain the same output you will otherwise see for that rule. The plugin will consider this as redundant and delete this log file for successful jobs - after all, we have the rule specific logs, too.
 
 Remote executors submit Snakemake jobs, as Snakemake needs to provide its unique functionality (piped group jobs, running rules with wrappers, etc.) on the cluster nodes. Its memory footprint will depend on that added functionality (i.e. for rules with a `run` directive, which imports modules and reads data, it will be bigger).
 
 #### Usage Hints
 
 To use this plugin, you can install it into your Snakemake base environment with conda. It will install its dependency, the "jobstep" plugin (which will be used on the cluster nodes). We recommend installing the `snakemake-storage-plugin-fs` (see below) for automatic stage-in and -out procedures.
-
-We recommend running Snakemake on the login node. Occasionally, HPC administrators are opposed to having a job shepherd running on the login node, since computational tasks should not be executed there.
-We therefore provide this table of measurements:
-
-| Workflow | Number of local rules  | Total Runtime (hh:mm:ss) | CPU-Time on the login node [user + system] (s) | Fraction |
-|:------------- |:---------------|:-------------|:-------------|:-------------:|
-| [Transcriptome DiffExp + Fusion detection](https://github.com/snakemake-workflows/transcriptome-differential-expression) | 4 | 9:15:43 | 225.15 | 0.68 |
-If you want to contribute similar statistics, please run `/usr/bin/time -v snakemake ...` on your cluster and submit your stats as an [issue to the plugin repo on GitHub](https://github.com/snakemake/snakemake-executor-plugin-slurm/issue).
 
 #### Reporting Bugs and Feature Requests
 
@@ -367,3 +359,18 @@ $ snakemake --workflow-profile <path> \
 > --configfile config/config.yaml \
 > --directory <path> # assuming a data path on a different file system than the workflow
 ```
+
+### Frequently Asked Questions
+
+#### Should I run Snakemake on the Login Node of my Cluster?
+
+We recommend running Snakemake on the login node. Occasionally, HPC administrators are opposed to having a job shepherd running on the login node, since computational tasks should not be executed there.
+
+We therefore provide this table of measurements:
+
+| Workflow | Version | Number of local rules  | Total Runtime (hh:mm:ss) | CPU-Time on the login node [user + system] (s) | Fraction |
+|:-------------|:---------------|:---------------|:-------------|:-------------|:-------------:|
+| [Transcriptome DiffExp + Fusion detection](https://github.com/snakemake-workflows/transcriptome-differential-expression) | 0.2.0 | 12 | 9:15:43 | 225.15 | 0.68 % |
+
+If you want to contribute similar statistics, please run `/usr/bin/time -v snakemake ...` on your cluster and submit your stats as an [issue to the plugin repo on GitHub](https://github.com/snakemake/snakemake-executor-plugin-slurm/issue).
+
