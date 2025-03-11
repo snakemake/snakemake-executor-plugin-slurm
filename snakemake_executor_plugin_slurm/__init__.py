@@ -180,7 +180,9 @@ class Executor(RemoteExecutor):
         group_or_rule = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
 
         try:
-            wildcard_str = "_".join(job.wildcards) if job.wildcards else ""
+            wildcard_str = (
+                "_".join(job.wildcards).replace("/", "_") if job.wildcards else ""
+            )
         except AttributeError:
             wildcard_str = ""
 
@@ -264,10 +266,10 @@ class Executor(RemoteExecutor):
                     "specified. Assuming 'tasks_per_node=1'."
                     "Probably not what you want."
                 )
+
         # we need to set cpus-per-task OR cpus-per-gpu, the function
         # will return a string with the corresponding value
         call += f" {get_cpu_setting(job, gpu_job)}"
-
         if job.resources.get("slurm_extra"):
             self.check_slurm_extra(job)
             call += f" {job.resources.slurm_extra}"
