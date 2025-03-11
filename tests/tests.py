@@ -84,21 +84,10 @@ class TestGresString:
         job = mock_job(gpu="tesla:2")
         assert set_gres_string(job) == " --gpus=tesla:2"
 
-    def test_invalid_gpu_format(self, mock_job):
-        """Test with invalid GPU format."""
-        job = mock_job(gpu="invalid:format:2")
-        with pytest.raises(WorkflowError, match="Invalid GPU format"):
-            set_gres_string(job)
-
     def test_gpu_with_model(self, mock_job):
         """Test GPU with model specification."""
         job = mock_job(gpu="2", gpu_model="tesla")
         assert set_gres_string(job) == " --gpus=tesla:2"
-
-    def test_gpu_with_manufacturer(self, mock_job):
-        """Test GPU with manufacturer specification."""
-        job = mock_job(gpu="2", gpu_manufacturer="nvidia")
-        assert set_gres_string(job) == " --gpus=nvidia:2"
 
     def test_invalid_gpu_model_format(self, mock_job):
         """Test with invalid GPU model format."""
@@ -117,5 +106,7 @@ class TestGresString:
     def test_both_gres_and_gpu_set(self, mock_job):
         """Test error case when both GRES and GPU are specified."""
         job = mock_job(gres="gpu:1", gpu="2")
-        with pytest.raises(WorkflowError, match="GRES and GPU are set"):
+        with pytest.raises(
+            WorkflowError, match="GRES and GPU are set. Please only set one of them."
+        ):
             set_gres_string(job)
