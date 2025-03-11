@@ -176,14 +176,9 @@ Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executi
 
 ### Software Recommendations
 
-#### Conda, Mamba
+#### Conda
 
-While Snakemake mainly relies on Conda for reproducible execution, many clusters impose file number limits in their "HOME" directory. In this case, run `mamba clean -a` occasionally for persisting environments.
-
-Note, `snakemake --sdm conda ...` works as intended.
-
-To ensure that this plugin is working, install it in your base environment for the desired workflow.
-
+Snakemake's default software deployment uses conda, hence `snakemake --sdm conda ...` [works as intended](https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html). On a cluster sometimes a file system other than `HOME` needs to be in dicated (e.g. because of quotas). In this case, `--conda-prefix /other/filesystem` might be a solution. You can use `--conda-cleanup-pkgs` to further save space by removing downloaded tarballs.
 
 #### Using Cluster Environment:  Modules
 
@@ -201,7 +196,6 @@ This will, internally, trigger a `module load bio VinaLC` immediately prior to e
 Note, that 
 - environment modules are best specified in a configuration file.
 - Using environment modules can be combined with conda and apptainer (`--sdm env-modules conda apptainer`), which will then be only used as a fallback for rules not defining environment modules.
-For running jobs, the `squeue` command:
 
 ### Inquiring about Job Information and Adjusting the Rate Limiter
 
