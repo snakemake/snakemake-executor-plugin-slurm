@@ -69,6 +69,29 @@ rule a:
 ```
 instead of the `threads` parameter. Parameters in the `resources` section will take precedence.
 
+Instead of writing hard-coded parameterization into Snakefiles, we recommend creating a cluster specific profile. This should be named `config.yaml` and placed in a directory `profiles` relative to your workflow directory. Indicate it to Snakemake with `--workflow-profile profiles`
+
+```YAML
+default-resources:
+    slurm_account: "<account>"
+    slurm_partition: "<default partition>"
+    mem_mb_per_cpu: 1800 # take a sensible default for your cluster
+    runtime: "30m"
+
+# here only rules, which require different (more) resources:
+set-resources:
+    rule_a:
+        runtime: "2h"
+
+    rule_b:
+        mem_mb_per_cpu: 3600
+        runtime: "5h"
+
+# parallelization with threads needs to be defined seperately:
+set-threads:
+    rule_b: 64
+```
+
 ### MPI jobs
 
 Snakemake\'s SLURM backend also supports MPI jobs, see
@@ -97,6 +120,18 @@ $ snakemake --set-resources calc_pi:mpi="mpiexec" ...
 ```
 
 To submit "ordinary" MPI jobs, submitting with `tasks` (the MPI ranks) is sufficient. Alternatively, on some clusters, it might be convenient to just configure `nodes`. Consider using a combination of `tasks` and `cpus_per_task` for hybrid applications (those that use ranks (multiprocessing) and threads). A detailed topology layout can be achieved using the `slurm_extra` parameter (see below) using further flags like `--distribution`.
+
+A sample profile might look like this:
+
+```YAML
+set-resources:
+    mpi_rule:
+        tasks: 2048
+
+    hybrid_mpi_rule:
+        tasks: 1024
+        cpus_per_tasks: 2
+```
 
 ### Running Jobs locally
 
