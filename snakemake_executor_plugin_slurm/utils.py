@@ -64,11 +64,11 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     gpu_string = None
     if job.resources.get("gpu"):
         gpu_string = str(job.resources.get("gpu"))
-     
+
     gpu_model = None
     if job.resources.get("gpu_model"):
         gpu_model = job.resources.get("gpu_model")
-    
+
     # ensure that gres is not set, if gpu and gpu_model are set
     if job.resources.get("gres") and gpu_string:
         raise WorkflowError("GRES and GPU are set. Please only set one" " of them.")
