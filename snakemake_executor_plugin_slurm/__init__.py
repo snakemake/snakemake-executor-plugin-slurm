@@ -3,6 +3,7 @@ __copyright__ = "Copyright 2023, David Lähnemann, Johannes Köster, Christian M
 __email__ = "johannes.koester@uni-due.de"
 __license__ = "MIT"
 
+import asyncio
 import atexit
 import csv
 from io import StringIO
