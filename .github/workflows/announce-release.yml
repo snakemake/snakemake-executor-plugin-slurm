@@ -1,11 +1,11 @@
 name: Announce Release on Mastodon
 
 on:
-  pull_request:
-    types:
-      - closed
+  push:
     branches:
       - main
+    path:
+      - 'CHANGELOG.md'
 
 permissions:
   pull-requests: read
