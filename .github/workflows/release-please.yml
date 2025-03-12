@@ -15,6 +15,7 @@ jobs:
         id: release
         with:
           release-type: python
+          token: ${{ secrets.RELEASE_PLEASE_PR_CI_TOKEN }}
 
   publish:
     runs-on: ubuntu-latest
