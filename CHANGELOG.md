@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.15.1...v1.0.0) (2025-03-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* improved GPU job support ([#173](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/173))
+
+### Features
+
+* improved GPU job support ([#173](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/173)) ([66dcdcf](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/66dcdcfed1b2185e7ffcf8d33ef70bf09e9b2f56))
+
+
+### Bug Fixes
+
+* another dummy commit to test release-please PR CI behaviour ([#230](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/230)) ([791ed16](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/791ed16087079105ec8166e6803e64349063cb7d))
+* logdir misconstruct when leading slash in wildcard ([#220](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/220)) ([61de847](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/61de84765790af6e3b1a5bbd2970aefb748f2192))
+
 ## [0.15.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.15.0...v0.15.1) (2025-02-14)
 
 
