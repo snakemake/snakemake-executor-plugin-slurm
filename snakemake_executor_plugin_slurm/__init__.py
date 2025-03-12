@@ -570,7 +570,36 @@ We leave it to SLURM to resume your job(s)"""
                     "The SLURM database might not be available yet. "
                     "Will retry querying the job status in 5 minutes."
                 )
-                await asyncio.sleep(retry_intervals)
+                for interval in retry_intervals:
+                    self.logger.warning(
+                        f"Waiting {interval} seconds before retrying..."
+                    )
+                    await asyncio.sleep(interval)
+                    
+                    try:
+                        time_before_query = time.time()
+                        command_res = subprocess.check_output(
+                            command, text=True, shell=True, stderr=subprocess.PIPE
+                        )
+                        query_duration = time.time() - time_before_query
+                        self.logger.debug(
+                            f"The job status was queried with command: {command}\n"
+                            f"It took: {query_duration} seconds\n"
+                            f"The output is:\n'{command_res}'\n"
+                        )
+                        res = {
+                            entry[0]: entry[1].split(sep=None, maxsplit=1)[0]
+                            for entry in csv.reader(StringIO(command_res), delimiter="|")
+                        }
+                        return (res, query_duration)  # Success, exit retry loop
+                    except subprocess.CalledProcessError as e:
+                        error_message = e.stderr.strip()
+                        if "slurm_persist_conn_open_without_init" not in error_message:
+                            self.logger.error(
+                                f"The job status query failed with command: {command}\n"
+                                f"Error message: {e.stderr.strip()}\n"
+                            )
+                            break  # Not the error we're looking for, stop retrying
             else:
                 self.logger.error(
                     f"The job status query failed with command: {command}\n"
