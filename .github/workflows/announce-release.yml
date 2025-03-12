@@ -1,0 +1,33 @@
+name: Announce Release on Mastodon
+
+on:
+  push:
+    branches:
+      - main
+    path:
+      - 'CHANGELOG.md'
+
+permissions:
+  pull-requests: read
+
+jobs:
+  post_to_mastodon:
+    if: contains(github.event.pull_request.title, 'chore(main): release')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post to Mastodon
+        uses: snakemake/mastodon-release-post-action@v1
+        with:
+          message: |
+            Beep, Beep - I am your friendly #Snakemake release announcement bot.
+            
+            There is a new release of the Snakemake executor for #SLURM on #HPC systems. Its version is {{ version }}!
+            
+            See {{ changelog }} for details.
+            
+            Give us some time and you will automatically find the plugin on #Bioconda and #Pypi.
+            
+            If you want to discuss the release you will find the maintainers here on Mastodon!
+            @rupdecat and @johanneskoester
+            
+            If you find any issues, please report them on {{ issue_url }}
