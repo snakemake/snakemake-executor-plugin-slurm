@@ -540,6 +540,10 @@ We leave it to SLURM to resume your job(s)"""
                    "<raw/main_job_id>|<long_status_string>"
         """
         res = query_duration = None
+        # Retry after 5 minutes (300 seconds) and then after 10 minutes (600 seconds)
+        # Reasoning: In rare cases, the SLURM database might not respond and we can hope
+        # that it will be available after a short while.
+        retry_intervals = [300, 600]
         try:
             time_before_query = time.time()
             command_res = subprocess.check_output(
@@ -559,10 +563,18 @@ We leave it to SLURM to resume your job(s)"""
                 for entry in csv.reader(StringIO(command_res), delimiter="|")
             }
         except subprocess.CalledProcessError as e:
-            self.logger.error(
-                f"The job status query failed with command: {command}\n"
-                f"Error message: {e.stderr.strip()}\n"
-            )
+            error_message = e.stderr.strip()
+            if "slurm_persist_conn_open_without_init" in error_message:
+                self.logger.warning(
+                    "The SLURM database might not be available yet. "
+                    "Will retry querying the job status in 5 minutes."
+                )
+                await asyncio.sleep(retry_intervals)
+            else:
+                self.logger.error(
+                    f"The job status query failed with command: {command}\n"
+                    f"Error message: {e.stderr.strip()}\n"
+                )
             pass
 
         return (res, query_duration)
