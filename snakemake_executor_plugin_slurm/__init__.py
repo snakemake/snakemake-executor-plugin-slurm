@@ -645,34 +645,44 @@ We leave it to SLURM to resume your job(s)"""
         """
         tests whether the given account is registered, raises an error, if not
         """
-        cmd = f'sacctmgr -n -s list user "{os.environ["USER"]}" format=account%256'
+        cmd = "sshare -U --format Account --noheader"
         try:
             accounts = subprocess.check_output(
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
         except subprocess.CalledProcessError as e:
-            sacctmgr_report = (
-                "Unable to test the validity of the given or guessed "
-                f"SLURM account '{account}' with sacctmgr: {e.stderr}."
+            sshare_report = (
+                "Unable to test the validity of the given or guessed"
+                f" SLURM account '{account}' with sshare: {e.stderr}."
             )
+            accounts = ""
+
+        if not accounts.strip():
+            cmd = f'sacctmgr -n -s list user "{os.environ["USER"]}" format=account%256'
             try:
-                cmd = "sshare -U --format Account --noheader"
                 accounts = subprocess.check_output(
                     cmd, shell=True, text=True, stderr=subprocess.PIPE
                 )
-            except subprocess.CalledProcessError as e2:
-                sshare_report = (
-                    "Unable to test the validity of the given or guessed"
-                    f" SLURM account '{account}' with sshare: {e2.stderr}."
+            except subprocess.CalledProcessError as e:
+                sacctmgr_report = (
+                    "Unable to test the validity of the given or guessed "
+                    f"SLURM account '{account}' with sacctmgr: {e.stderr}."
                 )
                 raise WorkflowError(
-                    f"The 'sacctmgr' reported: '{sacctmgr_report}' "
-                    f"and likewise 'sshare' reported: '{sshare_report}'."
+                    f"The 'sshare' reported: '{sshare_report}' "
+                    f"and likewise 'sacctmgr' reported: '{sacctmgr_report}'."
                 )
 
         # The set() has been introduced during review to eliminate
         # duplicates. They are not harmful, but disturbing to read.
         accounts = set(_.strip() for _ in accounts.split("\n") if _)
+
+        if not accounts:
+            self.logger.warning(
+                f"Both 'sshare' and 'sacctmgr' returned empty results for account "
+                f"'{account}'. Proceeding without account validation."
+            )
+            return ""
 
         if account not in accounts:
             raise WorkflowError(
