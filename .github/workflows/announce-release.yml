@@ -12,9 +12,7 @@ permissions:
 
 jobs:
   post_to_mastodon:
-    if: |
-      github.event.pull_request.merged == true &&
-      (contains(github.event.pull_request.title, 'release') || contains(github.event.pull_request.title, ' v') || contains(github.event.pull_request.title, 'version'))
+    if: contains(github.event.pull_request.title, 'chore(main): release')
     runs-on: ubuntu-latest
     steps:
       - name: Post to Mastodon
