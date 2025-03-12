@@ -575,7 +575,7 @@ We leave it to SLURM to resume your job(s)"""
                         f"Waiting {interval} seconds before retrying..."
                     )
                     await asyncio.sleep(interval)
-                    
+
                     try:
                         time_before_query = time.time()
                         command_res = subprocess.check_output(
@@ -589,7 +589,9 @@ We leave it to SLURM to resume your job(s)"""
                         )
                         res = {
                             entry[0]: entry[1].split(sep=None, maxsplit=1)[0]
-                            for entry in csv.reader(StringIO(command_res), delimiter="|")
+                            for entry in csv.reader(
+                                StringIO(command_res), delimiter="|"
+                            )
                         }
                         return (res, query_duration)  # Success, exit retry loop
                     except subprocess.CalledProcessError as e:
