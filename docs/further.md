@@ -498,7 +498,7 @@ To prevent failures due to faulty parameterization, we can dynamically adjust th
 
 ### Dynamic Parameterization
 
-Using dynamic parameterization we can react on different different inputs and prevent our HPC jobs from failing.
+Using dynamic parameterization we can react on different inputs and prevent our HPC jobs from failing.
 
 #### Adjusting Memory Requirements
 
