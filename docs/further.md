@@ -68,7 +68,7 @@ set-resources:
         mem_mb_per_cpu: 3600
         runtime: "5h"
 
-# parallelization with threads needs to be defined seperately:
+# parallelization with threads needs to be defined separately:
 set-threads:
     rule_b: 64
 ```
