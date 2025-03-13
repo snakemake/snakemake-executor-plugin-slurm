@@ -1,16 +1,30 @@
-### The general Idea
+### How this Plugin works
 
-To use this plugin, log in to your cluster's head node (sometimes called the "login" node), activate your environment as usual, and start Snakemake. Snakemake will then submit your jobs as cluster jobs.
+In this plugin, Snakemake submits itself as a job script when operating on an HPC cluster using the SLURM batch system.
+Consequently, the SLURM log file will duplicate the output of the corresponding rule.
+To avoid redundancy, the plugin deletes the SLURM log file for successful jobs, relying instead on the rule-specific logs.
+
+Remote executors submit Snakemake jobs to ensure unique functionalities — such as piped group jobs and rule wrappers — are available on cluster nodes.
+The memory footprint varies based on these functionalities; for instance, rules with a run directive that import modules and read data may require more memory.
+
+#### Usage Hints
+
+Install this plugin into your Snakemake base environment using conda.
+This process also installs the 'jobstep' plugin, utilized on cluster nodes.
+Additionally, we recommend installing the `snakemake-storage-plugin-fs` for automated stage-in and stage-out procedures.
+
+#### Reporting Bugs and Feature Requests
+
+We welcome bug reports and feature requests!
+Please report issues specific to this plugin [in the plugin's GitHub repository](https://github.com/snakemake/snakemake-executor-plugin-slurm/issue).
+For other concerns, refer to the [Snakemake main repository](https://github.com/snakemake/snakemake/issues) or the relevant Snakemake plugin repository.
+Cluster-related issues should be directed to your cluster administrator.
 
 ### Specifying Account and Partition
 
-Most SLURM clusters have two mandatory resource indicators for
-accounting and scheduling, the account and a
-partition, respectively. These resources are usually
-omitted from Snakemake workflows in order to keep the workflow
-definition independent of the platform. However, it is also possible
-to specify them inside of the workflow as resources in the rule
-definition.
+In SLURM, an **account** is used for resource accounting and allocation, while a **partition** designates a subset of compute nodes grouped for specific purposes, such as high-memory or GPU tasks.
+
+These resources are typically omitted from Snakemake workflows to maintain platform independence, allowing the same workflow to run on different systems without modification.
 
 To specify them at the command line, define them as default resources:
 
@@ -21,25 +35,22 @@ $ snakemake --executor slurm --default-resources slurm_account=<your SLURM accou
 The plugin does its best to _guess_ your account. That might not be possible. Particularly, when dealing with several SLURM accounts, users ought to set them per workflow.
 Some clusters, however, have a pre-defined default per user and _do not_ allow users to set their account or partition. The plugin will always attempt to set an account. To override this behavior, the `--slurm-no-account` flag can be used.
 
-If individual rules require e.g. a different partition, you can override
-the default per rule:
+If individual rules require e.g. a different partition, you can override the default per rule:
 
 ``` console
 $ snakemake --executor slurm --default-resources slurm_account=<your SLURM account> slurm_partition=<your SLURM partition> --set-resources <somerule>:slurm_partition=<some other partition>
 ```
 
-Usually, it is advisable to persist such settings via a
-[configuration profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles), which
-can be provided system-wide, per user, and in addition per workflow.
+To ensure consistency and ease of management, it's advisable to persist such settings via a [configuration profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles), which can be provided system-wide, per user, or per workflow.
 
-The executor waits per default 40 seconds for its first check of the job status. Using `--slurm-init-seconds-before-status-checks=<time in seconds>` this behaviour can be altered.
+By default, the executor waits 40 seconds before performing the first job status check.
+This interval can be adjusted using the `--slurm-init-seconds-before-status-checks=<time in seconds>` option, which may be useful when developing workflows on an HPC cluster to minimize turn-around times.
 
-### Ordinary SMP jobs
+### Configuring SMP Jobs in Snakemake with the SLURM Executor Plugin
 
-Most jobs will be carried out by programs that are either single-core
-scripts or threaded programs, hence SMP ([shared memory
-programs](https://en.wikipedia.org/wiki/Shared_memory)) in nature. Any
-given threads and `mem_mb` requirements will be passed to SLURM:
+In Snakemake workflows, many jobs are executed by programs that are either single-core scripts or multithreaded applications, which are categorized as SMP ([**S**hared **M**memory **P**rocessing](https://en.wikipedia.org/wiki/Shared_memory)) jobs.
+To allocate resources for such jobs using the SLURM executor plugin, you can specify the required number of CPU cores and memory directly within the resources section of a rule.
+Here's how you can define a rule that requests 8 CPU cores and 14 GB of memory:
 
 ``` python
 rule a:
@@ -50,23 +61,50 @@ rule a:
         mem_mb=14000
 ```
 
-This will give jobs from this rule 14GB of memory and 8 CPU cores. Using the SLURM executor plugin, we can alternatively define:
+Snakemake knows the `cpus_per_task`, similar to SLURM, as an alternative to `threads`.
+Parameters in the `resources` section will take precedence.
 
-```python
-rule a:
-    input: ...
-    output: ...
-    resources:
-        cpus_per_task=8,
-        mem_mb=14000
+To avoid hard-coding resource parameters into your Snakefiles, it is advisable to create a cluster-specific workflow profile.
+This profile should be named `config.yaml` and placed in a directory named `profiles` relative to your workflow directory.
+You can then indicate this profile to Snakemake using the `--workflow-profile` profiles option.
+Here's an example of how the `config.yaml` file might look:
+
+```YAML
+default-resources:
+    slurm_account: "<account>"
+    slurm_partition: "<default partition>"
+    mem_mb_per_cpu: 1800 # take a sensible default for your cluster
+    runtime: "30m"
+
+# here only rules, which require different (more) resources:
+set-resources:
+    rule_a:
+        runtime: "2h"
+
+    rule_b:
+        mem_mb_per_cpu: 3600
+        runtime: "5h"
+
+# parallelization with threads needs to be defined separately:
+set-threads:
+    rule_b: 64
 ```
-instead of the `threads` parameter. Parameters in the `resources` section will take precedence.
+
+In this configuration:
+
+- `default-resources` sets the default SLURM account, partition, memory per CPU, and runtime for all jobs.
+- `set-resources` allows you to override these defaults for specific rules, such as `rule_a` and `rule_b`
+- `set-threads` specifies the number of `threads` for particular rules, enabling fine-grained control over parallelization.
+
+By utilizing a configuration profile, you can maintain a clean and platform-independent workflow definition while tailoring resource specifications to the requirements of your SLURM cluster environment.
 
 ### MPI jobs
 
-Snakemake\'s SLURM backend also supports MPI jobs, see
-`snakefiles-mpi`{.interpreted-text role="ref"} for details. When using
-MPI with SLURM, it is advisable to use `srun` as an MPI starter.
+Snakemake's SLURM executor supports the execution of MPI ([Message Passing Interface](https://en.wikipedia.org/wiki/Message_Passing_Interface)) jobs, facilitating parallel computations across multiple nodes.
+To effectively utilize MPI within a Snakemake workflow, it's recommended to use `srun` as the MPI launcher when operating in a SLURM environment.
+
+
+Here's an example of defining an MPI rule in a Snakefile:
 
 ``` python
 rule calc_pi:
@@ -81,51 +119,167 @@ rule calc_pi:
       "{resources.mpi} -n {resources.tasks} calc-pi-mpi > {output} 2> {log}"
 ```
 
-Note that the `-n {resources.tasks}` is not necessary in the case of SLURM,
-but it should be kept in order to allow execution of the workflow on
-other systems, e.g. by replacing `srun` with `mpiexec`:
+In this configuration:
+
+- `tasks=10` specifies the number of MPI tasks (ranks) to be allocated for the job.
+- `mpi="srun"` sets srun as the MPI launcher, which is optimal for SLURM-managed clusters.
+- The `shell` directive constructs the command to execute the MPI program, utilizing the specified resources.
+
+#### Portability Considerations
+
+While SLURM's `srun` effectively manages task allocation, including the `-n {resources.tasks}` option ensures compatibility with some applications that may rely on `mpiexec` or similar MPI launchers.
+This approach maintains the portability of your workflow across different computing environments.
+
+To adapt the workflow for an application using `mpiexec`, you can override the `mpi` resource at runtime:
 
 ``` console
 $ snakemake --set-resources calc_pi:mpi="mpiexec" ...
 ```
 
-To submit "ordinary" MPI jobs, submitting with `tasks` (the MPI ranks) is sufficient. Alternatively, on some clusters, it might be convenient to just configure `nodes`. Consider using a combination of `tasks` and `cpus_per_task` for hybrid applications (those that use ranks (multiprocessing) and threads). A detailed topology layout can be achieved using the `slurm_extra` parameter (see below) using further flags like `--distribution`.
+#### Resource Specifications for MPI Jobs
 
-### GPU Jobs
-
-SLURM allows to specify GPU request with the `--gres` or `--gpus` flags and Snakemake takes a similar approach. Resources can be asked for with
-
-- The resource `gpu` can be used, e.g. by just requesting the number of GPUs like `gpu=2`. This can be combined with the `gpu_model` resource, i.e. `gpu_model=a100` or independently. The combination will result in a flag to `sbatch` like `--gpus=a100:2`. The Snakemake `gpu` resource has to be number. 
-- Alternatively, the resource `gres`, the syntax is `<string>:<number>` or `<string>:<model>:<number>`, i.e. `gres=gpu:1` or `gres=gpu:a100:2` (assuming GPU model).
-
-.. note:: Internally, Snakemake knows the resource `gpu_manufacturer`, too. However, SLURM does not know the distinction between model and manufacturer. Essentially, the preferred way to request an accelerator will depend on your specific cluster setup.
-    Also, to be consistent within Snakemake, the resource is called `gpu` not `gpus`.
-
-Additionally, `cpus_per_gpu` can be set - Snakemakes `threads` settings will otherwise be used to set `cpus_per_gpu`. If `cpus_per_gpu` is lower or equal to zero, no CPU is requested from SLURM (and cluster defaults will kick in, if any).
-
-A sample workflow profile might look like:
+When configuring MPI jobs, it's essential to accurately define the resources to match the requirements of your application.
+The tasks resource denotes the number of MPI ranks.
+For hybrid applications that combine MPI with multi-threading, you can specify both `tasks` and `cpus_per_task`:
 
 ```YAML
 set-resources:
-    gres_request_rule:
-        gres: "gpu:1"
+    mpi_rule:
+        tasks: 2048
+
+    hybrid_mpi_rule:
+        tasks: 1024
+        cpus_per_task: 2
+```
+
+In this setup:
+
+- `mpi_rule` is allocated 2048 MPI tasks.
+- `hybrid_mpi_rule` is assigned 1024 MPI tasks, with each task utilizing 2 CPU cores, accommodating applications that employ both MPI and threading.
+
+For advanced configurations, such as defining specific node distributions or memory allocations, you can utilize the `slurm_extra` parameter to pass additional SLURM directives, tailoring the job submission to the specific needs of your computational tasks.
+
+### GPU Jobs
+
+Integrating GPU resources into Snakemake workflows on SLURM-managed clusters requires precise configuration to ensure optimal performance.
+SLURM facilitates GPU allocation using the `--gres` (generic resources) or `--gpus` flags, and Snakemake provides corresponding mechanisms to request these resources within your workflow rules.
+
+#### Specifying GPU Resources in Snakemake
+
+To request GPU resources in Snakemake, you can utilize the `gpu` resource within the resources section of a rule.
+This approach allows you to specify the number of GPUs and, optionally, the GPU model.
+For example:
+
+```Python
+rule gpu_task:
+    input:
+        "input_file"
+    output:
+        "output_file"
+    resources:
+        gpu=2,
+        gpu_model="a100"
+    shell:
+        "your_gpu_application --input {input} --output {output}"
+```
+
+In this configuration:
+
+- `gpu=2` requests two GPUs for the job.
+- `gpu_model="a100"` specifies the desired GPU model.
+
+Snakemake translates these resource requests into SLURM's `--gpus` flag, resulting in a submission command like sbatch `--gpus=a100:2`.
+It is important to note that the `gpu` resource must be specified as a numerical value.
+
+.. note:: Internally, Snakemake knows the resource `gpu_manufacturer`, too.
+However, SLURM does not know the distinction between model and manufacturer.
+Essentially, the preferred way to request an accelerator will depend on your specific cluster setup.
+
+#### Alternative Method: Using the gres Resource
+
+Alternatively, you can define GPU requirements using the gres resource, which corresponds directly to SLURM's `--gres` flag.
+The syntax for this method is either `<resource_type>:<number>` or `<resource_type>:<model>:<number>`.
+For instance:
+
+```Python
+rule gpu_task:
+    input:
+        "input_file"
+    output:
+        "output_file"
+    resources:
+        gres="gpu:a100:2"
+    shell:
+        "your_gpu_application --input {input} --output {output}"
+```
+
+Here, `gres="gpu:a100:2"` requests two GPUs of the a100 model.
+This approach offers flexibility, especially on clusters where specific GPU models are available.
+
+#### Additional Considerations: CPU Allocation per GPU
+
+When configuring GPU jobs, it's crucial to allocate CPU resources appropriately to ensure that GPU tasks are not bottlenecked by insufficient CPU availability.
+You can specify the number of CPUs per GPU using the `cpus_per_gpu` resource:
+
+```Python
+rule gpu_task:
+    input:
+        "input_file"
+    output:
+        "output_file"
+    resources:
+        gpu=1,
+        cpus_per_gpu=4
+    shell:
+        "your_gpu_application --input {input} --output {output}"
+```
+
+In this example, `cpus_per_gpu=4` allocates four CPU cores for each GPU requested.
+
+.. note:: If `cpus_per_gpu` is set to a value less than or equal to zero, Snakemake will not include a CPU request in the SLURM submission, and the cluster's default CPU allocation policy will apply.
+
+#### Sample Workflow Profile for GPU Jobs
+
+To streamline the management of resource specifications across multiple rules, you can define a workflow profile in a `config.yaml` file:
+
+```YAML
+set-resources:
+    single_gpu_rule:
+        gpu: 1
+        cpus_per_gpu: 4
 
     multi_gpu_rule:
         gpu: 2
         gpu_model: "a100"
-        cpus_per_gpu: 4
+        cpus_per_gpu: 8
 
-    no_cpu_gpu_rule:
-        gpu: 1
-        cpus_per_gpu: 0 # Values <= 0 indicate that NO CPU request string
-                        # will be issued.
+    gres_request_rule:
+        gres: "gpu:rtx3090:2"
+        cpus_per_gpu: 6
 ```
+
+In this configuration:
+
+- `single_gpu_rule` requests one GPU with four CPUs allocated to it.
+- `multi_gpu_rule` requests two GPUs of the a100 model, with eight CPUs allocated per GPU.
+- `gres_request_rule` utilizes the `gres` resource to request two rtx3090 GPUs, with six CPUs allocated per GPU.
+
+By defining these resource specifications in a profile, you maintain a clean and organized workflow, ensuring that resource allocations are consistent and easily adjustable.
+
+#### Important Note
+
+The preferred method for requesting GPU resources -- whether using `gpu` or `gres` -- depends on your specific cluster configuration and scheduling policies.
+Consult your cluster administrator or the cluster's documentation to determine the best approach for your environment.
+Additionally, while Snakemake internally recognizes the `gpu_manufacturer` resource, SLURM does not distinguish between GPU model and manufacturer in its resource allocation.
+Therefore, it's essential to align your Snakemake resource definitions with your cluster's SLURM configuration to ensure accurate resource requests.
+
+By carefully configuring GPU resources in your Snakemake workflows, you can optimize the performance of GPU-accelerated tasks and ensure efficient utilization of computational resources within SLURM-managed clusters.
 
 ### Running Jobs locally
 
-Not all Snakemake workflows are adapted for heterogeneous environments, particularly clusters. Users might want to avoid the submission of _all_ rules as cluster jobs. Non-cluster jobs should usually include _short_ jobs, e.g. internet downloads or plotting rules.
-
-To label a rule as a non-cluster rule, use the `localrules` directive. Place it on top of a `Snakefile` as a comma-separated list like:
+In Snakemake workflows executed within cluster environments, certain tasks -- such as brief data downloads or plotting -- are better suited for local execution on the head node rather than being submitted as cluster jobs.
+To designate specific rules for local execution, Snakemake offers the localrules directive.
+This directive allows you to specify a comma-separated list of rules that should run locally:
 
 ```Python
 localrules: <rule_a>, <rule_b>
@@ -133,58 +287,121 @@ localrules: <rule_a>, <rule_b>
 
 ### Advanced Resource Specifications
 
-A workflow rule may support several
-[resource specifications](https://snakemake.readthedocs.io/en/latest/snakefiles/rules.html#resources).
-For a SLURM cluster, a mapping between Snakemake and SLURM needs to be performed.
+In Snakemake workflows executed on SLURM clusters, it's essential to map Snakemake's resource specifications to SLURM's resource management parameters.
+This ensures that each job receives the appropriate computational resources.
+Below is a guide on how to align these specifications:
 
-Each of the listed command line flags can be part of a rule, e.g.:
+#### Mapping Snakemake Resources to SLURM Parameters
 
-``` python
-rule:
-    input: ...
-    output: ...
+Snakemake allows the definition of resources within each rule, which can be translated to corresponding SLURM command-line flags:
+
+- Partition: Specifies the partition or queue to which the job should be submitted.
+  - Snakemake resource: `slurm_partition`
+  - SLURM flag: `--partition` or `-p`
+- Runtime: Defines the walltime limit for the job, typically in minutes.
+  - Snakemake resource: `runtime`
+  - SLURM flag: `--time` or `-t`
+- Memory: Specifies the memory requirements for the job.
+  - Snakemake resource: `mem_mb` (total memory in MB) or `mem_mb_per_cpu` (memory per CPU in MB)
+  - SLURM flags: `--mem` (for total memory) or `--mem-per-cpu` (for memory per CPU)
+- Constraints: Sets specific hardware or software constraints for the job.
+  - Snakemake resource: `constraint`
+  - SLURM flag: `--constraint` or `-C`
+
+#### Example of Rule Definition with Resource Specifications
+
+Here is how you can define a rule in Snakemake with specific SLURM resource requirements:
+
+```Python
+rule example_rule:
+    input: "input_file.txt"
+    output: "output_file.txt"
     resources:
-        partition=<partition name>
-        runtime=<some number>
+        slurm_partition="compute",
+        runtime=120,  # in minutes
+        mem_mb=8000,  # total memory in MB
+        cpus_per_task=4
+    shell:
+        "cmd {input} {output}"
 ```
+In this example, the job will be submitted to the 'compute' partition, with a runtime limit of 120 minutes, 8 GB of total memory, and 4 CPUs allocated.
 
-Please note: as `--mem` and `--mem-per-cpu` are mutually exclusive on
-SLURM clusters, their corresponding resource flags `mem`/`mem_mb` and
-`mem_mb_per_cpu` are mutually exclusive, too. You can either reserve the
-memory a compute node has to provide(`--mem` flag) or the memory required per CPU (`--mem-per-cpu` flag). Depending on your cluster's settings hyperthreads are enabled. SLURM does not make any distinction between real CPU cores and those provided by hyperthreads. SLURM will try to satisfy a combination of
-`mem_mb_per_cpu` and `cpus_per_task` and `nodes` if the `nodes` parameter is not given.
+#### Important Considerations
 
-Note that it is usually advisable to avoid specifying SLURM (and compute
-infrastructure) specific resources (like `constraint`) inside your
-workflow because that can limit the reproducibility when executed on other systems.
-Consider using the `--default-resources` and `--set-resources` flags to specify such resources
-at the command line or (ideally) within a [profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles).
+Mutual Exclusivity of Memory Flags: SLURM's `--mem` and `--mem-per-cpu` flags are mutually exclusive.
+Therefore, in Snakemake, you should use either `mem_mb` or `mem_mb_per_cpu`, but not both simultaneously.
 
-A sample configuration file as specified by the `--workflow-profile` flag might look like this:
+Avoid Hardcoding Cluster-Specific Resources: To maintain workflow portability across different computing environments, it's advisable to avoid embedding cluster-specific resource requests (like constraint) directly within your workflow rules.
+Instead, utilize Snakemake's `--default-resources` and `--set-resources` command-line options or define them within a configuration profile.
+
+#### Using Configuration Profiles for Resource Specifications
+
+A more flexible approach to manage resource specifications is by using Snakemake profiles.
+These profiles allow you to define default resources and rule-specific overrides in a centralized configuration file, enhancing the portability and maintainability of your workflows.
+
+Example of a Snakemake Profile Configuration (`config.yaml`):
 
 ```YAML
 default-resources:
-    slurm_partition: "<your default partition>"
-    slurm_account:   "<your account>
+    slurm_partition: "default_partition"
+    slurm_account: "your_account"
+    mem_mb_per_cpu: 2000
+    runtime: 60  # in minutes
 
 set-resources:
-    <rulename>:
-        slurm_partition: "<other partition>" # deviating partition for this rule
-        runtime: 60 # 1 hour
-        slurm_extra: "'--nice=150'"
-        mem_mb_per_cpu: 1800
-        cpus_per_task: 40
+    special_rule:
+        slurm_partition: "high_mem_partition"
+        runtime: 180  # in minutes
+        mem_mb_per_cpu: 4000
+        cpus_per_task: 8
 ```
+
+In this configuration:
+- Default resources are set for all rules, specifying the partition, account, memory per CPU, and runtime.
+- The special_rule has customized resources, overriding the defaults where specified.
+
+To apply this profile during workflow execution, use the --profile option:
+
+```console
+snakemake --profile path/to/profile
+```
+
+By leveraging configuration profiles, you can tailor resource specifications to different computing environments without modifying the core workflow definitions, thereby enhancing reproducibility and flexibility.
 
 #### Multicluster Support
 
-For reasons of scheduling multicluster support is provided by the `clusters` flag in resources sections. Note, that you have to write `clusters`, not `cluster`! 
+In Snakemake, specifying the target cluster for a particular rule is achieved using the `cluster` resource flag within the rule definition.
+This allows for precise control over job distribution across different clusters.
+For example:
+
+```YAML
+default-resources:
+    cluster: "default_cluster"
+
+set-resources:
+    specific_rule:
+        cluster: "high_memory_cluster"
+    another_rule:
+        cluster: "gpu_cluster"
+```
+
+In this configuration, `default-resources` sets a default cluster for all rules, while `set-resources` specifies clusters for individual rules as needed.
+This method ensures that your workflow is adaptable to various computing environments without hardcoding cluster-specific details into your `Snakefile`.
+Multicluster support is achieved in a comma separated list:
+
+```YAML
+set-resources:
+   multicluster_rule:
+       cluster: "cluster1,cluster2"
+```
 
 #### Additional Custom Job Configuration
 
 SLURM installations can support custom plugins, which may add support
-for additional flags to `sbatch`. In addition, there are various batch options not directly supported via the resource definitions
-shown above. You may use the `slurm_extra` resource to specify
+for additional flags to `sbatch`.
+In addition, there are various batch options not directly supported via the resource definitions
+shown above.
+You may use the `slurm_extra` resource to specify
 additional flags to `sbatch`:
 
 ``` python
@@ -199,18 +416,17 @@ Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executi
 
 ### Software Recommendations
 
-#### Conda, Mamba
+#### Conda
 
-While Snakemake mainly relies on Conda for reproducible execution, many clusters impose file number limits in their "HOME" directory. In this case, run `mamba clean -a` occasionally for persisting environments.
-
-Note, `snakemake --sdm conda ...` works as intended.
-
-To ensure that this plugin is working, install it in your base environment for the desired workflow.
-
+Snakemake is commonly used with software deployment via conda ([`snakemake --software-deployment-method conda ...`](https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html#integrated-package-management).
+On a cluster sometimes a file system other than `HOME` needs to be indicated (for example because of quotas).
+In this case pointing the installation to different file system with `--conda-prefix /other/filesystem` might be a solution.
+You can use `--conda-cleanup-pkgs` to further save space by removing downloaded tarballs.
 
 #### Using Cluster Environment:  Modules
 
-HPC clusters provide so-called environment modules. Some clusters do not allow using Conda (and its derivatives). In this case, or when a particular software is not provided by a Conda channel, Snakemake can be instructed to use environment modules. The `--sdm env-modules` flag will trigger loading modules defined for a specific rule, e.g.:
+HPC clusters provide so-called environment modules.
+To require installation with environment modules you can use `--sdm env-modules`, for example for a specific rule:
 
 ```
 rule ...:
@@ -219,22 +435,28 @@ rule ...:
        "bio/VinaLC"
 ```
 
-This will, internally, trigger a `module load bio VinaLC` immediately prior to execution. 
+This will trigger a `module load bio VinaLC` immediately before to execution.
+
 
 Note, that 
 - environment modules are best specified in a configuration file.
 - Using environment modules can be combined with conda and apptainer (`--sdm env-modules conda apptainer`), which will then be only used as a fallback for rules not defining environment modules.
-For running jobs, the `squeue` command:
 
 ### Inquiring about Job Information and Adjusting the Rate Limiter
 
-The executor plugin for SLURM uses unique job names to inquire about job status. It ensures inquiring about job status for the series of jobs of a workflow does not put too much strain on the batch system's database. Human readable information is stored in the comment of a particular job. It is a combination of the rule name and wildcards. You can ask for it with the `sacct` or `squeue` commands, e.g.:
+The executor plugin for SLURM uses unique job names to inquire about job status.
+It ensures inquiring about job status for the series of jobs of a workflow does not put too much strain on the batch system's database.
+Human readable information is stored in the comment of a particular job.
+It is a combination of the rule name and wildcards.
+You can ask for it with the `sacct` or `squeue` commands, for example:
 
 ``` console 
 sacct -o JobID,State,Comment%40
 ```
 
-Note, the "%40" after `Comment` ensures a width of 40 characters. This setting may be changed at will. If the width is too small, SLURM will abbreviate the column with a `+` sign.
+Note, the "%40" after `Comment` ensures a width of 40 characters.
+This setting may be changed at will.
+If the width is too small, SLURM will abbreviate the column with a `+` sign.
 
 For running jobs, you can use the squeue command:
 
@@ -244,15 +466,26 @@ squeue -u $USER -o %i,%P,%.10j,%.40k
 
 Here, the `.<number>` settings for the ID and the comment ensure a sufficient width, too.
 
-Snakemake will check the status of your jobs 40 seconds after submission. Another attempt will be made in 10 seconds, then 20, etcetera with an upper limit of 180 seconds.
+Snakemake will check the status of your jobs 40 seconds after submission.
+Another attempt will be made in 10 seconds, then 20, etcetera with an upper limit of 180 seconds.
 
 ### Using Profiles
 
-When using [profiles](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles), a command line may become shorter. A sample profile could look like this:
+Utilizing Snakemake [profiles](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles) streamlines workflow execution by consolidating configuration settings into dedicated directories, simplifying command-line operations.
+
+#### Setting Up a Global Profile:
+
+- Create a Profile Directory: If cluster administrators did not set up a global profile at `/etc/xdg/snakemake` users can opt for individual profiles.
+  Establish a directory at `$HOME/.config/snakemake`.
+- The default profile will be used when specifying the `--profile`.
+  It can also be set via the environment variable `SNAKEMAKE_PROFILE`, for example by specifying export `SNAKEMAKE_PROFILE=myprofile` in your `~/.bashrc`.
+  Then the --profile flag can be omitted.
+
+A sample configuration looks like this:
 
 ```YAML
 executor: slurm
-latency-wait: 60
+latency-wait: 5
 default-storage-provider: fs
 shared-fs-usage:
   - persistence
@@ -260,54 +493,63 @@ shared-fs-usage:
   - sources
   - source-cache
 remote-job-local-storage-prefix: "<your node local storage prefix>"
-local-storage-prefix: "<your local storage prefix, e.g. on login nodes>"
+local-storage-prefix: "<your local storage prefix, for example on login nodes>"
 ```
 
-The entire configuration will set the executor to SLURM executor, ensures sufficient file system latency and allow automatic stage-in of files using the [file system storage plugin](https://github.com/snakemake/snakemake-storage-plugin-fs).
 
-On a cluster with a scratch directory per job id, the prefix within jobs might be:
+In this configuration:
+- `executor: slurm`: Specifies the SLURM executor for job scheduling.
+The corresponding command line flag is not needed anymore.
+- `latency-wait: 5`: Sets a 5-second latency wait to accommodate file system delays.
+- `default-storage-provider: fs`: Utilizes the file system storage plugin for file handling.
+- `shared-fs-usage:` Lists storage categories to be managed via the shared file system.
+  - `remote-job-local-storage-prefix:` Defines the storage prefix for remote jobs; adjust based on your cluster's scratch directory structure.
+  - `local-storage-prefix:` Specifies the storage prefix for local jobs, such as on login nodes.
 
-```YAML
-remote-job-local-storage-prefix: "<scratch>/$SLURM_JOB_ID"
-```
+Using the [file system storage plugin](https://github.com/snakemake/snakemake-storage-plugin-fs) will automatically stage-in and -out in- and output files.
 
-On a cluster with a scratch directory per user, the prefix within jobs might be:
 
-```YAML
-remote-job-local-storage-prefix: "<scratch>/$USER"
-```
-
-Note, that the path `<scratch>` needs to be taken from a specific cluster documentation.
-
-Further note, that you need to set the `SNAKEMAKE_PROFILE` environment variable in your `~/.bashrc` file, e.g.:
-
-```console
-export SNAKEMAKE_PROFILE="$HOME/.config/snakemake"
-```
-
-==This is ongoing development. Eventually you will be able to annotate different file access patterns.==
+==This is ongoing development.
+Eventually, you will be able to annotate different file access patterns.==
 
 ### Log Files - Getting Information on Failures
 
-Snakemake, via this SLURM executor, submits itself as a job. This ensures that all features are preserved in the job context. SLURM requires a logfile to be written for _every_ job. This is redundant information and only contains the Snakemake output already printed on the terminal. If a rule is equipped with a `log` directive, SLURM logs only contain Snakemake's output.
+Snakemake's SLURM executor submits itself as a job, ensuring that all features function correctly within the job context.
+SLURM requires a log file for every job, which can lead to redundancy since Snakemake's output is already displayed in the terminal.
+However, if a rule includes a `log` directive, SLURM logs will contain only Snakemake's output.
 
-This executor will remove SLURM logs of sucessful jobs immediately when they are finished. You can change this behaviour with the flag `--slurm-keep-successful-logs`. A log file for a failed job will be preserved per default for 10 days. You may change this value using the `--slurm-delete-logfiles-older-than` flag.
+By default, the SLURM executor deletes log files of successful jobs immediately after completion (remember: this is redundant information).
+To modify this behavior and retain logs of successful jobs, use the `--slurm-keep-successful-logs` flag.
+Additionally, log files for failed jobs are preserved for 10 days by default.
+To change this retention period, use the `--slurm-delete-logfiles-older-than` flag.
 
-The default location of Snakemake log files are relative to the directory where the workflow is started or relative to the directory indicated with `--directory`. SLURM logs, produced by Snakemake, can be redirected using `--slurm-logdir`. If you want avoid that log files accumulate in different directories, you can store them in your home directory. Best put the parameter in your profile then, e.g.:
+Snakemake's log files are typically stored in the directory where the workflow is initiated or in the directory specified with the `--directory` flag.
+To redirect SLURM logs produced by Snakemake to a specific directory, use the `--slurm-logdir` flag.
+To prevent log files from accumulating in various directories, consider storing them in your home directory.
+For example, add the following to your Snakemake profile:
 
 ```YAML
 slurm-logdir: "/home/<username>/.snakemake/slurm_logs"
 ```
 
+Replace <username> with your actual username.
+This configuration directs SLURM logs to a centralized location, making them easier to manage.
+
 ### Retries - Or Trying again when a Job failed
 
-Some cluster jobs may fail. In this case Snakemake can be instructed to try another submit before the entire workflow fails, in this example up to 3 times:
+When running workflows on SLURM-managed clusters, it's common for jobs to occasionally fail.
+Snakemake provides mechanisms to handle such failures gracefully, allowing for automatic retries and workflow resumption.
+
+#### Retrying Failed Jobs
+
+To instruct Snakemake to automatically retry failed jobs, use the `--retries` option followed by the desired number of attempts.
+For example, to retry up to three times:
 
 ```console
 snakemake --retries=3
 ```
 
-If a workflow fails entirely (e.g. when there are cluster failures), it can be resumed as any other Snakemake workflow:
+If a workflow encounters multiple failures, you can resume it by re-running incomplete jobs with:
 
 ```console
 snakemake ... --rerun-incomplete
@@ -315,13 +557,19 @@ snakemake ... --rerun-incomplete
 snakemake ... --ri
 ```
 
-The "requeue" option allows jobs to be resubmitted automatically if they fail or are preempted. This is similar to Snakemake's `--retries`, except a SLURM job will not be considered failed and priority may be accumulated during pending. This might be the default on your cluster, already. You can check your cluster's requeue settings with 
+#### Automatic Job Requeuing in SLURM
+
+SLURM offers a job requeue feature that allows jobs to be automatically resubmitted if they fail or are preempted, preserving job IDs and priorities.
+To enable this feature with Snakemake, use the `--slurm-requeue` option.
+This is similar to Snakemake's `--retries`, except a SLURM job will not be considered failed and priority may be accumulated during pending.
+This might be the default on your cluster, already.
+You can check your cluster's requeue settings with 
 
 ```console
 scontrol show config | grep Requeue
 ```
 
-This requeue feature is integrated into the SLURM submission command, adding the --requeue parameter to allow requeuing after node failure or preemption using:
+If job requeuing is not enabled on your cluster, consider adding `--slurm-requeue` for your Snakemake jobs:
 
 ```console
 snakemake --slurm-requeue ...
@@ -331,11 +579,12 @@ To prevent failures due to faulty parameterization, we can dynamically adjust th
 
 ### Dynamic Parameterization
 
-Using dynamic parameterization we can react on different different inputs and prevent our HPC jobs from failing.
+Using dynamic parameterization we can react on different inputs and prevent our HPC jobs from failing.
 
 #### Adjusting Memory Requirements
 
-Input size of files may vary. [If we have an estimate for the RAM requirement due to varying input file sizes, we can use this to dynamically adjust our jobs.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources)
+Input size of files may vary.
+[If we have an estimate for the RAM requirement due to varying input file sizes, we can use this to dynamically adjust our jobs.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources)
 
 #### Adjusting Runtime
 
@@ -361,24 +610,56 @@ set-resources:
         runtime: f"{1 * attempt}h"
 ```
 
-Be sure to use sensible settings for your cluster and make use of parallel execution (e.g. threads) and [global profiles](#using-profiles) to avoid I/O contention. 
+Be sure to use sensible settings for your cluster and make use of parallel execution (for example threads) and [global profiles](#using-profiles) to avoid I/O contention.
+
 
 
 ### Nesting Jobs (or Running this Plugin within a Job)
 
-Some environments provide a shell within a SLURM job, for instance, IDEs started in on-demand context. If Snakemake attempts to use this plugin to spawn jobs on the cluster, this may work just as intended. Or it might not: depending on cluster settings or individual settings, submitted jobs may be ill-parameterized or will not find the right environment.
-
-If the plugin detects to be running within a job, it will therefore issue a warning and stop for 5 seconds.
-
+Running Snakemake within an active SLURM job can lead to unpredictable behavior, as the execution environment may not be properly configured for job submission.
+To mitigate potential issues, the SLURM executor plugin detects when it's operating inside a SLURM job and issues a warning, pausing for 5 seconds before proceeding.
 
 ### Summary:
 
 When put together, a frequent command line looks like:
 
 ```console
-$ snakemake --workflow-profile <path> \
-> -j unlimited \ # assuming an unlimited number of jobs
+$ snakemake -j unlimited \ # assuming an unlimited number of jobs
 > --workflow-profile <profile directory with a `config.yaml`>
 > --configfile config/config.yaml \
 > --directory <path> # assuming a data path on a different file system than the workflow
 ```
+
+### Frequently Asked Questions
+
+#### Should I run Snakemake on the Login Node of my Cluster?
+
+Running Snakemake on a cluster's login node is generally acceptable, as the primary Snakemake process is not resource-intensive.
+However, some High-Performance Computing (HPC) administrators may discourage running job management processes like Snakemake on the login node, as it is typically intended for interactive use and not for executing computational tasks.
+It's advisable to consult with your cluster's support team to understand any policies or guidelines regarding this practice.
+
+To assess the impact of running Snakemake on the login node, you can measure the CPU time consumed by Snakemake during workflow execution.
+For example, using the `/usr/bin/time -v` command to profile Snakemake's resource usage:
+
+```console
+/usr/bin/time -v snakemake ...
+```
+
+This command provides detailed statistics, including the CPU time used.
+Sharing such metrics with your HPC administrators can help evaluate whether running Snakemake on the login node aligns with cluster usage policies.
+
+We provide this table of measurements:
+
+| Workflow | Version | Number of local rules  | Total Runtime (hh:mm:ss) | CPU-Time on the login node [user + system] (s) | Fraction |
+|:-------------|:---------------|:---------------|:-------------|:-------------|:-------------:|
+| [Transcriptome DiffExp + Fusion detection](https://github.com/snakemake-workflows/transcriptome-differential-expression) | 0.2.0 | 12 | 9:15:43 | 225.15 | 0.68 % |
+
+If you want to contribute similar statistics, please run `/usr/bin/time -v snakemake ...` on your cluster and submit your stats as an [issue to the plugin repo on GitHub](https://github.com/snakemake/snakemake-executor-plugin-slurm/issue).
+
+#### My Administrators do not let me run Snakemake on a Login Node
+
+Running Snakemake within a SLURM job can lead to unpredictable behavior, as the execution environment may not be properly configured for job submission.
+The SLURM executor plugin detects when it's operating inside a SLURM job and issues a warning, pausing for 5 seconds before proceeding.
+
+If your administrators require running Snakemake within a job and encounter issues, please report the specific problems as issues on the plugin's GitHub repository.
+While it may be possible to adapt the plugin for different cluster configurations, it's important to note that the plugin is primarily designed for use in production environments, and not all specialized cluster setups can be accounted for.
