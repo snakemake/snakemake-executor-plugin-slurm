@@ -127,7 +127,7 @@ set-resources:
 
     hybrid_mpi_rule:
         tasks: 1024
-        cpus_per_tasks: 2
+        cpus_per_task: 2
 ```
 
 In this setup:
