@@ -341,7 +341,7 @@ set-resources:
         cluster: "gpu_cluster"
 ```
 
-In this configuration, `default-resources` sets a default cluster for all rules, while `set-resources` specifies clusters for individual rules as needed. This method ensures that your workflow is adaptable to various computing environments without hardcoding cluster-specific details into your `Snakefile`. Multicluster support is achieved in a comma separated list, i.e.:
+In this configuration, `default-resources` sets a default cluster for all rules, while `set-resources` specifies clusters for individual rules as needed. This method ensures that your workflow is adaptable to various computing environments without hardcoding cluster-specific details into your `Snakefile`. Multicluster support is achieved in a comma separated list:
 
 ```YAML
 set-resources:
@@ -370,7 +370,7 @@ Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executi
 
 #### Conda
 
-Snakemake's default software deployment uses conda, i.e. [`snakemake --sdm conda ...`](https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html). On a cluster sometimes a file system other than `HOME` needs to be indicated (for example because of quotas). In this case pointing the installation to different file system with `--conda-prefix /other/filesystem` might be a solution. You can use `--conda-cleanup-pkgs` to further save space by removing downloaded tarballs.
+Snakemake is commonly used with software deployment via conda ([`snakemake --software-deployment-method conda ...`](https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html#integrated-package-management). On a cluster sometimes a file system other than `HOME` needs to be indicated (for example because of quotas). In this case pointing the installation to different file system with `--conda-prefix /other/filesystem` might be a solution. You can use `--conda-cleanup-pkgs` to further save space by removing downloaded tarballs.
 
 #### Using Cluster Environment:  Modules
 
