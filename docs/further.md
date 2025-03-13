@@ -37,7 +37,7 @@ By default, the executor waits 40 seconds before performing the first job status
 
 ### Configuring SMP Jobs in Snakemake with the SLURM Executor Plugin
 
-In Snakemake workflows, many jobs are executed by programs that are either single-core scripts or multi-threaded applications, which are categorized as SMP ([**S**hared **M**memory **P**rocessing](https://en.wikipedia.org/wiki/Shared_memory)) jobs. To allocate resources for such jobs using the SLURM executor plugin, you can specify the required number of CPU cores and memory directly within the resources section of a rule. Here's how you can define a rule that requests 8 CPU cores and 14 GB of memory:
+In Snakemake workflows, many jobs are executed by programs that are either single-core scripts or multithreaded applications, which are categorized as SMP ([**S**hared **M**memory **P**rocessing](https://en.wikipedia.org/wiki/Shared_memory)) jobs. To allocate resources for such jobs using the SLURM executor plugin, you can specify the required number of CPU cores and memory directly within the resources section of a rule. Here's how you can define a rule that requests 8 CPU cores and 14 GB of memory:
 
 ``` python
 rule a:
