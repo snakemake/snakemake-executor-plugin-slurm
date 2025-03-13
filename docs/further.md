@@ -1,6 +1,6 @@
 ### How this Plugin works
 
-In this plugin Snakemake submits itself as a job script when operating on an HPC cluster using the SLURM batch system. Consequently, the SLURM log file will duplicate the output of the corresponding rule. To avoid redundancy, the plugin deletes the SLURM log file for successful jobs, relying instead on the rule-specific logs. 
+In this plugin, Snakemake submits itself as a job script when operating on an HPC cluster using the SLURM batch system. Consequently, the SLURM log file will duplicate the output of the corresponding rule. To avoid redundancy, the plugin deletes the SLURM log file for successful jobs, relying instead on the rule-specific logs. 
 
 Remote executors submit Snakemake jobs to ensure unique functionalities — such as piped group jobs and rule wrappers — are available on cluster nodes. The memory footprint varies based on these functionalities; for instance, rules with a run directive that import modules and read data may require more memory.
 
@@ -31,7 +31,7 @@ the default per rule:
 $ snakemake --executor slurm --default-resources slurm_account=<your SLURM account> slurm_partition=<your SLURM partition> --set-resources <somerule>:slurm_partition=<some other partition>
 ```
 
-To ensure consistency and ease of management, it's advisable to persist such settings via a configuration profile[configuration profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles), which can be provided system-wide, per user, or per workflow.
+To ensure consistency and ease of management, it's advisable to persist such settings via a [configuration profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles), which can be provided system-wide, per user, or per workflow.
 
 By default, the executor waits 40 seconds before performing the first job status check. This interval can be adjusted using the `--slurm-init-seconds-before-status-checks=<time in seconds>` option, which may be useful when developing workflows on an HPC cluster to minimize turn-around times.
 
