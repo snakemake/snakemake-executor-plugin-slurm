@@ -24,7 +24,7 @@ To specify them at the command line, define them as default resources:
 $ snakemake --executor slurm --default-resources slurm_account=<your SLURM account> slurm_partition=<your SLURM partition>
 ```
 
-If individual rules require e.g. a different partition, you can override
+If individual rules require for example a different partition, you can override
 the default per rule:
 
 ``` console
@@ -202,7 +202,7 @@ rule gpu_task:
         "your_gpu_application --input {input} --output {output}"
 ```
 
-In this example, `cpus_per_gpu=4` allocates four CPU cores for each GPU requested. 
+In this example, `cpus_per_gpu=4` allocates four CPU cores for each GPU requested.
 
 .. note:: If `cpus_per_gpu` is set to a value less than or equal to zero, Snakemake will not include a CPU request in the SLURM submission, and the cluster's default CPU allocation policy will apply.
 
@@ -370,11 +370,11 @@ Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executi
 
 #### Conda
 
-Snakemake's default software deployment uses conda, i.e. [`snakemake --sdm conda ...`](https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html). On a cluster sometimes a file system other than `HOME` needs to be indicated (e.g. because of quotas). In this case pointing the installation to different file system with `--conda-prefix /other/filesystem` might be a solution. You can use `--conda-cleanup-pkgs` to further save space by removing downloaded tarballs.
+Snakemake's default software deployment uses conda, i.e. [`snakemake --sdm conda ...`](https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html). On a cluster sometimes a file system other than `HOME` needs to be indicated (for example because of quotas). In this case pointing the installation to different file system with `--conda-prefix /other/filesystem` might be a solution. You can use `--conda-cleanup-pkgs` to further save space by removing downloaded tarballs.
 
 #### Using Cluster Environment:  Modules
 
-HPC clusters provide so-called environment modules. To require installation with environment modules you can use `--sdm env-modules`, e.g. for a specific rule:
+HPC clusters provide so-called environment modules. To require installation with environment modules you can use `--sdm env-modules`, for example for a specific rule:
 
 ```
 rule ...:
@@ -391,7 +391,7 @@ Note, that
 
 ### Inquiring about Job Information and Adjusting the Rate Limiter
 
-The executor plugin for SLURM uses unique job names to inquire about job status. It ensures inquiring about job status for the series of jobs of a workflow does not put too much strain on the batch system's database. Human readable information is stored in the comment of a particular job. It is a combination of the rule name and wildcards. You can ask for it with the `sacct` or `squeue` commands, e.g.:
+The executor plugin for SLURM uses unique job names to inquire about job status. It ensures inquiring about job status for the series of jobs of a workflow does not put too much strain on the batch system's database. Human readable information is stored in the comment of a particular job. It is a combination of the rule name and wildcards. You can ask for it with the `sacct` or `squeue` commands, for example:
 
 ``` console 
 sacct -o JobID,State,Comment%40
@@ -416,7 +416,7 @@ Utilizing Snakemake [profiles](https://snakemake.readthedocs.io/en/stable/execut
 #### Setting Up a Global Profile:
 
 - Create a Profile Directory: If cluster administrators did not set up a global profile at `/etc/xdg/snakemake` users can opt for individual profiles. Establish a directory at `$HOME/.config/snakemake`.
-- The default profile will be used when specifying the `--profile`. It can also be set via the environment variable `SNAKEMAKE_PROFILE`, e.g. by specifying export `SNAKEMAKE_PROFILE=myprofile` in your `~/.bashrc`. Then the --profile flag can be omitted.
+- The default profile will be used when specifying the `--profile`. It can also be set via the environment variable `SNAKEMAKE_PROFILE`, for example by specifying export `SNAKEMAKE_PROFILE=myprofile` in your `~/.bashrc`. Then the --profile flag can be omitted.
 
 A sample configuration looks like this:
 
@@ -430,7 +430,7 @@ shared-fs-usage:
   - sources
   - source-cache
 remote-job-local-storage-prefix: "<your node local storage prefix>"
-local-storage-prefix: "<your local storage prefix, e.g. on login nodes>"
+local-storage-prefix: "<your local storage prefix, for example on login nodes>"
 ```
 
 
@@ -528,7 +528,7 @@ set-resources:
         runtime: f"{1 * attempt}h"
 ```
 
-Be sure to use sensible settings for your cluster and make use of parallel execution (e.g. threads) and [global profiles](#using-profiles) to avoid I/O contention. 
+Be sure to use sensible settings for your cluster and make use of parallel execution (for example threads) and [global profiles](#using-profiles) to avoid I/O contention. 
 
 
 ### Nesting Jobs (or Running this Plugin within a Job)
