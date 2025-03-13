@@ -110,7 +110,7 @@ In this configuration:
 
 While SLURM's `srun` effectively manages task allocation, including the `-n {resources.tasks}` option ensures compatibility with some applications that may rely on `mpiexec` or similar MPI launchers. This approach maintains the portability of your workflow across different computing environments.
 
-To adapt the workflow an application using `mpiexec`, you can override the `mpi` resource at runtime:
+To adapt the workflow for an application using `mpiexec`, you can override the `mpi` resource at runtime:
 
 ``` console
 $ snakemake --set-resources calc_pi:mpi="mpiexec" ...
