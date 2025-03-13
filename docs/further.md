@@ -48,7 +48,7 @@ rule a:
         mem_mb=14000
 ```
 
-Snakemake knows the `cpus_per_task`, similar to SLURM, as an alternative to `threads` Parameters in the `resources` section will take precedence.
+Snakemake knows the `cpus_per_task`, similar to SLURM, as an alternative to `threads`. Parameters in the `resources` section will take precedence.
 
 To avoid hard-coding resource parameters into your Snakefiles, it is advisable to create a cluster-specific workflow profile. This profile should be named `config.yaml` and placed in a directory named `profiles` relative to your workflow directory. You can then indicate this profile to Snakemake using the `--workflow-profile` profiles option. Here's an example of how the `config.yaml` file might look:
 
