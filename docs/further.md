@@ -370,7 +370,7 @@ Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executi
 
 #### Conda
 
-Snakemake's default software deployment uses conda, i.e. [`snakemake --sdm conda ...`](https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html). On a cluster sometimes a file system other than `HOME` needs to be in dicated (e.g. because of quotas). In this case pointing the installation to different file system with `--conda-prefix /other/filesystem` might be a solution. You can use `--conda-cleanup-pkgs` to further save space by removing downloaded tarballs.
+Snakemake's default software deployment uses conda, i.e. [`snakemake --sdm conda ...`](https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html). On a cluster sometimes a file system other than `HOME` needs to be indicated (e.g. because of quotas). In this case pointing the installation to different file system with `--conda-prefix /other/filesystem` might be a solution. You can use `--conda-cleanup-pkgs` to further save space by removing downloaded tarballs.
 
 #### Using Cluster Environment:  Modules
 
