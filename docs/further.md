@@ -19,7 +19,7 @@ $ snakemake --executor slurm --default-resources slurm_account=<your SLURM accou
 ```
 
 The plugin does its best to _guess_ your account. That might not be possible. Particularly, when dealing with several SLURM accounts, users ought to set them per workflow.
-Some clusters, however, have a pre-defined default per user and _do not_ allow users to set their account. The plugin will attept to always set an account. To override this behauvior, the `--slurm-no-account` flag can be used.
+Some clusters, however, have a pre-defined default per user and _do not_ allow users to set their account or partition. The plugin will always attempt to set an account. To override this behavior, the `--slurm-no-account` flag can be used.
 
 If individual rules require e.g. a different partition, you can override
 the default per rule:
