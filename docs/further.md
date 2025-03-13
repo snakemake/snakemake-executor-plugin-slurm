@@ -7,18 +7,25 @@ To avoid redundancy, the plugin deletes the SLURM log file for successful jobs, 
 Remote executors submit Snakemake jobs to ensure unique functionalities — such as piped group jobs and rule wrappers — are available on cluster nodes.
 The memory footprint varies based on these functionalities; for instance, rules with a run directive that import modules and read data may require more memory.
 
-#### Usage Hints
+### Installation
 
-Install this plugin into your Snakemake base environment using conda.
-This process also installs the 'jobstep' plugin, utilized on cluster nodes.
-Additionally, we recommend installing the `snakemake-storage-plugin-fs` for automated stage-in and stage-out procedures.
+Installing this plugin into your Snakemake base environment using conda will also install the 'jobstep' plugin, utilized on cluster nodes.
+Additionally, we recommend installing the `snakemake-storage-plugin-fs`, which will automate transferring data from the main file system to slurm execution nodes and back (stage-in and stage-out).
 
-#### Reporting Bugs and Feature Requests
+### Contributions
 
-We welcome bug reports and feature requests!
+We welcome bug reports, feature requests and pull requests!
 Please report issues specific to this plugin [in the plugin's GitHub repository](https://github.com/snakemake/snakemake-executor-plugin-slurm/issue).
-For other concerns, refer to the [Snakemake main repository](https://github.com/snakemake/snakemake/issues) or the relevant Snakemake plugin repository.
-Cluster-related issues should be directed to your cluster administrator.
+Additionally, bugs related to the plugin can originate in the:
+
+* [`snakemake-executor-plugin-slurm-jobstep`](https://github.com/snakemake/snakemake-executor-plugin-slurm-jobstep), which runs snakemake within slurm jobs
+* [`snakemake-interface-executor-plugins`](https://github.com/snakemake/snakemake-interface-executor-plugins), which connects it to the main snakemake application
+* [`snakemake`](https://github.com/snakemake/snakemake) itself
+
+If you can pinpoint the exact repository your issue pertains to, file you issue or pull request there.
+If unsure, posting here should ensure that we can direct you to right one.
+
+For issues that are specific to your local cluster-setup, please contact your cluster administrator.
 
 ### Specifying Account and Partition
 
@@ -285,13 +292,10 @@ This directive allows you to specify a comma-separated list of rules that should
 localrules: <rule_a>, <rule_b>
 ```
 
-### Advanced Resource Specifications
 
 In Snakemake workflows executed on SLURM clusters, it's essential to map Snakemake's resource specifications to SLURM's resource management parameters.
 This ensures that each job receives the appropriate computational resources.
 Below is a guide on how to align these specifications:
-
-#### Mapping Snakemake Resources to SLURM Parameters
 
 Snakemake allows the definition of resources within each rule, which can be translated to corresponding SLURM command-line flags:
 
@@ -367,6 +371,8 @@ snakemake --profile path/to/profile
 ```
 
 By leveraging configuration profiles, you can tailor resource specifications to different computing environments without modifying the core workflow definitions, thereby enhancing reproducibility and flexibility.
+
+### Advanced Resource Specifications
 
 #### Multicluster Support
 
