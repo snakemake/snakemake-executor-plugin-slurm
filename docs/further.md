@@ -416,7 +416,7 @@ Utilizing Snakemake [profiles](https://snakemake.readthedocs.io/en/stable/execut
 #### Setting Up a Global Profile:
 
 - Create a Profile Directory: If cluster administrators did not set up a global profile at `/etc/xdg/snakemake` users can opt for individual profiles. Establish a directory at `$HOME/.config/snakemake`.
-- The default profile twill be used when specifying the `--profile`. It can also be set via the environment variable `SNAKEMAKE_PROFILE`, e.g. by specifying export `SNAKEMAKE_PROFILE=myprofile` in your `~/.bashrc`. Then the --profile flag can be omitted.
+- The default profile will be used when specifying the `--profile`. It can also be set via the environment variable `SNAKEMAKE_PROFILE`, e.g. by specifying export `SNAKEMAKE_PROFILE=myprofile` in your `~/.bashrc`. Then the --profile flag can be omitted.
 
 A sample configuration looks like this:
 
