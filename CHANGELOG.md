@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.0.0...v1.0.1) (2025-03-13)
+
+
+### Bug Fixes
+
+* skip account setting upon user request ([#224](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/224)) ([08a867a](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/08a867a8d7768fa906872c8b8cf065a1830a7491))
+
 ## [1.0.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.15.1...v1.0.0) (2025-03-12)
 
 
