@@ -32,8 +32,10 @@ To specify them at the command line, define them as default resources:
 $ snakemake --executor slurm --default-resources slurm_account=<your SLURM account> slurm_partition=<your SLURM partition>
 ```
 
-If individual rules require for example a different partition, you can override
-the default per rule:
+The plugin does its best to _guess_ your account. That might not be possible. Particularly, when dealing with several SLURM accounts, users ought to set them per workflow.
+Some clusters, however, have a pre-defined default per user and _do not_ allow users to set their account or partition. The plugin will always attempt to set an account. To override this behavior, the `--slurm-no-account` flag can be used.
+
+If individual rules require e.g. a different partition, you can override the default per rule:
 
 ``` console
 $ snakemake --executor slurm --default-resources slurm_account=<your SLURM account> slurm_partition=<your SLURM partition> --set-resources <somerule>:slurm_partition=<some other partition>
