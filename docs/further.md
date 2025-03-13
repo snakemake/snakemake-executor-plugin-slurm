@@ -320,7 +320,7 @@ In this configuration:
 
 To apply this profile during workflow execution, use the --profile option:
 
-```Shell
+```console
 snakemake --profile path/to/profile
 ```
 
@@ -328,7 +328,26 @@ By leveraging configuration profiles, you can tailor resource specifications to 
 
 #### Multicluster Support
 
-For reasons of scheduling multicluster support is provided by the `clusters` flag in resources sections. Note, that you have to write `clusters`, not `cluster`! 
+In Snakemake, specifying the target cluster for a particular rule is achieved using the `cluster` resource flag within the rule definition. This allows for precise control over job distribution across different clusters. For example:
+
+```YAML
+default-resources:
+    cluster: "default_cluster"
+
+set-resources:
+    specific_rule:
+        cluster: "high_memory_cluster"
+    another_rule:
+        cluster: "gpu_cluster"
+```
+
+In this configuration, `default-resources` sets a default cluster for all rules, while `set-resources` specifies clusters for individual rules as needed. This method ensures that your workflow is adaptable to various computing environments without hardcoding cluster-specific details into your `Snakefile`. Multicluster support is achieved in a comma separated list, i.e.:
+
+```YAML
+set-resources:
+   multicluster_rule:
+       cluster: "cluster1,cluster2"
+```
 
 #### Additional Custom Job Configuration
 
@@ -351,11 +370,11 @@ Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executi
 
 #### Conda
 
-Snakemake's default software deployment uses conda, hence `snakemake --sdm conda ...` [works as intended](https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html). On a cluster sometimes a file system other than `HOME` needs to be in dicated (e.g. because of quotas). In this case, `--conda-prefix /other/filesystem` might be a solution. You can use `--conda-cleanup-pkgs` to further save space by removing downloaded tarballs.
+Snakemake's default software deployment uses conda, i.e. [`snakemake --sdm conda ...`](https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html). On a cluster sometimes a file system other than `HOME` needs to be in dicated (e.g. because of quotas). In this case pointing the installation to different file system with `--conda-prefix /other/filesystem` might be a solution. You can use `--conda-cleanup-pkgs` to further save space by removing downloaded tarballs.
 
 #### Using Cluster Environment:  Modules
 
-HPC clusters provide so-called environment modules. Some clusters do not allow using Conda (and its derivatives). In this case, or when a particular software is not provided by a Conda channel, Snakemake can be instructed to use environment modules. The `--sdm env-modules` flag will trigger loading modules defined for a specific rule, e.g.:
+HPC clusters provide so-called environment modules. To require installation with environment modules you can use `--sdm env-modules`, e.g. for a specific rule:
 
 ```
 rule ...:
@@ -364,7 +383,7 @@ rule ...:
        "bio/VinaLC"
 ```
 
-This will, internally, trigger a `module load bio VinaLC` immediately prior to execution. 
+This will trigger a `module load bio VinaLC` immediately prior to execution. 
 
 Note, that 
 - environment modules are best specified in a configuration file.
@@ -392,7 +411,14 @@ Snakemake will check the status of your jobs 40 seconds after submission. Anothe
 
 ### Using Profiles
 
-When using [profiles](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles), a command line may become shorter. A sample profile could look like this:
+Utilizing Snakemake [profiles](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles) streamlines workflow execution by consolidating configuration settings into dedicated directories, simplifying command-line operations.
+
+#### Setting Up a Global Profile:
+
+- Create a Profile Directory: If cluster administrators did not set up a global profile at `/etc/xdg/snakemake` users can opt for individual profiles. Establish a directory at `$HOME/.config/snakemake`.
+- The default profile twill be used when specifying the `--profile`. It can also be set via the environment variable `SNAKEMAKE_PROFILE`, e.g. by specifying export `SNAKEMAKE_PROFILE=myprofile` in your `~/.bashrc`. Then the --profile flag can be omitted.
+
+A sample configuration looks like this:
 
 ```YAML
 executor: slurm
@@ -407,51 +433,46 @@ remote-job-local-storage-prefix: "<your node local storage prefix>"
 local-storage-prefix: "<your local storage prefix, e.g. on login nodes>"
 ```
 
-The entire configuration will set the executor to SLURM executor, ensures sufficient file system latency and allow automatic stage-in of files using the [file system storage plugin](https://github.com/snakemake/snakemake-storage-plugin-fs).
 
-On a cluster with a scratch directory per job id, the prefix within jobs might be:
+In this configuration:
+- `executor: slurm`: Specifies the SLURM executor for job scheduling. The corresponding command line flag is not needed anymore.
+- `latency-wait: 5`: Sets a 5-second latency wait to accommodate file system delays.
+- `default-storage-provider: fs`: Utilizes the file system storage plugin for file handling.
+- `shared-fs-usage:` Lists storage categories to be managed via the shared file system.
+  - `remote-job-local-storage-prefix:` Defines the storage prefix for remote jobs; adjust based on your cluster's scratch directory structure.
+  - `local-storage-prefix:` Specifies the storage prefix for local jobs, such as on login nodes.
 
-```YAML
-remote-job-local-storage-prefix: "<scratch>/$SLURM_JOB_ID"
-```
-
-On a cluster with a scratch directory per user, the prefix within jobs might be:
-
-```YAML
-remote-job-local-storage-prefix: "<scratch>/$USER"
-```
-
-Note, that the path `<scratch>` needs to be taken from a specific cluster documentation.
-
-Further note, that you need to set the `SNAKEMAKE_PROFILE` environment variable in your `~/.bashrc` file, e.g.:
-
-```console
-export SNAKEMAKE_PROFILE="$HOME/.config/snakemake"
-```
+Using the [file system storage plugin](https://github.com/snakemake/snakemake-storage-plugin-fs) will automatically stage-in and -out in- and output files. 
 
 ==This is ongoing development. Eventually you will be able to annotate different file access patterns.==
 
 ### Log Files - Getting Information on Failures
 
-Snakemake, via this SLURM executor, submits itself as a job. This ensures that all features are preserved in the job context. SLURM requires a logfile to be written for _every_ job. This is redundant information and only contains the Snakemake output already printed on the terminal. If a rule is equipped with a `log` directive, SLURM logs only contain Snakemake's output.
+Snakemake's SLURM executor submits itself as a job, ensuring that all features function correctly within the job context. SLURM requires a log file for every job, which can lead to redundancy since Snakemake's output is already displayed in the terminal. However, if a rule includes a `log` directive, SLURM logs will contain only Snakemake's output.
 
-This executor will remove SLURM logs of sucessful jobs immediately when they are finished. You can change this behaviour with the flag `--slurm-keep-successful-logs`. A log file for a failed job will be preserved per default for 10 days. You may change this value using the `--slurm-delete-logfiles-older-than` flag.
+By default, the SLURM executor deletes log files of successful jobs immediately after completion (remember: this is redundant information). To modify this behavior and retain logs of successful jobs, use the `--slurm-keep-successful-logs` flag. Additionally, log files for failed jobs are preserved for 10 days by default. To change this retention period, use the `--slurm-delete-logfiles-older-than` flag.
 
-The default location of Snakemake log files are relative to the directory where the workflow is started or relative to the directory indicated with `--directory`. SLURM logs, produced by Snakemake, can be redirected using `--slurm-logdir`. If you want avoid that log files accumulate in different directories, you can store them in your home directory. Best put the parameter in your profile then, e.g.:
+Snakemake's log files are typically stored in the directory where the workflow is initiated or in the directory specified with the `--directory` flag. To redirect SLURM logs produced by Snakemake to a specific directory, use the `--slurm-logdir` flag. To prevent log files from accumulating in various directories, consider storing them in your home directory. For example, add the following to your Snakemake profile:
 
 ```YAML
 slurm-logdir: "/home/<username>/.snakemake/slurm_logs"
 ```
 
+Replace <username> with your actual username. This configuration directs SLURM logs to a centralized location, making them easier to manage.
+
 ### Retries - Or Trying again when a Job failed
 
-Some cluster jobs may fail. In this case Snakemake can be instructed to try another submit before the entire workflow fails, in this example up to 3 times:
+When running workflows on SLURM-managed clusters, it's common for jobs to occasionally fail. Snakemake provides mechanisms to handle such failures gracefully, allowing for automatic retries and workflow resumption.
+
+#### Retrying Failed Jobs
+
+To instruct Snakemake to automatically retry failed jobs, use the `--retries` option followed by the desired number of attempts. For example, to retry up to three times:
 
 ```console
 snakemake --retries=3
 ```
 
-If a workflow fails entirely (e.g. when there are cluster failures), it can be resumed as any other Snakemake workflow:
+If a workflow encounters multiple failures, you can resume it by re-running incomplete jobs with:
 
 ```console
 snakemake ... --rerun-incomplete
@@ -459,13 +480,15 @@ snakemake ... --rerun-incomplete
 snakemake ... --ri
 ```
 
-The "requeue" option allows jobs to be resubmitted automatically if they fail or are preempted. This is similar to Snakemake's `--retries`, except a SLURM job will not be considered failed and priority may be accumulated during pending. This might be the default on your cluster, already. You can check your cluster's requeue settings with 
+#### Automatic Job Requeuing in SLURM
+
+SLURM offers a job requeue feature that allows jobs to be automatically resubmitted if they fail or are preempted, preserving job IDs and priorities. To enable this feature with Snakemake, use the `--slurm-requeue` option. This is similar to Snakemake's `--retries`, except a SLURM job will not be considered failed and priority may be accumulated during pending. This might be the default on your cluster, already. You can check your cluster's requeue settings with 
 
 ```console
 scontrol show config | grep Requeue
 ```
 
-This requeue feature is integrated into the SLURM submission command, adding the --requeue parameter to allow requeuing after node failure or preemption using:
+If job requeuing is not enabled on your cluster, consider adding `--slurm-requeue` for your Snakemake jobs:
 
 ```console
 snakemake --slurm-requeue ...
@@ -510,18 +533,14 @@ Be sure to use sensible settings for your cluster and make use of parallel execu
 
 ### Nesting Jobs (or Running this Plugin within a Job)
 
-Some environments provide a shell within a SLURM job, for instance, IDEs started in on-demand context. If Snakemake attempts to use this plugin to spawn jobs on the cluster, this may work just as intended. Or it might not: depending on cluster settings or individual settings, submitted jobs may be ill-parameterized or will not find the right environment.
-
-If the plugin detects to be running within a job, it will therefore issue a warning and stop for 5 seconds.
-
+Running Snakemake within an active SLURM job can lead to unpredictable behavior, as the execution environment may not be properly configured for job submission. To mitigate potential issues, the SLURM executor plugin detects when it's operating inside a SLURM job and issues a warning, pausing for 5 seconds before proceeding.
 
 ### Summary:
 
 When put together, a frequent command line looks like:
 
 ```console
-$ snakemake --workflow-profile <path> \
-> -j unlimited \ # assuming an unlimited number of jobs
+$ snakemake -j unlimited \ # assuming an unlimited number of jobs
 > --workflow-profile <profile directory with a `config.yaml`>
 > --configfile config/config.yaml \
 > --directory <path> # assuming a data path on a different file system than the workflow
@@ -531,9 +550,17 @@ $ snakemake --workflow-profile <path> \
 
 #### Should I run Snakemake on the Login Node of my Cluster?
 
-We recommend running Snakemake on the login node. Occasionally, HPC administrators are opposed to having a job shepherd running on the login node, since computational tasks should not be executed there.
+Running Snakemake on a cluster's login node is generally acceptable, as the primary Snakemake process is not resource-intensive. However, some High-Performance Computing (HPC) administrators may discourage running job management processes like Snakemake on the login node, as it is typically intended for interactive use and not for executing computational tasks. It's advisable to consult with your cluster's support team to understand any policies or guidelines regarding this practice.
 
-We therefore provide this table of measurements:
+To assess the impact of running Snakemake on the login node, you can measure the CPU time consumed by Snakemake during workflow execution. For example, using the `/usr/bin/time -v` command to profile Snakemake's resource usage:
+
+```console
+/usr/bin/time -v snakemake ...
+```
+
+This command provides detailed statistics, including the CPU time used. Sharing such metrics with your HPC administrators can help evaluate whether running Snakemake on the login node aligns with cluster usage policies.
+
+We provide this table of measurements:
 
 | Workflow | Version | Number of local rules  | Total Runtime (hh:mm:ss) | CPU-Time on the login node [user + system] (s) | Fraction |
 |:-------------|:---------------|:---------------|:-------------|:-------------|:-------------:|
@@ -541,3 +568,8 @@ We therefore provide this table of measurements:
 
 If you want to contribute similar statistics, please run `/usr/bin/time -v snakemake ...` on your cluster and submit your stats as an [issue to the plugin repo on GitHub](https://github.com/snakemake/snakemake-executor-plugin-slurm/issue).
 
+#### My Administrators do not let me run Snakemake on a Login Node
+
+Running Snakemake within a SLURM job can lead to unpredictable behavior, as the execution environment may not be properly configured for job submission. The SLURM executor plugin detects when it's operating inside a SLURM job and issues a warning, pausing for 5 seconds before proceeding.
+
+If your administrators require running Snakemake within a job and encounter issues, please report the specific problems as issues on the plugin's GitHub repository. While it may be possible to adapt the plugin for different cluster configurations, it's important to note that the plugin is primarily designed for use in production environments, and not all specialized cluster setups can be accounted for.
