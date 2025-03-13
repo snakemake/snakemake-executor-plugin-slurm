@@ -257,17 +257,17 @@ In Snakemake workflows executed on SLURM clusters, it's essential to map Snakema
 Snakemake allows the definition of resources within each rule, which can be translated to corresponding SLURM command-line flags:
 
 - Partition: Specifies the partition or queue to which the job should be submitted.
-    - Snakemake resource: `slurm_partition`
-    - SLURM flag: `--partition` or `-p`
+  - Snakemake resource: `slurm_partition`
+  - SLURM flag: `--partition` or `-p`
 - Runtime: Defines the walltime limit for the job, typically in minutes.
-    - Snakemake resource: `runtime`
-    - SLURM flag: `--time` or `-t`
+  - Snakemake resource: `runtime`
+  - SLURM flag: `--time` or `-t`
 - Memory: Specifies the memory requirements for the job.
-    - Snakemake resource: `mem_mb` (total memory in MB) or `mem_mb_per_cpu` (memory per CPU in MB)
-    - SLURM flags: `--mem` (for total memory) or `--mem-per-cpu` (for memory per CPU)
+  - Snakemake resource: `mem_mb` (total memory in MB) or `mem_mb_per_cpu` (memory per CPU in MB)
+  - SLURM flags: `--mem` (for total memory) or `--mem-per-cpu` (for memory per CPU)
 - Constraints: Sets specific hardware or software constraints for the job.
-    - Snakemake resource: `constraint`
-    - SLURM flag: `--constraint` or `-C`
+  - Snakemake resource: `constraint`
+  - SLURM flag: `--constraint` or `-C`
 
 #### Example of Rule Definition with Resource Specifications
 
