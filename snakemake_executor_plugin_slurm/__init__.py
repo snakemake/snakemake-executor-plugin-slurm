@@ -74,6 +74,18 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
+    status_attempts: Optional[int] = field(
+        default=5,
+        metadata={
+            "help": "Defines the number of attempts to query the status of "
+            "all active jobs. If the status query fails, the next attempt "
+            "will be performed after the next status check interval."
+            "The default is 5 status attempts before giving up. The maximum "
+            "time between status checks is 180 seconds.",
+            "env_var": False,
+            "required": False,
+        },
+    )
     requeue: bool = field(
         default=False,
         metadata={
@@ -376,7 +388,11 @@ class Executor(RemoteExecutor):
 
         sacct_query_durations = []
 
-        status_attempts = 5
+        status_attempts = self.workflow.executor_settings.status_attempts
+        self.logger.debug(
+            f"Checking the status of {len(active_jobs)} active jobs "
+            f"with {status_attempts} attempts."
+        )
 
         active_jobs_ids = {job_info.external_jobid for job_info in active_jobs}
         active_jobs_seen_by_sacct = set()
@@ -510,7 +526,7 @@ We leave it to SLURM to resume your job(s)"""
                     self.next_seconds_between_status_checks + 10, max_sleep_time
                 )
             else:
-                self.next_seconds_between_status_checks = None
+                self.next_seconds_between_status_checks = 40
 
     def cancel_jobs(self, active_jobs: List[SubmittedJobInfo]):
         # Cancel all active jobs.
@@ -570,10 +586,22 @@ We leave it to SLURM to resume your job(s)"""
                 for entry in csv.reader(StringIO(command_res), delimiter="|")
             }
         except subprocess.CalledProcessError as e:
-            self.logger.error(
-                f"The job status query failed with command: {command}\n"
-                f"Error message: {e.stderr.strip()}\n"
-            )
+            error_message = e.stderr.strip()
+            if "slurm_persist_conn_open_without_init" in error_message:
+                self.logger.warning(
+                    "The SLURM database might not be available ... "
+                    f"Error message: '{error_message}'"
+                    "This error message indicates that the SLURM database is currently "
+                    "not available. This is not an error of the Snakemake plugin, "
+                    "but some kind of server issue. "
+                    "Please consult with your HPC provider."
+                )
+            else:
+                self.logger.error(
+                    f"The job status query failed with command '{command}'"
+                    f"Error message: '{error_message}'"
+                    "This error message is not expected, please report it back to us."
+                )
             pass
 
         return (res, query_duration)
