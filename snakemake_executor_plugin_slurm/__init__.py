@@ -388,7 +388,7 @@ class Executor(RemoteExecutor):
 
         sacct_query_durations = []
 
-        status_attempts = self.workflow.executor_settings.status_attemps
+        status_attempts = self.workflow.executor_settings.status_attempts
         self.logger.debug(
             f"Checking the status of {len(active_jobs)} active jobs "
             f"with {status_attempts} attempts."
