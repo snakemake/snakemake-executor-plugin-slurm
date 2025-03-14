@@ -26,9 +26,9 @@ from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
 from snakemake_interface_common.exceptions import WorkflowError
-from snakemake_executor_plugin_slurm_jobstep import get_cpus_per_task
+from snakemake_executor_plugin_slurm_jobstep import get_cpu_setting
 
-from .utils import delete_slurm_environment, delete_empty_dirs
+from .utils import delete_slurm_environment, delete_empty_dirs, set_gres_string
 from .efficiency_report import fetch_sacct_data
 
 
@@ -75,12 +75,33 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
+    status_attempts: Optional[int] = field(
+        default=5,
+        metadata={
+            "help": "Defines the number of attempts to query the status of "
+            "all active jobs. If the status query fails, the next attempt "
+            "will be performed after the next status check interval."
+            "The default is 5 status attempts before giving up. The maximum "
+            "time between status checks is 180 seconds.",
+            "env_var": False,
+            "required": False,
+        },
+    )
     requeue: bool = field(
         default=False,
         metadata={
             "help": "Allow requeuing preempted of failed jobs, "
             "if no cluster default. Results in "
             "`sbatch ... --requeue ...` "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    no_account: bool = field(
+        default=False,
+        metadata={
+            "help": "Do not use any account for submission. "
             "This flag has no effect, if not set.",
             "env_var": False,
             "required": False,
@@ -123,7 +144,11 @@ class Executor(RemoteExecutor):
         self._fallback_account_arg = None
         self._fallback_partition = None
         self._preemption_warning = False  # no preemption warning has been issued
-        self.slurm_logdir = None
+        self.slurm_logdir = (
+            Path(self.workflow.executor_settings.logdir)
+            if self.workflow.executor_settings.logdir
+            else Path(".snakemake/slurm_logs").resolve()
+        )
         atexit.register(self.clean_old_logs)
         atexit.register(self.fetch_sacct_data)
 
@@ -178,15 +203,11 @@ class Executor(RemoteExecutor):
         group_or_rule = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
 
         try:
-            wildcard_str = "_".join(job.wildcards) if job.wildcards else ""
+            wildcard_str = (
+                "_".join(job.wildcards).replace("/", "_") if job.wildcards else ""
+            )
         except AttributeError:
             wildcard_str = ""
-
-        self.slurm_logdir = (
-            Path(self.workflow.executor_settings.logdir)
-            if self.workflow.executor_settings.logdir
-            else Path(".snakemake/slurm_logs").resolve()
-        )
 
         self.slurm_logdir.mkdir(parents=True, exist_ok=True)
         slurm_logfile = self.slurm_logdir / group_or_rule / wildcard_str / "%j.log"
@@ -212,14 +233,18 @@ class Executor(RemoteExecutor):
             f"--job-name {self.run_uuid} "
             f"--output '{slurm_logfile}' "
             f"--export=ALL "
-            f"--comment {comment_str}"
+            f"--comment '{comment_str}'"
         )
 
-        call += self.get_account_arg(job)
+        if not self.workflow.executor_settings.no_account:
+            call += self.get_account_arg(job)
+
         call += self.get_partition_arg(job)
 
         if self.workflow.executor_settings.requeue:
             call += " --requeue"
+
+        call += set_gres_string(job)
 
         if job.resources.get("clusters"):
             call += f" --clusters {job.resources.clusters}"
@@ -251,7 +276,11 @@ class Executor(RemoteExecutor):
 
         # fixes #40 - set ntasks regardless of mpi, because
         # SLURM v22.05 will require it for all jobs
-        call += f" --ntasks={job.resources.get('tasks', 1)}"
+        gpu_job = job.resources.get("gpu") or "gpu" in job.resources.get("gres", "")
+        if gpu_job:
+            call += f" --ntasks-per-gpu={job.resources.get('tasks', 1)}"
+        else:
+            call += f" --ntasks={job.resources.get('tasks', 1)}"
         # MPI job
         if job.resources.get("mpi", False):
             if not job.resources.get("tasks_per_node") and not job.resources.get(
@@ -263,8 +292,9 @@ class Executor(RemoteExecutor):
                     "Probably not what you want."
                 )
 
-        call += f" --cpus-per-task={get_cpus_per_task(job)}"
-
+        # we need to set cpus-per-task OR cpus-per-gpu, the function
+        # will return a string with the corresponding value
+        call += f" {get_cpu_setting(job, gpu_job)}"
         if job.resources.get("slurm_extra"):
             self.check_slurm_extra(job)
             call += f" {job.resources.slurm_extra}"
@@ -360,7 +390,11 @@ class Executor(RemoteExecutor):
 
         sacct_query_durations = []
 
-        status_attempts = 5
+        status_attempts = self.workflow.executor_settings.status_attempts
+        self.logger.debug(
+            f"Checking the status of {len(active_jobs)} active jobs "
+            f"with {status_attempts} attempts."
+        )
 
         active_jobs_ids = {job_info.external_jobid for job_info in active_jobs}
         active_jobs_seen_by_sacct = set()
@@ -494,7 +528,7 @@ We leave it to SLURM to resume your job(s)"""
                     self.next_seconds_between_status_checks + 10, max_sleep_time
                 )
             else:
-                self.next_seconds_between_status_checks = None
+                self.next_seconds_between_status_checks = 40
 
     def cancel_jobs(self, active_jobs: List[SubmittedJobInfo]):
         # Cancel all active jobs.
@@ -554,10 +588,22 @@ We leave it to SLURM to resume your job(s)"""
                 for entry in csv.reader(StringIO(command_res), delimiter="|")
             }
         except subprocess.CalledProcessError as e:
-            self.logger.error(
-                f"The job status query failed with command: {command}\n"
-                f"Error message: {e.stderr.strip()}\n"
-            )
+            error_message = e.stderr.strip()
+            if "slurm_persist_conn_open_without_init" in error_message:
+                self.logger.warning(
+                    "The SLURM database might not be available ... "
+                    f"Error message: '{error_message}'"
+                    "This error message indicates that the SLURM database is currently "
+                    "not available. This is not an error of the Snakemake plugin, "
+                    "but some kind of server issue. "
+                    "Please consult with your HPC provider."
+                )
+            else:
+                self.logger.error(
+                    f"The job status query failed with command '{command}'"
+                    f"Error message: '{error_message}'"
+                    "This error message is not expected, please report it back to us."
+                )
             pass
 
         return (res, query_duration)
@@ -629,34 +675,44 @@ We leave it to SLURM to resume your job(s)"""
         """
         tests whether the given account is registered, raises an error, if not
         """
-        cmd = f'sacctmgr -n -s list user "{os.environ["USER"]}" format=account%256'
+        cmd = "sshare -U --format Account --noheader"
         try:
             accounts = subprocess.check_output(
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
         except subprocess.CalledProcessError as e:
-            sacctmgr_report = (
-                "Unable to test the validity of the given or guessed "
-                f"SLURM account '{account}' with sacctmgr: {e.stderr}."
+            sshare_report = (
+                "Unable to test the validity of the given or guessed"
+                f" SLURM account '{account}' with sshare: {e.stderr}."
             )
+            accounts = ""
+
+        if not accounts.strip():
+            cmd = f'sacctmgr -n -s list user "{os.environ["USER"]}" format=account%256'
             try:
-                cmd = "sshare -U --format Account --noheader"
                 accounts = subprocess.check_output(
                     cmd, shell=True, text=True, stderr=subprocess.PIPE
                 )
-            except subprocess.CalledProcessError as e2:
-                sshare_report = (
-                    "Unable to test the validity of the given or guessed"
-                    f" SLURM account '{account}' with sshare: {e2.stderr}."
+            except subprocess.CalledProcessError as e:
+                sacctmgr_report = (
+                    "Unable to test the validity of the given or guessed "
+                    f"SLURM account '{account}' with sacctmgr: {e.stderr}."
                 )
                 raise WorkflowError(
-                    f"The 'sacctmgr' reported: '{sacctmgr_report}' "
-                    f"and likewise 'sshare' reported: '{sshare_report}'."
+                    f"The 'sshare' reported: '{sshare_report}' "
+                    f"and likewise 'sacctmgr' reported: '{sacctmgr_report}'."
                 )
 
         # The set() has been introduced during review to eliminate
         # duplicates. They are not harmful, but disturbing to read.
         accounts = set(_.strip() for _ in accounts.split("\n") if _)
+
+        if not accounts:
+            self.logger.warning(
+                f"Both 'sshare' and 'sacctmgr' returned empty results for account "
+                f"'{account}'. Proceeding without account validation."
+            )
+            return ""
 
         if account not in accounts:
             raise WorkflowError(

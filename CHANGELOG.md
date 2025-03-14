@@ -1,5 +1,72 @@
 # Changelog
 
+## [1.1.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.0.1...v1.1.0) (2025-03-14)
+
+
+### Features
+
+* tolerant status checks ([#232](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/232)) ([cb20135](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/cb20135d5c894cf8b013509576997002c6e6d256))
+
+
+### Bug Fixes
+
+* trying syntax fix ([#235](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/235)) ([5e591ae](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/5e591aee3a9489f33c67f79c67473244263c8673))
+
+
+### Documentation
+
+* rewrite of the documentation  ([#219](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/219)) ([7d0b44c](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/7d0b44c43841111567e42e38b4c10b84f3efe88d))
+
+## [1.0.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.0.0...v1.0.1) (2025-03-13)
+
+
+### Bug Fixes
+
+* skip account setting upon user request ([#224](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/224)) ([08a867a](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/08a867a8d7768fa906872c8b8cf065a1830a7491))
+
+## [1.0.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.15.1...v1.0.0) (2025-03-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* improved GPU job support ([#173](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/173))
+
+### Features
+
+* improved GPU job support ([#173](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/173)) ([66dcdcf](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/66dcdcfed1b2185e7ffcf8d33ef70bf09e9b2f56))
+
+
+### Bug Fixes
+
+* another dummy commit to test release-please PR CI behaviour ([#230](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/230)) ([791ed16](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/791ed16087079105ec8166e6803e64349063cb7d))
+* logdir misconstruct when leading slash in wildcard ([#220](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/220)) ([61de847](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/61de84765790af6e3b1a5bbd2970aefb748f2192))
+
+## [0.15.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.15.0...v0.15.1) (2025-02-14)
+
+
+### Bug Fixes
+
+* missing quotes for the slurm comment ([#211](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/211)) ([44f2e2b](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/44f2e2b8defdaa2adc6e9d7ab92d60935bccd010))
+
+## [0.15.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.14.3...v0.15.0) (2025-01-23)
+
+
+### Features
+
+* disallowing blank reports ([#204](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/204)) ([6dd0105](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6dd0105ddf0ac37cd8074b51e5b1f3329b04ae3e))
+
+
+### Bug Fixes
+
+* initializing self.slurm_logdir ([#206](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/206)) ([b00e520](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/b00e520a1c3b4707b9ee87765a44c2da23559650))
+
+## [0.14.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.14.2...v0.14.3) (2025-01-22)
+
+
+### Bug Fixes
+
+* ci runner ought to start now upon merge to main ([#199](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/199)) ([363f130](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/363f130782f557c56bbbd80ec47a9f732818e6b4))
+
 ## [0.14.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v0.14.1...v0.14.2) (2025-01-20)
 
 
