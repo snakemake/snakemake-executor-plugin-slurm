@@ -3,13 +3,11 @@ __copyright__ = "Copyright 2023, David Lähnemann, Johannes Köster, Christian M
 __email__ = "johannes.koester@uni-due.de"
 __license__ = "MIT"
 
-import asyncio
 import atexit
 import csv
 from io import StringIO
 import os
 from pathlib import Path
-import re
 import shlex
 import subprocess
 import time
@@ -71,6 +69,16 @@ class ExecutorSettings(ExecutorSettingsBase):
         metadata={
             "help": "Defines the time in seconds before the first status "
             "check is performed after job submission.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    status_attemps: Optional[int] = field(
+        default=5,
+        metadata={
+            "help": "Defines the number of attempts to query the status of "
+            "all active jobs. If the status query fails, the next attempt "
+            "will be performed after the next status check interval.",
             "env_var": False,
             "required": False,
         },
@@ -377,7 +385,11 @@ class Executor(RemoteExecutor):
 
         sacct_query_durations = []
 
-        status_attempts = 5
+        status_attempts = self.workflow.executor_settings.status_attemps
+        self.logger.debug(
+            f"Checking the status of {len(active_jobs)} active jobs "
+            f"with {status_attempts} attempts."
+        )
 
         active_jobs_ids = {job_info.external_jobid for job_info in active_jobs}
         active_jobs_seen_by_sacct = set()
@@ -511,7 +523,7 @@ We leave it to SLURM to resume your job(s)"""
                     self.next_seconds_between_status_checks + 10, max_sleep_time
                 )
             else:
-                self.next_seconds_between_status_checks = None
+                self.next_seconds_between_status_checks = 40
 
     def cancel_jobs(self, active_jobs: List[SubmittedJobInfo]):
         # Cancel all active jobs.
@@ -552,10 +564,6 @@ We leave it to SLURM to resume your job(s)"""
                    "<raw/main_job_id>|<long_status_string>"
         """
         res = query_duration = None
-        # Retry after 5 minutes (300 seconds) and then after 10 minutes (600 seconds)
-        # Reasoning: In rare cases, the SLURM database might not respond and we can hope
-        # that it will be available after a short while.
-        retry_intervals = [300, 600]
         try:
             time_before_query = time.time()
             command_res = subprocess.check_output(
@@ -578,45 +586,18 @@ We leave it to SLURM to resume your job(s)"""
             error_message = e.stderr.strip()
             if "slurm_persist_conn_open_without_init" in error_message:
                 self.logger.warning(
-                    "The SLURM database might not be available yet. "
-                    "Will retry querying the job status in 5 minutes."
+                    "The SLURM database might not be available ... "
+                    f"Error message: '{error_message}'"
+                    "This error message indicates that the SLURM database is currently "
+                    "not available. This is not an error of the Snakemake plugin, "
+                    "but some kind of server issue. "
+                    "Please consult with your HPC provider."
                 )
-                for interval in retry_intervals:
-                    self.logger.warning(
-                        f"Waiting {interval} seconds before retrying..."
-                    )
-                    await asyncio.sleep(interval)
-
-                    try:
-                        time_before_query = time.time()
-                        command_res = subprocess.check_output(
-                            command, text=True, shell=True, stderr=subprocess.PIPE
-                        )
-                        query_duration = time.time() - time_before_query
-                        self.logger.debug(
-                            f"The job status was queried with command: {command}\n"
-                            f"It took: {query_duration} seconds\n"
-                            f"The output is:\n'{command_res}'\n"
-                        )
-                        res = {
-                            entry[0]: entry[1].split(sep=None, maxsplit=1)[0]
-                            for entry in csv.reader(
-                                StringIO(command_res), delimiter="|"
-                            )
-                        }
-                        return (res, query_duration)  # Success, exit retry loop
-                    except subprocess.CalledProcessError as e:
-                        error_message = e.stderr.strip()
-                        if "slurm_persist_conn_open_without_init" not in error_message:
-                            self.logger.error(
-                                f"The job status query failed with command: {command}\n"
-                                f"Error message: {e.stderr.strip()}\n"
-                            )
-                            break  # Not the error we're looking for, stop retrying
             else:
                 self.logger.error(
-                    f"The job status query failed with command: {command}\n"
-                    f"Error message: {e.stderr.strip()}\n"
+                    f"The job status query failed with command '{command}'"
+                    f"Error message: '{error_message}'"
+                    "This error message is not expected, please report it back to us."
                 )
             pass
 
