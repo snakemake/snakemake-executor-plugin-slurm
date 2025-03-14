@@ -78,7 +78,9 @@ class ExecutorSettings(ExecutorSettingsBase):
         metadata={
             "help": "Defines the number of attempts to query the status of "
             "all active jobs. If the status query fails, the next attempt "
-            "will be performed after the next status check interval.",
+            "will be performed after the next status check interval."
+            "The default is 5 status attempts before giving up. The maximum "
+            "time between status checks is 180 seconds.",
             "env_var": False,
             "required": False,
         },
