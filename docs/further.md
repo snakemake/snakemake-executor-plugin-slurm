@@ -27,6 +27,18 @@ If unsure, posting here should ensure that we can direct you to right one.
 
 For issues that are specific to your local cluster-setup, please contact your cluster administrator.
 
+### Example
+
+A command line invocation of the plugin could look like:
+
+TODO: Include common configuration options and locations, especially the setting or invocation of the `--executor slurm` and link out to the respective sections in these docs.
+```console
+$ snakemake -j unlimited \ # assuming an unlimited number of jobs
+> --workflow-profile <profile directory with a `config.yaml`>
+> --configfile config/config.yaml \
+> --directory <path> # assuming a data path on a different file system than the workflow
+```
+
 ### Configuration
 
 Snakemake offers great [capabilities to specify and thereby limit resources](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#resources) used by a workflow as a whole and by individual jobs.
@@ -633,17 +645,6 @@ To prevent failures due to faulty parameterization, we can dynamically adjust th
 
 Running Snakemake within an active SLURM job can lead to unpredictable behavior, as the execution environment may not be properly configured for job submission.
 To mitigate potential issues, the SLURM executor plugin detects when it's operating inside a SLURM job and issues a warning, pausing for 5 seconds before proceeding.
-
-### Summary:
-
-When put together, a frequent command line looks like:
-
-```console
-$ snakemake -j unlimited \ # assuming an unlimited number of jobs
-> --workflow-profile <profile directory with a `config.yaml`>
-> --configfile config/config.yaml \
-> --directory <path> # assuming a data path on a different file system than the workflow
-```
 
 ### Frequently Asked Questions
 
