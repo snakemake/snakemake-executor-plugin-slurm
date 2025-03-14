@@ -74,7 +74,7 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
-    status_attemps: Optional[int] = field(
+    status_attempts: Optional[int] = field(
         default=5,
         metadata={
             "help": "Defines the number of attempts to query the status of "
