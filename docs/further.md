@@ -86,11 +86,12 @@ Similarly, memory requirements for rules can be specified as `mem_mb` (total mem
 
 The resources described here are usually omitted from reusable Snakemake workflows, as they are platform-specific.
 
-| Snakemake plugin     | Description                              | SLURM               |
-| `clusters`           | comma separated string of clusters       | `--clusters`        |
-| `constraint`         | may hold features on some clusters       | `--constraint`/`-C` |
-| `slurm_account`      | user account for resource usage tracking | `--account`         |
-| `slurm_partition`    | partition/queue to submit job(s) to      | `--partition`       |
+| Snakemake plugin     | Description                                 | SLURM               |
+| `clusters`           | comma separated string of clusters          | `--clusters`        |
+| `constraint`         | may hold features on some clusters          | `--constraint`/`-C` |
+| `slurm_account`      | user account for resource usage tracking    | `--account`         |
+| `slurm_partition`    | partition/queue to submit job(s) to         | `--partition`       |
+| `slurm_requeue`      | handle `--retries` with SLURM functionality |                     |
 
 
 ##### `slurm_partition`
@@ -129,6 +130,35 @@ Or if you are a system administrator, you can adjust the respective defaults in 
 Or you might sometimes want to decrease certain wait times during development.
 For example, the plugin waits 40 seconds before performing the first job status check.
 You can reduce this with the `--slurm-init-seconds-before-status-checks=<time in seconds>` option, to minimize turn-around times for test runs.
+TODO: add wait times and frequencies arguments to SLURM-specific table
+
+##### Retry failed jobs
+
+When running workflows, jobs will occasionally fail.
+Snakemake provides mechanisms to handle such failures gracefully, for example by resuming a workflow from the last succesfully created outputs.
+But it can even retry failed jobs, in case you expect unpredictable failures or increase some limiting resource requirements with each attempt.
+For this, have a look at the [documentation of the snakemake argument `--retries`]() and set it to a value above `0`.
+
+In addition, SLURM offers a built-in job requeue feature.
+You can check whether your cluster has this enabled with:
+
+```console
+scontrol show config | grep Requeue
+```
+TODO: provide expected output here
+
+If enabled, this feature allows jobs to be automatically resubmitted if they fail or are preempted.
+This effectively does not consider the SLURM job failed, preserving job IDs and priorities, and allowing priority to be accumulated while pending.
+If job requeuing is not enabled on your cluster, consider adding `--slurm-requeue` for your Snakemake jobs:
+
+TODO: Does the `--slurm-requeue` command line argument work when this feature is on, or when it is off. This is not clear from the previous docs version.
+
+```console
+snakemake --slurm-requeue ...
+```
+
+This might be the default on your cluster, already.
+TODO: What exactly might be the default on a cluster?
 
 
 ### different job types
@@ -597,48 +627,6 @@ slurm-logdir: "/home/<username>/.snakemake/slurm_logs"
 
 Replace <username> with your actual username.
 This configuration directs SLURM logs to a centralized location, making them easier to manage.
-
-### Retries - Or Trying again when a Job failed
-
-When running workflows on SLURM-managed clusters, it's common for jobs to occasionally fail.
-Snakemake provides mechanisms to handle such failures gracefully, allowing for automatic retries and workflow resumption.
-
-#### Retrying Failed Jobs
-
-To instruct Snakemake to automatically retry failed jobs, use the `--retries` option followed by the desired number of attempts.
-For example, to retry up to three times:
-
-```console
-snakemake --retries=3
-```
-
-If a workflow encounters multiple failures, you can resume it by re-running incomplete jobs with:
-
-```console
-snakemake ... --rerun-incomplete
-# or the short-hand version
-snakemake ... --ri
-```
-
-#### Automatic Job Requeuing in SLURM
-
-SLURM offers a job requeue feature that allows jobs to be automatically resubmitted if they fail or are preempted, preserving job IDs and priorities.
-To enable this feature with Snakemake, use the `--slurm-requeue` option.
-This is similar to Snakemake's `--retries`, except a SLURM job will not be considered failed and priority may be accumulated during pending.
-This might be the default on your cluster, already.
-You can check your cluster's requeue settings with 
-
-```console
-scontrol show config | grep Requeue
-```
-
-If job requeuing is not enabled on your cluster, consider adding `--slurm-requeue` for your Snakemake jobs:
-
-```console
-snakemake --slurm-requeue ...
-```
-
-To prevent failures due to faulty parameterization, we can dynamically adjust the runtime behaviour:
 
 
 ### Nesting Jobs (or Running this Plugin within a Job)
