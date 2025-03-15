@@ -148,7 +148,10 @@ class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageB
 
 
 class TestSLURMResources:
-    """Test cases for the constraint and qos resources in the Executor.run_job method."""
+    """
+    Test cases for the constraint and qos resources
+    in the Executor.run_job method.
+    """
 
     @pytest.fixture
     def mock_job(self):
@@ -200,7 +203,10 @@ class TestSLURMResources:
         return executor
 
     def test_constraint_resource(self, mock_job, mock_executor):
-        """Test that the constraint resource is correctly added to the sbatch command."""
+        """
+        Test that the constraint resource is correctly
+        added to the sbatch command.
+        """
         # Create a job with a constraint resource
         job = mock_job(constraint="haswell")
 
@@ -267,7 +273,10 @@ class TestSLURMResources:
             assert "--qos 'high'" in call_args
 
     def test_no_resources(self, mock_job, mock_executor):
-        """Test that no constraint or qos flags are added when resources are not specified."""
+        """
+        Test that no constraint or qos flags are added
+        when resources are not specified.
+        """
         # Create a job without constraint or qos resources
         job = mock_job()
 
