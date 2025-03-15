@@ -1,7 +1,7 @@
 from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import pytest
 
 from snakemake_executor_plugin_slurm import ExecutorSettings
@@ -145,3 +145,190 @@ class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageB
 
     # Verify no slashes remain in the wildcard string
     assert "/" not in wildcard_str
+
+
+class TestSLURMResources:
+    """Test cases for the constraint and qos resources in the Executor.run_job method."""
+
+    @pytest.fixture
+    def mock_job(self):
+        """Create a mock job with configurable resources."""
+
+        def _create_job(**resources):
+            mock_resources = MagicMock()
+            # Configure get method to return values from resources dict
+            mock_resources.get.side_effect = lambda key, default=None: resources.get(
+                key, default
+            )
+            # Add direct attribute access for certain resources
+            for key, value in resources.items():
+                setattr(mock_resources, key, value)
+
+            mock_job = MagicMock()
+            mock_job.resources = mock_resources
+            mock_job.name = "test_job"
+            mock_job.wildcards = {}
+            mock_job.is_group.return_value = False
+            mock_job.jobid = 1
+            return mock_job
+
+        return _create_job
+
+    @pytest.fixture
+    def mock_executor(self):
+        """Create a mock executor for testing the run_job method."""
+        from snakemake_executor_plugin_slurm import Executor
+
+        # Create a mock workflow
+        mock_workflow = MagicMock()
+        mock_settings = MagicMock()
+        mock_settings.requeue = False
+        mock_settings.no_account = True
+        mock_settings.logdir = None
+        mock_workflow.executor_settings = mock_settings
+        mock_workflow.workdir_init = "/test/workdir"
+
+        # Create an executor with the mock workflow
+        executor = Executor(mock_workflow, None)
+
+        # Mock some executor methods to avoid external calls
+        executor.get_account_arg = MagicMock(return_value="")
+        executor.get_partition_arg = MagicMock(return_value="")
+        executor.report_job_submission = MagicMock()
+
+        # Return the mocked executor
+        return executor
+
+    def test_constraint_resource(self, mock_job, mock_executor):
+        """Test that the constraint resource is correctly added to the sbatch command."""
+        # Create a job with a constraint resource
+        job = mock_job(constraint="haswell")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+            # Run the job
+            mock_executor.run_job(job)
+
+            # Get the sbatch command from the call
+            call_args = mock_popen.call_args[0][0]
+
+            # Assert the constraint is correctly included
+            assert "-C 'haswell'" in call_args
+
+    def test_qos_resource(self, mock_job, mock_executor):
+        """Test that the qos resource is correctly added to the sbatch command."""
+        # Create a job with a qos resource
+        job = mock_job(qos="normal")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+            # Run the job
+            mock_executor.run_job(job)
+
+            # Get the sbatch command from the call
+            call_args = mock_popen.call_args[0][0]
+
+            # Assert the qos is correctly included
+            assert "--qos 'normal'" in call_args
+
+    def test_both_constraint_and_qos(self, mock_job, mock_executor):
+        """Test that both constraint and qos resources can be used together."""
+        # Create a job with both constraint and qos resources
+        job = mock_job(constraint="haswell", qos="high")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+            # Run the job
+            mock_executor.run_job(job)
+
+            # Get the sbatch command from the call
+            call_args = mock_popen.call_args[0][0]
+
+            # Assert both resources are correctly included
+            assert "-C 'haswell'" in call_args
+            assert "--qos 'high'" in call_args
+
+    def test_no_resources(self, mock_job, mock_executor):
+        """Test that no constraint or qos flags are added when resources are not specified."""
+        # Create a job without constraint or qos resources
+        job = mock_job()
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+            # Run the job
+            mock_executor.run_job(job)
+
+            # Get the sbatch command from the call
+            call_args = mock_popen.call_args[0][0]
+
+            # Assert neither resource is included
+            assert "-C " not in call_args
+            assert "--qos " not in call_args
+
+    def test_empty_constraint(self, mock_job, mock_executor):
+        """Test that an empty constraint is still included in the command."""
+        # Create a job with an empty constraint
+        job = mock_job(constraint="")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+            # Run the job
+            mock_executor.run_job(job)
+
+            # Get the sbatch command from the call
+            call_args = mock_popen.call_args[0][0]
+
+            # Assert the constraint is included (even if empty)
+            assert "-C ''" in call_args
+
+    def test_empty_qos(self, mock_job, mock_executor):
+        """Test that an empty qos is still included in the command."""
+        # Create a job with an empty qos
+        job = mock_job(qos="")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+            # Run the job
+            mock_executor.run_job(job)
+
+            # Get the sbatch command from the call
+            call_args = mock_popen.call_args[0][0]
+
+            # Assert the qos is included (even if empty)
+            assert "--qos ''" in call_args
