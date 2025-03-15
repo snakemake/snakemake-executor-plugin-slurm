@@ -259,7 +259,7 @@ class Executor(RemoteExecutor):
 
         if job.resources.get("constraint"):
             call += f" -C '{job.resources.constraint}'"
-        if jog.resources.get("qos"):
+        if job.resources.get("qos"):
             call += f" --qos '{job.resources.qos}'"
         if job.resources.get("mem_mb_per_cpu"):
             call += f" --mem-per-cpu {job.resources.mem_mb_per_cpu}"
