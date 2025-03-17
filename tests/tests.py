@@ -112,41 +112,6 @@ class TestGresString:
             set_gres_string(job)
 
 
-class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageBase):
-    """
-    Test handling of wildcards with slashes to ensure log directories are
-    correctly constructed.
-    """
-
-    __test__ = True
-
-    def get_executor(self) -> str:
-        return "slurm"
-
-    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
-        return ExecutorSettings(
-            logdir="test_logdir", init_seconds_before_status_checks=1
-        )
-
-    def test_wildcard_slash_replacement(self):
-        """
-        Test that slashes in wildcards are correctly replaced with
-        underscores in log directory paths.
-        """
-
-    # Just test the wildcard sanitization logic directly
-    wildcards = ["/leading_slash", "middle/slash", "trailing/"]
-
-    # This is the actual logic from the Executor.run_job method
-    wildcard_str = "_".join(wildcards).replace("/", "_") if wildcards else ""
-
-    # Assert that slashes are correctly replaced with underscores
-    assert wildcard_str == "_leading_slash_middle_slash_trailing_"
-
-    # Verify no slashes remain in the wildcard string
-    assert "/" not in wildcard_str
-
-
 class TestSLURMResources:
     """
     Test cases for the constraint and qos resources
@@ -341,3 +306,38 @@ class TestSLURMResources:
 
             # Assert the qos is included (even if empty)
             assert "--qos ''" in call_args
+
+
+class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+    """
+    Test handling of wildcards with slashes to ensure log directories are
+    correctly constructed.
+    """
+
+    __test__ = True
+
+    def get_executor(self) -> str:
+        return "slurm"
+
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        return ExecutorSettings(
+            logdir="test_logdir", init_seconds_before_status_checks=1
+        )
+
+    def test_wildcard_slash_replacement(self):
+        """
+        Test that slashes in wildcards are correctly replaced with
+        underscores in log directory paths.
+        """
+
+    # Just test the wildcard sanitization logic directly
+    wildcards = ["/leading_slash", "middle/slash", "trailing/"]
+
+    # This is the actual logic from the Executor.run_job method
+    wildcard_str = "_".join(wildcards).replace("/", "_") if wildcards else ""
+
+    # Assert that slashes are correctly replaced with underscores
+    assert wildcard_str == "_leading_slash_middle_slash_trailing_"
+
+    # Verify no slashes remain in the wildcard string
+    assert "/" not in wildcard_str
