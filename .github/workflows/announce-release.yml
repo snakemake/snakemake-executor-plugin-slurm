@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   post_to_mastodon:
-    if: contains(github.event.pull_request.title, 'chore(main): release')
+    if: ${{ contains(github.event.head_commit.message, 'chore(main): release') }}
     runs-on: ubuntu-latest
     steps:
       - name: Post to Mastodon
