@@ -163,8 +163,8 @@ TODO: What exactly might be the default on a cluster?
 
 ### different job types
 
-Snakemake does not care whether the programs executed in jobs are single-core scripts or multithreaded applications.
-Those can all be handled and are run as jobs that can be categorized as SMP ([**S**hared **M**memory **P**rocessing](https://en.wikipedia.org/wiki/Shared_memory)).
+Snakemake does not care whether the programs executed in jobs are single-core scripts or multithreaded applications, you just have to account for resources accordingly.
+Per default, they are run as jobs that can be categorized as SMP ([**S**hared **M**memory **P**rocessing](https://en.wikipedia.org/wiki/Shared_memory)).
 To allocate resources for such jobs using the SLURM executor plugin, you can specify the required number of CPU cores and memory directly within the resources section of a rule.
 Here's how you can define a rule that requests 8 CPU cores and 14 GB of memory:
 
