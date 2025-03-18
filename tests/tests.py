@@ -2,6 +2,7 @@ from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
 from unittest.mock import MagicMock, patch
+import sys
 import pytest
 
 from snakemake_executor_plugin_slurm import ExecutorSettings
@@ -102,6 +103,14 @@ class TestGresString:
             WorkflowError, match="GPU model is set, but no GPU number is given"
         ):
             set_gres_string(job)
+
+    @pytest.fixture(autouse=True)
+    def patch_sys_streams(self):
+        """Patch sys.stdout and sys.stderr to prevent file descriptor issues."""
+        with patch("sys.stdout", new_callable=lambda: sys.stdout), patch(
+            "sys.stderr", new_callable=lambda: sys.stderr
+        ):
+            yield
 
     def test_both_gres_and_gpu_set(self, mock_job):
         """Test error case when both GRES and GPU are specified."""
