@@ -27,6 +27,7 @@ class TestWorkflowsRequeue(TestWorkflows):
 class TestGresString:
     """Test cases for the set_gres_string function."""
 
+    @pytest.fixture
     def mock_job(self):
         """Create a mock job with configurable resources."""
 
@@ -49,7 +50,6 @@ class TestGresString:
             return mock_job
 
         return _create_job
-
 
     @pytest.fixture
     def mock_executor(self):
