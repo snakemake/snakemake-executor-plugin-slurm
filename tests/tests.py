@@ -104,16 +104,6 @@ class TestGresString:
         ):
             set_gres_string(job)
 
-    @pytest.fixture(scope="class", autouse=True)
-    def patch_sys_streams(self):
-        """Patch sys.stdout and sys.stderr to prevent file descriptor issues."""
-        import io
-
-        with patch("sys.stdout", new_callable=lambda: io.StringIO()), patch(
-            "sys.stderr", new_callable=lambda: io.StringIO()
-        ):
-            yield
-
     def test_both_gres_and_gpu_set(self, mock_job):
         """Test error case when both GRES and GPU are specified."""
         job = mock_job(gres="gpu:1", gpu="2")
