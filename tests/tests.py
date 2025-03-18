@@ -27,7 +27,6 @@ class TestWorkflowsRequeue(TestWorkflows):
 class TestGresString:
     """Test cases for the set_gres_string function."""
 
-    @pytest.fixture
     def mock_job(self):
         """Create a mock job with configurable resources."""
 
@@ -43,59 +42,89 @@ class TestGresString:
 
             mock_job = MagicMock()
             mock_job.resources = mock_resources
+            mock_job.name = "test_job"
+            mock_job.wildcards = {}
+            mock_job.is_group.return_value = False
+            mock_job.jobid = 1
             return mock_job
 
         return _create_job
 
-    def test_no_gres_or_gpu(self, mock_job):
+
+    @pytest.fixture
+    def mock_executor(self):
+        """Create a mock executor for testing the run_job method."""
+        from snakemake_executor_plugin_slurm import Executor
+
+        # Create a mock workflow
+        mock_workflow = MagicMock()
+        mock_settings = MagicMock()
+        mock_settings.requeue = False
+        mock_settings.no_account = True
+        mock_settings.logdir = None
+        mock_workflow.executor_settings = mock_settings
+        mock_workflow.workdir_init = "/test/workdir"
+
+        # Create an executor with the mock workflow
+        executor = Executor(mock_workflow, None)
+
+        # Mock some executor methods to avoid external calls
+        executor.get_account_arg = MagicMock(return_value="")
+        executor.get_partition_arg = MagicMock(return_value="")
+        executor.report_job_submission = MagicMock()
+
+        # Return the mocked executor
+        return executor
+
+    def test_no_gres_or_gpu(self, mock_job, mock_executor):
         """Test with no GPU or GRES resources specified."""
         job = mock_job()
         assert set_gres_string(job) == ""
 
-    def test_valid_gres_simple(self, mock_job):
+    def test_valid_gres_simple(self, mock_job, mock_executor):
         """Test with valid GRES format (simple)."""
         job = mock_job(gres="gpu:1")
         assert set_gres_string(job) == " --gres=gpu:1"
 
-    def test_valid_gres_with_model(self, mock_job):
+    def test_valid_gres_with_model(self, mock_job, mock_executor):
         """Test with valid GRES format including GPU model."""
         job = mock_job(gres="gpu:tesla:2")
         assert set_gres_string(job) == " --gres=gpu:tesla:2"
 
-    def test_invalid_gres_format(self, mock_job):
+    def test_invalid_gres_format(self, mock_job, mock_executor):
         """Test with invalid GRES format."""
         job = mock_job(gres="gpu")
         with pytest.raises(WorkflowError, match="Invalid GRES format"):
             set_gres_string(job)
 
-    def test_invalid_gres_format_missing_count(self, mock_job):
+    def test_invalid_gres_format_missing_count(self, mock_job, mock_executor):
         """Test with invalid GRES format (missing count)."""
         job = mock_job(gres="gpu:tesla:")
         with pytest.raises(WorkflowError, match="Invalid GRES format"):
             set_gres_string(job)
 
-    def test_valid_gpu_number(self, mock_job):
+    def test_valid_gpu_number(self, mock_job, mock_executor):
         """Test with valid GPU number."""
         job = mock_job(gpu="2")
         assert set_gres_string(job) == " --gpus=2"
 
-    def test_valid_gpu_with_name(self, mock_job):
+    def test_valid_gpu_with_name(self, mock_job, mock_executor):
         """Test with valid GPU name and number."""
         job = mock_job(gpu="tesla:2")
         assert set_gres_string(job) == " --gpus=tesla:2"
 
-    def test_gpu_with_model(self, mock_job):
+    def test_gpu_with_model(self, mock_job, mock_executor):
         """Test GPU with model specification."""
         job = mock_job(gpu="2", gpu_model="tesla")
         assert set_gres_string(job) == " --gpus=tesla:2"
 
-    def test_invalid_gpu_model_format(self, mock_job):
+    def test_invalid_gpu_model_format(self, mock_job, mock_executor):
         """Test with invalid GPU model format."""
         job = mock_job(gpu="2", gpu_model="invalid:model")
         with pytest.raises(WorkflowError, match="Invalid GPU model format"):
             set_gres_string(job)
 
-    def test_gpu_model_without_gpu(self, mock_job):
+    def test_gpu_model_without_gpu(self, mock_job, mock_executor):
         """Test GPU model without GPU number."""
         job = mock_job(gpu_model="tesla")
         with pytest.raises(
@@ -103,13 +132,13 @@ class TestGresString:
         ):
             set_gres_string(job)
 
-#    def test_both_gres_and_gpu_set(self, mock_job):
-#        """Test error case when both GRES and GPU are specified."""
-#        job = mock_job(gres="gpu:1", gpu="2")
-#        with pytest.raises(
-#            WorkflowError, match="GRES and GPU are set. Please only set one of them."
-#        ):
-#            set_gres_string(job)
+    def test_both_gres_and_gpu_set(self, mock_job, mock_executor):
+        """Test error case when both GRES and GPU are specified."""
+        job = mock_job(gres="gpu:1", gpu="2")
+        with pytest.raises(
+            WorkflowError, match="GRES and GPU are set. Please only set one of them."
+        ):
+            set_gres_string(job)
 
 
 class TestSLURMResources:
