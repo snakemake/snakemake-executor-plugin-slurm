@@ -73,81 +73,171 @@ class TestGresString:
         executor.get_partition_arg = MagicMock(return_value="")
         executor.report_job_submission = MagicMock()
 
-         # Ensure subprocess mocks stdout and stderr
-        with patch("subprocess.Popen") as mock_popen:
-            process_mock = MagicMock()
-            process_mock.communicate.return_value = (b"123", b"")  # Ensure byte output
-            process_mock.returncode = 0
-            process_mock.stdout = MagicMock()  # Ensure stdout is defined
-            process_mock.stderr = MagicMock()  # Ensure stderr is defined
-            mock_popen.return_value = process_mock
-
         # Return the mocked executor
         return executor
 
     def test_no_gres_or_gpu(self, mock_job, mock_executor):
         """Test with no GPU or GRES resources specified."""
         job = mock_job()
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
         assert set_gres_string(job) == ""
 
     def test_valid_gres_simple(self, mock_job, mock_executor):
         """Test with valid GRES format (simple)."""
         job = mock_job(gres="gpu:1")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
         assert set_gres_string(job) == " --gres=gpu:1"
 
     def test_valid_gres_with_model(self, mock_job, mock_executor):
         """Test with valid GRES format including GPU model."""
         job = mock_job(gres="gpu:tesla:2")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
         assert set_gres_string(job) == " --gres=gpu:tesla:2"
 
     def test_invalid_gres_format(self, mock_job, mock_executor):
         """Test with invalid GRES format."""
         job = mock_job(gres="gpu")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
         with pytest.raises(WorkflowError, match="Invalid GRES format"):
             set_gres_string(job)
 
     def test_invalid_gres_format_missing_count(self, mock_job, mock_executor):
         """Test with invalid GRES format (missing count)."""
         job = mock_job(gres="gpu:tesla:")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
         with pytest.raises(WorkflowError, match="Invalid GRES format"):
             set_gres_string(job)
 
     def test_valid_gpu_number(self, mock_job, mock_executor):
         """Test with valid GPU number."""
         job = mock_job(gpu="2")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
         assert set_gres_string(job) == " --gpus=2"
 
     def test_valid_gpu_with_name(self, mock_job, mock_executor):
         """Test with valid GPU name and number."""
         job = mock_job(gpu="tesla:2")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
         assert set_gres_string(job) == " --gpus=tesla:2"
 
     def test_gpu_with_model(self, mock_job, mock_executor):
         """Test GPU with model specification."""
         job = mock_job(gpu="2", gpu_model="tesla")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
         assert set_gres_string(job) == " --gpus=tesla:2"
 
     def test_invalid_gpu_model_format(self, mock_job, mock_executor):
         """Test with invalid GPU model format."""
         job = mock_job(gpu="2", gpu_model="invalid:model")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
         with pytest.raises(WorkflowError, match="Invalid GPU model format"):
             set_gres_string(job)
 
     def test_gpu_model_without_gpu(self, mock_job, mock_executor):
         """Test GPU model without GPU number."""
         job = mock_job(gpu_model="tesla")
-        with pytest.raises(
-            WorkflowError, match="GPU model is set, but no GPU number is given"
-        ):
-            set_gres_string(job)
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+            # test whether the resource setting raises the correct error
+            with pytest.raises(
+                WorkflowError, match="GPU model is set, but no GPU number is given"
+            ):
+                set_gres_string(job)
 
     def test_both_gres_and_gpu_set(self, mock_job, mock_executor):
         """Test error case when both GRES and GPU are specified."""
         job = mock_job(gres="gpu:1", gpu="2")
-        with pytest.raises(
-            WorkflowError, match="GRES and GPU are set. Please only set one of them."
-        ):
-            set_gres_string(job)
+
+        # Patch subprocess.Popen to simulate job submission
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to simulate successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+            # Ensure the error is raised when both GRES and GPU are set
+            with pytest.raises(
+                WorkflowError, match="GRES and GPU are set. Please only set one"
+            ):
+                set_gres_string(job)
 
 
 class TestSLURMResources:
