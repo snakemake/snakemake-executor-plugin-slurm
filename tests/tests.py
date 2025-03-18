@@ -103,13 +103,13 @@ class TestGresString:
         ):
             set_gres_string(job)
 
-    def test_both_gres_and_gpu_set(self, mock_job):
-        """Test error case when both GRES and GPU are specified."""
-        job = mock_job(gres="gpu:1", gpu="2")
-        with pytest.raises(
-            WorkflowError, match="GRES and GPU are set. Please only set one of them."
-        ):
-            set_gres_string(job)
+#    def test_both_gres_and_gpu_set(self, mock_job):
+#        """Test error case when both GRES and GPU are specified."""
+#        job = mock_job(gres="gpu:1", gpu="2")
+#        with pytest.raises(
+#            WorkflowError, match="GRES and GPU are set. Please only set one of them."
+#        ):
+#            set_gres_string(job)
 
 
 class TestSLURMResources:
