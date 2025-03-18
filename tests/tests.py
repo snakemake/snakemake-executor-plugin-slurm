@@ -104,11 +104,13 @@ class TestGresString:
         ):
             set_gres_string(job)
 
-    @pytest.fixture(autouse=True)
+    @pytest.fixture(scope="class", autouse=True)
     def patch_sys_streams(self):
         """Patch sys.stdout and sys.stderr to prevent file descriptor issues."""
-        with patch("sys.stdout", new_callable=lambda: sys.stdout), patch(
-            "sys.stderr", new_callable=lambda: sys.stderr
+        import io
+
+        with patch("sys.stdout", new_callable=lambda: io.StringIO()), patch(
+            "sys.stderr", new_callable=lambda: io.StringIO()
         ):
             yield
 
