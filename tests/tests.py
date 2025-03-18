@@ -73,6 +73,15 @@ class TestGresString:
         executor.get_partition_arg = MagicMock(return_value="")
         executor.report_job_submission = MagicMock()
 
+         # Ensure subprocess mocks stdout and stderr
+        with patch("subprocess.Popen") as mock_popen:
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = (b"123", b"")  # Ensure byte output
+            process_mock.returncode = 0
+            process_mock.stdout = MagicMock()  # Ensure stdout is defined
+            process_mock.stderr = MagicMock()  # Ensure stderr is defined
+            mock_popen.return_value = process_mock
+
         # Return the mocked executor
         return executor
 
