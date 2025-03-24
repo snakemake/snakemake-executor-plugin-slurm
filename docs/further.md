@@ -138,11 +138,22 @@ In such cases, where the plugin's default behavior would interfere with your set
 ##### wait times and frequencies
 
 There are a number of wait times and frequencies that users can tune to their local cluster setup.
-The plugin tries to provide sensible defaults.
-But especially if your local cluster is regularly overwhelmed with status checks, you might want to decrease the respective frequencies.
+Snakemake and the plugin try to provide sensible defaults.
+But especially if you become aware of your local cluster being overwhelmed with job status checks, you might want to decrease the respective frequencies further.
 Or if you are a system administrator, you can adjust the respective defaults in a system-wide configuration profile.
 
-Or you might sometimes want to decrease certain wait times during development.
+Some of these are [central snakemake command-line arguments determining its behavior](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-behavior):
+
+* With `--seconds-between-status-checks`, you set the wait time between rounds of status checks of all submitted jobs.
+  In the SLURM plugin, this is currently fixed to a minimum of 40 seconds.
+  Whenever no finished jobs are found, this time automatically increases in 10 second steps with every status check, up to a maximum of 180 seconds.
+  As soon as finished jobs are found, this gets reset to 40 seconds.
+  (TODO: respect the `--seconds-between-status-checks` option in the plugin.)
+* With `--max-status-checks-per-second`, you can limit the frequency of individual attempts of querying the job status database within a round of status checks.
+  Within a round, repeated attempts will happen whenever the `sacct` command used for the status query comes back with an error.
+  (TODO: set a reasonable default here; also double-check this is what we want to happen, here.)
+
+Or you might sometimes want to decrease certain wait times for small workflow runs during development.
 For example, the plugin waits 40 seconds before performing the first job status check.
 You can reduce this with the `--slurm-init-seconds-before-status-checks=<time in seconds>` option, to minimize turn-around times for test runs.
 TODO: add wait times and frequencies arguments to SLURM-specific table
