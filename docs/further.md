@@ -67,18 +67,15 @@ Classical examples are determining the memory requirement based on the size of i
 
 The SLURM executor plugin should respect all of [snakemake's standard resources](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#standard-resources) by default.
 These are usually set directly in the workflow rule, optimally as [dynamic resources](#dynamic-resource-specification) that will, for example, adapt to input file sizes.
-Snakemake's standard resources are mapped to the following configurations in SLURM:
+The plugin understands all of snakemake's standard resources.
+Where appropriate, they are mapped to respective configurations in SLURM:
 
 | Snakemake            | Description                             | SLURM              |
 |----------------------|-----------------------------------------|--------------------|
-| `cpus_per_task`      | number of cpus per task (in case of SMP,| `--cpus-per-task`  |
-|                      | rather use `threads`)                   |                    |
+| `gpu`                | number of gpus needed                   | 
 | `mem`, `mem_mb`      | memory a cluster node must provide      | `--mem`            |
 |                      | (`mem`: string with unit, `mem_mb`: int)|                    |
-| `mem_mb_per_cpu`     | memory per reserved CPU                 | `--mem-per-cpu`    |
-| `nodes`              | number of nodes                         | `--nodes`          |
 | `runtime`            | the walltime per job in minutes         | `--time`           |
-| `tasks`              | number of concurrent tasks / ranks      | `--ntasks`         |
 
 One classical example is the `runtime` resource that defines the walltime limit for a rule, which gets translated to the `--time` argument of SLURM.
 Similarly, memory requirements for rules can be specified as `mem_mb` (total memory in MB, mapped to SLURM's `--mem`) or `mem_mb_per_cpu` (memory per CPU in MB, mapped to SLURM's `--mem-per-cpu`).
