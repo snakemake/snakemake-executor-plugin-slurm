@@ -83,14 +83,39 @@ Similarly, memory requirements for rules can be specified as `mem_mb` (total mem
 #### SLURM-specific resources
 
 The resources described here are usually omitted from reusable Snakemake workflows, as they are platform-specific.
+Instead, it makes sense to set them for the system that a workflow is run on, which can be done in profiles at the system, user or workflow level.
+These are the available options, and the SLURM `sbatch` command line arguments that the plugin maps them to:
 
-| Snakemake plugin     | Description                                 | SLURM               |
-| `clusters`           | comma separated string of clusters          | `--clusters`        |
-| `constraint`         | may hold features on some clusters          | `--constraint`/`-C` |
-| `slurm_account`      | user account for resource usage tracking    | `--account`         |
-| `slurm_partition`    | partition/queue to submit job(s) to         | `--partition`       |
-| `slurm_requeue`      | handle `--retries` with SLURM functionality |                     |
+| Snakemake plugin     | Description                         | SLURM               |
+|----------------------|-------------------------------------|---------------------|
+| `clusters`           | list of clusters that (a) job(s)    | `--clusters`        |
+|                      | can run on                          |                     |
+| `constraint`         | requiring particular node features  | `--constraint`/`-C` |
+|                      | for job execution                   |                     |
+| `cpus_per_task`      | number of CPUs per task (in case of | `--cpus-per-task`   |
+|                      | SMP, rather use `threads`)          |                     |
+| `mem_mb_per_cpu`     | memory per reserved CPU             | `--mem-per-cpu`     |
+| `nodes`              | number of nodes                     | `--nodes`           |
+| `slurm_account`      | account for resource usage tracking | `--account`         |
+| `slurm_partition`    | partition/queue to submit job(s) to | `--partition`       |
+| `slurm_requeue`      | handle `--retries` with SLURM       |                     |
+|                      | functionality                       |                     |
+| `tasks`              | number of concurrent tasks / ranks  | `--ntasks`          |
 
+The use of these options is explained in the documentation below.
+But whenever necessary, you can [find more details regarding the SLURM `sbatch` command line arguments in the slurm documentation](https://slurm.schedmd.com/sbatch.html#SECTION_OPTIONS).
+
+##### `constraint`
+ 
+Administrators can annotate SLURM nodes with features, which are basically string tags that inform about some kind of capability.
+Via the plugin resource `constraint`, users can specify any available feature names as required by their job.
+For details on the constraint syntax, see the [documentation of the SLURM `sbatch` command-line argument `--constraint`](https://slurm.schedmd.com/sbatch.html#SECTION_OPTIONS), to which the plugin passes on the `constraint` resource.
+
+##### `clusters`
+
+With SLURM, it is possible to [federate multiple clusters](https://slurm.schedmd.com/multi_cluster.html).
+This can allow users to submit jobs to a cluster different from the one they run their job submission commands.
+If this is available on your cluster, this resource accepts a string with a comma separated list of cluster names, which is passed on to the [SLURM `sbatch` command-line argument `--clusters`](https://slurm.schedmd.com/sbatch.html#SECTION_OPTIONS).
 
 ##### `slurm_partition`
 
@@ -100,23 +125,15 @@ In snakemake, you can specify the partition that jobs are supposed to run in as 
 
 ##### `slurm_account`
 
-In SLURM, an `account` is used for resource accounting users' resource usage, which can in turn be used to implement fair share policies.
+In SLURM, an `account` can be used for [collection users' resource usage](https://slurm.schedmd.com/accounting.html), which can in turn be used to implement fair share policies.
 If and how this is used depends on the local cluster setup.
 
-The plugin does its best to _guess_ your account, but that might not be possible.
-If this default behavior interferes with your setup or requirements, use the `--slurm-no-account` flag to turn it off.
-For example, some clusters have a pre-defined default per user and _do not_ allow users to set their account or partition.
-In addition, you can deliberately set the snakemake resource `slurm_account`.
-For example, this allows set the account per user, or even per workflow, when dealing with multiple SLURM accounts per user.
+It might be required or desirable for you to specify a `slurm_account`.
+For example, this you might want to set the account per user, or even per workflow, when dealing with multiple SLURM accounts per user.
+If you do not deliberately set the snakemake resource `slurm_account`, the plugin does its best to _guess_ your account (however, this can fail).
 
-
-##### `constraint`
-
-The plugin resource `constraint` can set specific hardware or software constraints for the job, if the cluster configuration allows for this.
-
-##### `clusters`
-
-
+By contrast, some clusters _do not_ allow users to set their account or partition; for example, because they have a pre-defined default per user.
+In such cases, where the plugin's default behavior would interfere with your setup or requirements, you can use the `--slurm-no-account` flag to turn it off.
 
 ##### wait times and frequencies
 
