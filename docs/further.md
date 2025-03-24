@@ -97,9 +97,9 @@ The resources described here are usually omitted from reusable Snakemake workflo
 
 ##### `slurm_partition`
 
-In SLURM, a `partition` designates a subset of compute nodes grouped for specific purposes, such as high-memory or GPU tasks.
-A `partition` is also referred to as a `queue` in other cluster systems.
-In snakemake, you can specify this as a resource with the name `slurm_partition` (which is mapped to the SLURM flag: `--partition`/`-p`).
+In SLURM, [a `partition` designates a subset of compute nodes](https://slurm.schedmd.com/quickstart_admin.html#Config), grouped for specific purposes (such as high-memory or GPU tasks).
+Thus, a `partition` in SLURM is similar to a `queue` in other cluster systems.
+In snakemake, you can specify the partition that jobs are supposed to run in as a resource with the name `slurm_partition` (which is mapped to the SLURM flag: `--partition`/`-p`).
 
 ##### `slurm_account`
 
