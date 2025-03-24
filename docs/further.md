@@ -46,26 +46,27 @@ The SLURM executor plugin takes care of mapping all the [standard resources to S
 
 #### Where to set resources and configurations
 
-Snakemake allows the definition of resources within each rule, or in profiles that can be defined on the workflow, user-wide or system-wide level.
-On each of these levels, you can either set limits for `default-resources` across all rules; or you can set rule-specific limits via `set-resources` (`--set-threads` for cpus).
+Required resources and configuration options can either be specified within each rule definition, or via [profiles that can be defined on the workflow, user-wide or system-wide level](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles).
+On each of these levels, you can either [set limits for `default-resources` across all rules](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#default-resources); or you can set rule-specific limits via `set-resources` ([`set-threads` for cpus](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#threads)).
 Where to set resources and configurations can depend on your role.
 For example, system administators will want to set useful defaults in a system-wide profile.
 In contrast, users might want to set defaults in their user or workflow profiles, or even adjust them for a particular workflow run (via the command line arguments `--default-resources <resource>=<value>`, `--set-resources <rule_name>:<resource>=<value>` and `--set-threads <rule_name>:<resource>=<value>`).
+See the [snakemake documentation on profiles](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles) for further details.
 
-##### Dynamic resources specification
+#### Dynamic resource specification
 
 Where to set configurations can also depend on how generically we are able to set them.
 Using [dynamic resource specification](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources), we can generalize resource requirements.
-This can mean that the respective resources can be set in a rule in the workflow, and end-users will not have to worry about setting them for their specific workflow instance.
+This can mean that the respective resources can be set in a rule in the workflow, and end-users will not have to worry about setting them for their analysis-specific workflow instance.
 
-Classical examples are basing the memory requirement on the size of input files, or increasing the runtime with every `attempt` of running a job (if `--retries` is greater than `0`).
+Classical examples are determining the memory requirement based on the size of input files, or increasing the runtime with every `attempt` of running a job (if [`--retries` is greater than `0`](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-behavior)).
 [There are detailed examples for these in the snakemake documentation.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources)
 
 
 #### Standard resources
 
 The SLURM executor plugin should respect all of [snakemake's standard resources](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#standard-resources) by default.
-These are usually set directly in the workflow rule, optimally as dynamic resources that will, for example, adapt to input file sizes.
+These are usually set directly in the workflow rule, optimally as [dynamic resources](#dynamic-resource-specification) that will, for example, adapt to input file sizes.
 Snakemake's standard resources are mapped to the following configurations in SLURM:
 
 | Snakemake            | Description                             | SLURM              |
