@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.1.0...v1.1.1) (2025-03-27)
+
+
+### Bug Fixes
+
+* case insensitive matching of declared slurm account  ([#244](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/244)) ([dc9a4fd](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/dc9a4fd754fee372482e66fe1e5eff6a71558eba))
+
 ## [1.1.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.0.1...v1.1.0) (2025-03-14)
 
 
