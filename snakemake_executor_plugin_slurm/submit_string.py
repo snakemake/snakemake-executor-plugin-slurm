@@ -1,5 +1,6 @@
 from snakemake_executor_plugin_slurm_jobstep import get_cpu_setting
 
+
 def get_submit_command(job, params):
     """
     Return the submit command for the job.
@@ -32,12 +33,10 @@ def get_submit_command(job, params):
     if job.resources.get("constraint") or isinstance(
         job.resources.get("constraint"), str
     ):
-        call += f" -C \'{job.resources.get('constraint')}\'"
+        call += f" -C '{job.resources.get('constraint')}'"
 
-    if job.resources.get("qos") or isinstance(
-        job.resources.get("qos"), str
-    ):
-        call += f" --qos=\'{job.resources.get('qos')}\'"
+    if job.resources.get("qos") or isinstance(job.resources.get("qos"), str):
+        call += f" --qos='{job.resources.get('qos')}'"
     if job.resources.get("mem_mb_per_cpu"):
         call += f" --mem-per-cpu {job.resources.mem_mb_per_cpu}"
     elif job.resources.get("mem_mb"):
@@ -63,6 +62,6 @@ def get_submit_command(job, params):
     # ensure that workdir is set correctly
     # use short argument as this is the same in all slurm versions
     # (see https://github.com/snakemake/snakemake/issues/2014)
-    call += f" -D \'{params['workdir']}\'"
+    call += f" -D '{params['workdir']}'"
 
     return call
