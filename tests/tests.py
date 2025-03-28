@@ -1,11 +1,12 @@
 from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import pytest
 
 from snakemake_executor_plugin_slurm import ExecutorSettings
 from snakemake_executor_plugin_slurm.utils import set_gres_string
+from snakemake_executor_plugin_slurm.submit_string import get_submit_command
 from snakemake_interface_common.exceptions import WorkflowError
 
 
@@ -43,6 +44,10 @@ class TestGresString:
 
             mock_job = MagicMock()
             mock_job.resources = mock_resources
+            mock_job.name = "test_job"
+            mock_job.wildcards = {}
+            mock_job.is_group.return_value = False
+            mock_job.jobid = 1
             return mock_job
 
         return _create_job
@@ -50,66 +55,354 @@ class TestGresString:
     def test_no_gres_or_gpu(self, mock_job):
         """Test with no GPU or GRES resources specified."""
         job = mock_job()
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
         assert set_gres_string(job) == ""
 
     def test_valid_gres_simple(self, mock_job):
         """Test with valid GRES format (simple)."""
         job = mock_job(gres="gpu:1")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
         assert set_gres_string(job) == " --gres=gpu:1"
 
     def test_valid_gres_with_model(self, mock_job):
         """Test with valid GRES format including GPU model."""
         job = mock_job(gres="gpu:tesla:2")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
         assert set_gres_string(job) == " --gres=gpu:tesla:2"
 
     def test_invalid_gres_format(self, mock_job):
         """Test with invalid GRES format."""
         job = mock_job(gres="gpu")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
         with pytest.raises(WorkflowError, match="Invalid GRES format"):
             set_gres_string(job)
 
     def test_invalid_gres_format_missing_count(self, mock_job):
         """Test with invalid GRES format (missing count)."""
         job = mock_job(gres="gpu:tesla:")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
         with pytest.raises(WorkflowError, match="Invalid GRES format"):
             set_gres_string(job)
 
     def test_valid_gpu_number(self, mock_job):
         """Test with valid GPU number."""
         job = mock_job(gpu="2")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
         assert set_gres_string(job) == " --gpus=2"
 
     def test_valid_gpu_with_name(self, mock_job):
         """Test with valid GPU name and number."""
         job = mock_job(gpu="tesla:2")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
         assert set_gres_string(job) == " --gpus=tesla:2"
 
     def test_gpu_with_model(self, mock_job):
         """Test GPU with model specification."""
         job = mock_job(gpu="2", gpu_model="tesla")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
         assert set_gres_string(job) == " --gpus=tesla:2"
 
     def test_invalid_gpu_model_format(self, mock_job):
         """Test with invalid GPU model format."""
         job = mock_job(gpu="2", gpu_model="invalid:model")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
         with pytest.raises(WorkflowError, match="Invalid GPU model format"):
             set_gres_string(job)
 
     def test_gpu_model_without_gpu(self, mock_job):
         """Test GPU model without GPU number."""
         job = mock_job(gpu_model="tesla")
-        with pytest.raises(
-            WorkflowError, match="GPU model is set, but no GPU number is given"
-        ):
-            set_gres_string(job)
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+            # test whether the resource setting raises the correct error
+            with pytest.raises(
+                WorkflowError, match="GPU model is set, but no GPU number is given"
+            ):
+                set_gres_string(job)
 
     def test_both_gres_and_gpu_set(self, mock_job):
         """Test error case when both GRES and GPU are specified."""
         job = mock_job(gres="gpu:1", gpu="2")
-        with pytest.raises(
-            WorkflowError, match="GRES and GPU are set. Please only set one of them."
-        ):
-            set_gres_string(job)
+
+        # Patch subprocess.Popen to simulate job submission
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to simulate successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+            # Ensure the error is raised when both GRES and GPU are set
+            with pytest.raises(
+                WorkflowError, match="GRES and GPU are set. Please only set one"
+            ):
+                set_gres_string(job)
+
+
+class TestSLURMResources(TestWorkflows):
+    """
+    Test workflows using job resources passed as part of the job configuration.
+    This test suite uses the `get_submit_command` function to generate the
+    sbatch command and validates the inclusion of resources.
+    """
+
+    @pytest.fixture
+    def mock_job(self):
+        """Create a mock job with configurable resources."""
+
+        def _create_job(**resources):
+            mock_resources = MagicMock()
+            # Configure get method to return values from resources dict
+            mock_resources.get.side_effect = lambda key, default=None: resources.get(
+                key, default
+            )
+            # Add direct attribute access for certain resources
+            for key, value in resources.items():
+                setattr(mock_resources, key, value)
+
+            mock_job = MagicMock()
+            mock_job.resources = mock_resources
+            mock_job.name = "test_job"
+            mock_job.wildcards = {}
+            mock_job.is_group.return_value = False
+            mock_job.jobid = 1
+            return mock_job
+
+        return _create_job
+
+    def test_constraint_resource(self, mock_job):
+        """
+        Test that the constraint resource is correctly
+        added to the sbatch command.
+        """
+        # Create a job with a constraint resource
+        job = mock_job(constraint="haswell")
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+            "constraint": "haswell",
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+        assert " -C 'haswell'" in get_submit_command(job, params)
+
+    def test_qos_resource(self, mock_job):
+        """Test that the qos resource is correctly added to the sbatch command."""
+        # Create a job with a qos resource
+        job = mock_job(qos="normal")
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+            "qos": "normal",
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+        assert " --qos='normal'" in get_submit_command(job, params)
+
+    def test_both_constraint_and_qos(self, mock_job):
+        """Test that both constraint and qos resources can be used together."""
+        # Create a job with both constraint and qos resources
+        job = mock_job(constraint="haswell", qos="high")
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+            "constraint": "haswell",
+            "qos": "high",
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+            # Assert both resources are correctly included
+            sbatch_command = get_submit_command(job, params)
+            assert " --qos='high'" in sbatch_command
+            assert " -C 'haswell'" in sbatch_command
+
+    def test_no_resources(self, mock_job):
+        """
+        Test that no constraint or qos flags are added
+        when resources are not specified.
+        """
+        # Create a job without constraint or qos resources
+        job = mock_job()
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+            # Assert neither resource is included
+            sbatch_command = get_submit_command(job, params)
+            assert "-C " not in sbatch_command
+            assert "--qos " not in sbatch_command
+
+    def test_empty_constraint(self, mock_job):
+        """Test that an empty constraint is still included in the command."""
+        # Create a job with an empty constraint
+        job = mock_job(constraint="")
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+            "constraint": "",
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+            # Assert the constraint is included (even if empty)
+            assert "-C ''" in get_submit_command(job, params)
+
+    def test_empty_qos(self, mock_job):
+        """Test that an empty qos is still included in the command."""
+        # Create a job with an empty qos
+        job = mock_job(qos="")
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+            "qos": "",
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+            # Assert the qoes is included (even if empty)
+            assert "--qos=''" in get_submit_command(job, params)
 
 
 class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageBase):
