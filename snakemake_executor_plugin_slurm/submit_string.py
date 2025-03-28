@@ -27,9 +27,6 @@ def get_submit_command(job, params):
     if job.resources.get("runtime"):
         call += f" -t {job.resources.runtime}"
 
-    if job.resources.get("clusters"):
-        call += f" --clusters {job.resources.clusters}"
-
     if job.resources.get("constraint") or isinstance(
         job.resources.get("constraint"), str
     ):
