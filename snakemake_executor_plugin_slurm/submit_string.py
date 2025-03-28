@@ -16,10 +16,10 @@ def get_submit_command(job, params):
 
     # check whether an account is set
     if params.get("account"):
-        call += f" {params['account']} "
+        call += f" --account={params['account']}"
     # check whether a partition is set
     if params.get("partition"):
-        call += f" {params['partition']}"
+        call += f" --partition={params['partition']}"
 
     if job.resources.get("clusters"):
         call += f" --clusters {job.resources.clusters}"
@@ -59,6 +59,6 @@ def get_submit_command(job, params):
     # ensure that workdir is set correctly
     # use short argument as this is the same in all slurm versions
     # (see https://github.com/snakemake/snakemake/issues/2014)
-    call += f" -D '{params['workdir']}'"
+    call += f" -D '{params.workdir}'"
 
     return call
