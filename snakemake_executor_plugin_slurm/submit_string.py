@@ -1,25 +1,29 @@
 from snakemake_executor_plugin_slurm_jobstep import get_cpu_setting
+from types import SimpleNamespace
 
 
 def get_submit_command(job, params):
     """
     Return the submit command for the job.
     """
+    # Convert params dict to a SimpleNamespace for attribute-style access
+    params = SimpleNamespace(**params)
+
     call = (
         f"sbatch "
         f"--parsable "
-        f"--job-name {params['run_uuid']} "
-        f"--output \"{params['slurm_logfile']}\" "
+        f"--job-name {params.run_uuid} "
+        f'--output "{params.slurm_logfile}" '
         f"--export=ALL "
-        f"--comment \"{params['comment_str']}\""
+        f'--comment "{params.comment_str}"'
     )
 
     # check whether an account is set
-    if params.get("account"):
-        call += f" --account={params['account']}"
+    if hasattr(params, "account"):
+        call += f" --account={params.account}"
     # check whether a partition is set
-    if params.get("partition"):
-        call += f" --partition={params['partition']}"
+    if hasattr(params, "partition"):
+        call += f" --partition={params.partition}"
 
     if job.resources.get("clusters"):
         call += f" --clusters {job.resources.clusters}"
@@ -34,6 +38,7 @@ def get_submit_command(job, params):
 
     if job.resources.get("qos") or isinstance(job.resources.get("qos"), str):
         call += f" --qos='{job.resources.qos}'"
+
     if job.resources.get("mem_mb_per_cpu"):
         call += f" --mem-per-cpu {job.resources.mem_mb_per_cpu}"
     elif job.resources.get("mem_mb"):
