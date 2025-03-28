@@ -683,7 +683,7 @@ We leave it to SLURM to resume your job(s)"""
             )
             return ""
 
-        if account not in accounts:
+        if account.lower() not in accounts:
             raise WorkflowError(
                 f"The given account {account} appears to be invalid. Available "
                 f"accounts:\n{', '.join(accounts)}"
