@@ -26,10 +26,9 @@ from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
 from snakemake_interface_common.exceptions import WorkflowError
-from snakemake_executor_plugin_slurm_jobstep import get_cpu_setting
 
 from .utils import delete_slurm_environment, delete_empty_dirs, set_gres_string
-
+from .submit_string import get_submit_command
 
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
@@ -135,9 +134,10 @@ common_settings = CommonSettings(
 # Required:
 # Implementation of your executor
 class Executor(RemoteExecutor):
-    def __post_init__(self):
+    def __post_init__(self, test_mode: bool = False):
         # run check whether we are running in a SLURM job context
         self.warn_on_jobcontext()
+        self.test_mode = test_mode
         self.run_uuid = str(uuid.uuid4())
         self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
@@ -225,31 +225,28 @@ class Executor(RemoteExecutor):
             comment_str = f"rule_{job.name}"
         else:
             comment_str = f"rule_{job.name}_wildcards_{wildcard_str}"
-        call = (
-            f"sbatch "
-            f"--parsable "
-            f"--job-name {self.run_uuid} "
-            f"--output '{slurm_logfile}' "
-            f"--export=ALL "
-            f"--comment '{comment_str}'"
-        )
+        # check whether the 'slurm_extra' parameter is used correctly
+        # prior to putatively setting in the sbatch call
+        if job.resources.get("slurm_extra"):
+            self.check_slurm_extra(job)
 
-        if not self.workflow.executor_settings.no_account:
-            call += self.get_account_arg(job)
-
-        call += self.get_partition_arg(job)
+        job_params = {
+            "run_uuid": self.run_uuid,
+            "slurm_logfile": slurm_logfile,
+            "comment_str": comment_str,
+            "account": self.get_account_arg(job),
+            "partition": self.get_partition_arg(job),
+            "workdir": self.workflow.workdir_init,
+            }
+  
+        call = get_submit_command(job, job_params)
 
         if self.workflow.executor_settings.requeue:
             call += " --requeue"
 
         call += set_gres_string(job)
 
-        if job.resources.get("clusters"):
-            call += f" --clusters {job.resources.clusters}"
-
-        if job.resources.get("runtime"):
-            call += f" -t {job.resources.runtime}"
-        else:
+        if not job.resources.get("runtime"):
             self.logger.warning(
                 "No wall time information given. This might or might not "
                 "work on your cluster. "
@@ -257,30 +254,12 @@ class Executor(RemoteExecutor):
                 "default via --default-resources."
             )
 
-        if job.resources.get("constraint"):
-            call += f" -C '{job.resources.constraint}'"
-        if job.resources.get("qos"):
-            call += f" --qos '{job.resources.qos}'"
-        if job.resources.get("mem_mb_per_cpu"):
-            call += f" --mem-per-cpu {job.resources.mem_mb_per_cpu}"
-        elif job.resources.get("mem_mb"):
-            call += f" --mem {job.resources.mem_mb}"
-        else:
+        if not job.resources.get("mem_mb_per_cpu") and not job.resources.get("mem_mb"):
             self.logger.warning(
                 "No job memory information ('mem_mb' or 'mem_mb_per_cpu') is given "
                 "- submitting without. This might or might not work on your cluster."
             )
-
-        if job.resources.get("nodes", False):
-            call += f" --nodes={job.resources.get('nodes', 1)}"
-
-        # fixes #40 - set ntasks regardless of mpi, because
-        # SLURM v22.05 will require it for all jobs
-        gpu_job = job.resources.get("gpu") or "gpu" in job.resources.get("gres", "")
-        if gpu_job:
-            call += f" --ntasks-per-gpu={job.resources.get('tasks', 1)}"
-        else:
-            call += f" --ntasks={job.resources.get('tasks', 1)}"
+        
         # MPI job
         if job.resources.get("mpi", False):
             if not job.resources.get("tasks_per_node") and not job.resources.get(
@@ -292,19 +271,8 @@ class Executor(RemoteExecutor):
                     "Probably not what you want."
                 )
 
-        # we need to set cpus-per-task OR cpus-per-gpu, the function
-        # will return a string with the corresponding value
-        call += f" {get_cpu_setting(job, gpu_job)}"
-        if job.resources.get("slurm_extra"):
-            self.check_slurm_extra(job)
-            call += f" {job.resources.slurm_extra}"
-
         exec_job = self.format_job_exec(job)
 
-        # ensure that workdir is set correctly
-        # use short argument as this is the same in all slurm versions
-        # (see https://github.com/snakemake/snakemake/issues/2014)
-        call += f" -D {self.workflow.workdir_init}"
         # and finally the job to execute with all the snakemake parameters
         call += f' --wrap="{exec_job}"'
 
