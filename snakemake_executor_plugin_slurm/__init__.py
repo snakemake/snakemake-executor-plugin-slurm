@@ -30,6 +30,7 @@ from snakemake_interface_common.exceptions import WorkflowError
 from .utils import delete_slurm_environment, delete_empty_dirs, set_gres_string
 from .submit_string import get_submit_command
 
+
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
     logdir: Optional[Path] = field(
@@ -237,8 +238,8 @@ class Executor(RemoteExecutor):
             "account": self.get_account_arg(job),
             "partition": self.get_partition_arg(job),
             "workdir": self.workflow.workdir_init,
-            }
-  
+        }
+
         call = get_submit_command(job, job_params)
 
         if self.workflow.executor_settings.requeue:
@@ -259,7 +260,7 @@ class Executor(RemoteExecutor):
                 "No job memory information ('mem_mb' or 'mem_mb_per_cpu') is given "
                 "- submitting without. This might or might not work on your cluster."
             )
-        
+
         # MPI job
         if job.resources.get("mpi", False):
             if not job.resources.get("tasks_per_node") and not job.resources.get(
