@@ -60,7 +60,7 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     gpu_model_re = re.compile(r"^[a-zA-Z0-9_]+$")
     # any arguments should not start and end with ticks or
     # quotation marks:
-    string_check = re.compile(r"^[^'\"].*[^'\"']$")
+    string_check = re.compile(r"^[^'\"].*[^'\"]$")
     # The Snakemake resources can be only be of type "int",
     # hence no further regex is needed.
 
@@ -84,7 +84,7 @@ def set_gres_string(job: JobExecutorInterface) -> str:
         # Validate GRES format (e.g., "gpu:1", "gpu:tesla:2")
         gres = job.resources.gres
         if not gres_re.match(gres):
-            if string_check.match(gres):
+            if not string_check.match(gres):
                 raise WorkflowError(
                     "GRES format should not be a nested string (start "
                     "and end with ticks or quotation marks). "
@@ -103,7 +103,7 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     if gpu_model and gpu_string:
         # validate GPU model format
         if not gpu_model_re.match(gpu_model):
-            if string_check.match(gpu_model):
+            if not string_check.match(gpu_model):
                 raise WorkflowError(
                     "GPU model format should not be a nested string (start "
                     "and end with ticks or quotation marks). "
