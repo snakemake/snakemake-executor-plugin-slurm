@@ -18,12 +18,15 @@ def get_submit_command(job, params):
         f'--comment "{params.comment_str}"'
     )
 
-    # check whether an account is set
-    if hasattr(params, "account"):
-        call += f" --account={params.account}"
-    # check whether a partition is set
-    if hasattr(params, "partition"):
-        call += f" --partition={params.partition}"
+    # No accout or partition checking is required, here.
+    # Checking is done in the submit function.
+
+    # here, only the string is used, as it already contains
+    # '-A {account_name}'
+    call += f" {params.account}"
+    # here, only the string is used, as it already contains
+    # '- p {partition_name}'
+    call += f" {params.partition}"
 
     if job.resources.get("clusters"):
         call += f" --clusters {job.resources.clusters}"
