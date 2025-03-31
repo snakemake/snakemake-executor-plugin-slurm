@@ -249,7 +249,7 @@ class TestGresString:
                 WorkflowError,
                 match="GPU model format should not be a nested string",
             ):
-                set_gres_string(job)          
+                set_gres_string(job)
 
 
 class TestSLURMResources(TestWorkflows):
