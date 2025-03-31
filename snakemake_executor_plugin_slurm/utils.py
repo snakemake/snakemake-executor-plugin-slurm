@@ -60,7 +60,7 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     gpu_model_re = re.compile(r"^[a-zA-Z0-9_]+$")
     # any arguments should not start and end with ticks or
     # quotation marks:
-    string_check = re.compile(r"^[^'\"].*[^'\"']$")
+    string_check = re.compile(r"^[^'\"].*[^'\"]$")
     # The Snakemake resources can be only be of type "int",
     # hence no further regex is needed.
 
