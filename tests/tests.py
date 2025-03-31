@@ -235,7 +235,7 @@ class TestGresString:
 
     def test_gpu_model_nested_string_raise(self, mock_job):
         """Test error case when gpu_model is a nested string."""
-        job = mock_job(gpu_model="'tesla'")
+        job = mock_job(gpu_model="'tesla'", gpu="2")
         # Patch subprocess.Popen to simulate job submission
         with patch("subprocess.Popen") as mock_popen:
             # Configure the mock to simulate successful submission
