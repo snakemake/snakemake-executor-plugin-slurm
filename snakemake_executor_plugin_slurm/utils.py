@@ -103,7 +103,7 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     if gpu_model and gpu_string:
         # validate GPU model format
         if not gpu_model_re.match(gpu_model):
-            if string_check.match(gpu_model):
+            if not string_check.match(gpu_model):
                 raise WorkflowError(
                     "GPU model format should not be a nested string (start "
                     "and end with ticks or quotation marks). "
