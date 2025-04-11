@@ -148,15 +148,16 @@ In such cases, where the plugin's default behavior would interfere with your set
 There are a number of wait times and frequencies that users can tune to their local cluster setup.
 Snakemake and the plugin try to provide sensible defaults.
 But especially if you become aware of your local cluster being overwhelmed with job status checks, you might want to decrease the respective frequencies further.
-Or if you are a system administrator, you can adjust the respective defaults in a system-wide configuration profile.
+Or if you are a system administrator, you can adjust the respective defaults in a system-wide configuration profile, to reduce strain on your scheduling database.
 
 Some of these are [central snakemake command-line arguments determining its behavior](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-behavior):
 
 * With `--seconds-between-status-checks`, you set the wait time between rounds of status checks of all submitted jobs.
   In the SLURM plugin, this is currently fixed to a minimum of 40 seconds.
-  Whenever no finished jobs are found, this time automatically increases in 10 second steps with every status check, up to a maximum of 180 seconds.
-  As soon as finished jobs are found, this gets reset to 40 seconds.
-  (TODO: respect the `--seconds-between-status-checks` option in the plugin.)
+  To reduce the burden of regular status checks,  this time automatically increases in 10 second steps with every status check whenever no finished jobs are found.
+  But this will never go beyond a wait time of 180 seconds (3 minutes), to avoid long wait times once jobs do finish.
+  Also, as soon as finished jobs are found, this gets reset to 40 seconds.
+  (TODO: respect the `--seconds-between-status-checks` option in the plugin and use it as the minimum wait time.)
 * With `--max-status-checks-per-second`, you can limit the frequency of individual attempts of querying the job status database within a round of status checks.
   Within a round, repeated attempts will happen whenever the `sacct` command used for the status query comes back with an error.
   (TODO: set a reasonable default here; also double-check this is what we want to happen, here.)
