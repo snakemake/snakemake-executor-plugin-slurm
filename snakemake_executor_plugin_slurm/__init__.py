@@ -639,7 +639,9 @@ We leave it to SLURM to resume your job(s)"""
             sacct_out = subprocess.check_output(
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
-            return sacct_out.replace("(null)", "").strip()
+            possible_account = sacct_out.replace("(null)", "").strip()
+            if possible_account == "none": # some clusters may not use an account
+                return None
         except subprocess.CalledProcessError as e:
             self.logger.warning(
                 f"No account was given, not able to get a SLURM account via sacct: "
