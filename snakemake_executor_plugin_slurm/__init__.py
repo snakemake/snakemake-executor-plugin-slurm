@@ -640,7 +640,7 @@ We leave it to SLURM to resume your job(s)"""
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
             possible_account = sacct_out.replace("(null)", "").strip()
-            if possible_account == "none": # some clusters may not use an account
+            if possible_account == "none":  # some clusters may not use an account
                 return None
         except subprocess.CalledProcessError as e:
             self.logger.warning(
