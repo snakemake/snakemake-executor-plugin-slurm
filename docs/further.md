@@ -171,8 +171,8 @@ TODO: add wait times and frequencies arguments to SLURM-specific table
 
 When running workflows, jobs will occasionally fail.
 Snakemake provides mechanisms to handle such failures gracefully, for example by resuming a workflow from the last succesfully created outputs.
-But it can even retry failed jobs, in case you expect unpredictable failures or increase some limiting resource requirements with each attempt.
-For this, have a look at the [documentation of the snakemake argument `--retries`]() and set it to a value above `0`.
+But it can even retry failed jobs within a single workflow run, for example if you expect unpredictable failures; or if you want to increase some limiting resource requirements with each attempt, because jobs will rarely exceed an otherwise sensible limit.
+For this, have a look at the [documentation of the snakemake argument `--retries`](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-behavior) and set it to a value above `0`.
 
 In addition, SLURM offers a built-in job requeue feature.
 You can check whether your cluster has this enabled with:
@@ -194,6 +194,7 @@ snakemake --slurm-requeue ...
 
 This might be the default on your cluster, already.
 TODO: What exactly might be the default on a cluster?
+TODO: Also, what exactly does the `--slurm-requeue` mode do? I assume it makes snakemake handle the requeueing instead of slurm doing this internally?
 
 
 ### different job types
