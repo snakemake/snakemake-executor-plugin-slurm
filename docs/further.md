@@ -202,53 +202,7 @@ TODO: Also, what exactly does the `--slurm-requeue` mode do? I assume it makes s
 Snakemake does not care whether the programs executed in jobs are single-core scripts or multithreaded applications, you just have to account for resources accordingly.
 Per default, they are run as jobs that can be categorized as SMP ([**S**hared **M**memory **P**rocessing](https://en.wikipedia.org/wiki/Shared_memory)).
 To allocate resources for such jobs using the SLURM executor plugin, you can specify the required number of CPU cores and memory directly within the resources section of a rule.
-Here's how you can define a rule that requests 8 CPU cores and 14 GB of memory:
 
-``` python
-rule a:
-    input: ...
-    output: ...
-    threads: 8
-    resources:
-        mem_mb=14000
-```
-
-Snakemake knows the `cpus_per_task`, similar to SLURM, as an alternative to `threads`.
-Parameters in the `resources` section will take precedence.
-
-To avoid hard-coding resource parameters into your Snakefiles, it is advisable to create a cluster-specific workflow profile.
-This profile should be named `config.yaml` and placed in a directory named `profiles` relative to your workflow directory.
-You can then indicate this profile to Snakemake using the `--workflow-profile` profiles option.
-Here's an example of how the `config.yaml` file might look:
-
-```YAML
-default-resources:
-    slurm_account: "<account>"
-    slurm_partition: "<default partition>"
-    mem_mb_per_cpu: 1800 # take a sensible default for your cluster
-    runtime: "30m"
-
-# here only rules, which require different (more) resources:
-set-resources:
-    rule_a:
-        runtime: "2h"
-
-    rule_b:
-        mem_mb_per_cpu: 3600
-        runtime: "5h"
-
-# parallelization with threads needs to be defined separately:
-set-threads:
-    rule_b: 64
-```
-
-In this configuration:
-
-- `default-resources` sets the default SLURM account, partition, memory per CPU, and runtime for all jobs.
-- `set-resources` allows you to override these defaults for specific rules, such as `rule_a` and `rule_b`
-- `set-threads` specifies the number of `threads` for particular rules, enabling fine-grained control over parallelization.
-
-By utilizing a configuration profile, you can maintain a clean and platform-independent workflow definition while tailoring resource specifications to the requirements of your SLURM cluster environment.
 
 #### MPI job configuration
 
