@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.0...v1.2.1) (2025-04-11)
+
+
+### Bug Fixes
+
+* add lost code back in ([#254](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/254)) ([6523889](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6523889f4bec2b42a2be2b7de6381bd9e8477d76))
+
 ## [1.2.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.1.0...v1.2.0) (2025-04-04)
 
 
