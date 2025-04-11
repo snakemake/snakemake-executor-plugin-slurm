@@ -197,11 +197,21 @@ TODO: What exactly might be the default on a cluster?
 TODO: Also, what exactly does the `--slurm-requeue` mode do? I assume it makes snakemake handle the requeueing instead of slurm doing this internally?
 
 
-#### MPI job configuration
+#### MPI-specific resources
 
-Snakemake's SLURM executor supports the execution of MPI ([Message Passing Interface](https://en.wikipedia.org/wiki/Message_Passing_Interface)) jobs, facilitating parallel computations across multiple nodes.
+TODO: From what I can see, snakemake-executor-plugin-slurm does not do anything special to mpi jobs. So it might be sufficient to point to the main snakemake MPI support docs at https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html and maybe extend those (or clean them up). The only Slurm-specific info is probably to use `mpi="srun"` instead of `mpi="mpiexec"`, right? But maybe I am also overlooking any special things happening in the software package stack of the plugin (or the jobstep)?
+
+Snakemake's SLURM executor plugin supports the execution of MPI ([Message Passing Interface](https://en.wikipedia.org/wiki/Message_Passing_Interface)) jobs.
+Per default, jobs can only run on a single cluster node (or machine) and parallelization is thus limited by the maximum number of cores that is available on any machine in the cluster.
+MPI jobs enable parallel computations spanning across multiple nodes, thus potentially parallelizing to more cores than any machine in you cluster can offer.
+
+| Snakemake     | Description                                 |
+|---------------|---------------------------------------------|
+| `mpi`         | MPI launcher command, for example `srun`    |
+| `tasks`       | the walltime per job in minutes             |
+
+
 To effectively utilize MPI within a Snakemake workflow, it's recommended to use `srun` as the MPI launcher when operating in a SLURM environment.
-
 
 Here's an example of defining an MPI rule in a Snakefile:
 
