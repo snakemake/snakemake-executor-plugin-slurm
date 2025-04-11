@@ -46,11 +46,19 @@ The SLURM executor plugin takes care of mapping all the [standard resources to S
 
 #### Where to set resources and configurations
 
-Required resources and configuration options can either be specified within each rule definition, or via [profiles that can be defined on the workflow, user-wide or system-wide level](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles).
-On each of these levels, you can either [set limits for `default-resources` across all rules](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#default-resources); or you can set rule-specific limits via `set-resources` ([`set-threads` for cpus](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#threads)).
-Where to set resources and configurations can depend on your role.
-For example, system administators will want to set useful defaults in a system-wide profile.
-In contrast, users might want to set defaults in their user or workflow profiles, or even adjust them for a particular workflow run (via the command line arguments `--default-resources <resource>=<value>`, `--set-resources <rule_name>:<resource>=<value>` and `--set-threads <rule_name>:<resource>=<value>`).
+Required resources and configuration options can be specified in three different places:
+
+1. In the `threads:` and `resources:` sections of a rule definition (in a `Snakefile` or an `include:`d `.smk` file).
+2. Via [`.yaml` profile files that can be defined on the workflow, user-wide or system-wide level](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles)
+3. On the command-line, via the [arguments `--default-resources <resource>=<value>`, `--set-resources <rule_name>:<resource>=<value>` and `--set-threads <rule_name>:<resource>=<value>`](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-execution).
+
+On each of these levels, you can set rule-specific limits via `set-resources` and [`set-threads` (for cpus)](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#threads).
+In profiles and on the command line, you can additionally [set default limits for `default-resources` across all rules](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#default-resources).
+Rule-specific limits will always take precedence over default limits, and workflow-specific profiles will take precedence over system- and user-wide profiles.
+
+Where exactly to set resources and configurations can depend on your role.
+For example, system administators might want to set useful defaults in a system-wide `.yaml` profile.
+In contrast, users might want to set defaults in their user or workflow profiles, or even adjust them for a particular workflow run .
 See the [snakemake documentation on profiles](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles) for further details.
 
 #### Dynamic resource specification
