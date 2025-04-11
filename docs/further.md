@@ -197,13 +197,6 @@ TODO: What exactly might be the default on a cluster?
 TODO: Also, what exactly does the `--slurm-requeue` mode do? I assume it makes snakemake handle the requeueing instead of slurm doing this internally?
 
 
-### different job types
-
-Snakemake does not care whether the programs executed in jobs are single-core scripts or multithreaded applications, you just have to account for resources accordingly.
-Per default, they are run as jobs that can be categorized as SMP ([**S**hared **M**memory **P**rocessing](https://en.wikipedia.org/wiki/Shared_memory)).
-To allocate resources for such jobs using the SLURM executor plugin, you can specify the required number of CPU cores and memory directly within the resources section of a rule.
-
-
 #### MPI job configuration
 
 Snakemake's SLURM executor supports the execution of MPI ([Message Passing Interface](https://en.wikipedia.org/wiki/Message_Passing_Interface)) jobs, facilitating parallel computations across multiple nodes.
