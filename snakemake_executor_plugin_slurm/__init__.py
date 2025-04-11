@@ -634,7 +634,7 @@ We leave it to SLURM to resume your job(s)"""
         tries to deduce the acccount from recent jobs,
         returns None, if none is found
         """
-        cmd = f'sacct -nu "{os.environ["USER"]}" -o Account%256 | head -n1'
+        cmd = f'sacct -nu "{os.environ["USER"]}" -o Account%256 | tail -1'
         try:
             sacct_out = subprocess.check_output(
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
