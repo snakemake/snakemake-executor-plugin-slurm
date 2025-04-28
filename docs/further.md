@@ -208,7 +208,7 @@ MPI jobs enable parallel computations spanning across multiple nodes, thus poten
 | Snakemake     | Description                                 |
 |---------------|---------------------------------------------|
 | `mpi`         | MPI launcher command, for example `srun`    |
-| `tasks`       | the walltime per job in minutes             |
+| `tasks`       | The number of SLURM tasks - equivalent to MPI-ranks |
 
 
 To effectively utilize MPI within a Snakemake workflow, it's recommended to use `srun` as the MPI launcher when operating in a SLURM environment.
