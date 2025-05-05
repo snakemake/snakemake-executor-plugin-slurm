@@ -646,7 +646,7 @@ We leave it to SLURM to resume your job(s)"""
                 partition = "sapphire";
     
         else:
-            partition = "shared";
+            partition = "sapphire";
             # if self._fallback_partition is None:
             #     self._fallback_partition = self.get_default_partition(job)
             # partition = self._fallback_partition
