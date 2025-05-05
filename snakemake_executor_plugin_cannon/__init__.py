@@ -27,9 +27,8 @@ from snakemake_interface_executor_plugins.jobs import (
 )
 from snakemake_interface_common.exceptions import WorkflowError
 
-from .utils import delete_slurm_environment, delete_empty_dirs, set_gres_string
+from .utils import *
 from .submit_string import get_submit_command
-
 
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
@@ -627,107 +626,85 @@ We leave it to SLURM to resume your job(s)"""
         else raises an error - implicetly.
         """
 
-        max_resources = { "mem_mb" : 2000000, "runtime": 20160, "cpus_per_task" : 112 }
+        partitions = cannon_resources()
 
-        partitions = {
-            "sapphire": {
-                "cpus_per_task": 112,
-                "mem_mb": 990 * 1024,     # 1013760
-                "runtime": 4320,
-                "gpus": 0,
-            },
-            "shared": {
-                "cpus_per_task": 48,
-                "mem_mb": 184 * 1024,     # 188416
-                "runtime": 4320,
-                "gpus": 0,
-            },
-            "bigmem": {
-                "cpus_per_task": 112,
-                "mem_mb": 1988 * 1024,    # 2035712
-                "runtime": 4320,
-                "gpus": 0,
-            },
-            "bigmem_intermediate": {
-                "cpus_per_task": 64,
-                "mem_mb": 2000 * 1024,    # 2048000
-                "runtime": 20160,
-                "gpus": 0,
-            },
-            "gpu": {
-                "cpus_per_task": 64,
-                "mem_mb": 990 * 1024,     # 1013760
-                "runtime": 4320,
-                "gpus": 4,
-            },
-            "intermediate": {
-                "cpus_per_task": 112,
-                "mem_mb": 990 * 1024,     # 1013760
-                "runtime": 20160,
-                "gpus": 0,
-            },
-            "unrestricted": {
-                "cpus_per_task": 48,
-                "mem_mb": 184 * 1024,     # 188416
-                "runtime": "none",
-                "gpus": 0,
-            },
-            "test": {
-                "cpus_per_task": 112,
-                "mem_mb": 990 * 1024,     # 1013760
-                "runtime": 720,
-                "gpus": 0,
-            },
-            "gpu_test": {
-                "cpus_per_task": 64,
-                "mem_mb": 487 * 1024,     # 498688
-                "runtime": 720,
-                "gpus": 4,
-            },
-            "serial_requeue": {
-                "cpus_per_task": "varies",
-                "mem_mb": "varies",
-                "runtime": 4320,
-                "gpus": 0,
-            },
-            "gpu_requeue": {
-                "cpus_per_task": "varies",
-                "mem_mb": "varies",
-                "runtime": 4320,
-                "gpus": 4,
-            }
-        }
+        # # Dynamically find max values across all numeric partition resources
+        # max_values = {}
+        # for resource in ["mem_mb", "runtime", "cpus_per_task"]:
+        #     max_values[resource] = max(
+        #         val[resource]
+        #         for val in partitions.values()
+        #         if isinstance(val.get(resource), int)
+        #     )
 
-        for resource, max_value in max_resources.items():
-            if job.resources.get(resource, 0) > max_value:
-                raise WorkflowError(
-                    f"The requested resource '{resource}' exceeds the maximum allowed "
-                    f"value of {max_value}. Requested: {job.resources.get(resource)}."
-                )
+        # # Compare job requests to max values
+        # for resource, max_value in max_values.items():
+        #     requested = job.resources.get(resource, 0)
+        #     if requested > max_value:
+        #         raise WorkflowError(
+        #             f"The requested resource '{resource}' exceeds the cluster-wide maximum "
+        #             f"of {max_value}. Requested: {requested}."
+        #         )
 
-        gpu_job = job.resources.get("gpu") or "gpu" in job.resources.get("slurm_extra", "");
+        ##########
 
-        if job.resources.get("slurm_partition"):
-            partition = job.resources.slurm_partition
-   
-        elif gpu_job:
-            print("Using GPU partition")
-            partition = "gpu";
-
-        elif job.resources.get("mem_mb") >= 1000000:
-            if job.resources.get("runtime") >= 4320:
-                partition = "bigmem_intermediate";
-            else:
-                partition = "bigmem";
-    
-        elif job.resources.get("mem_mb") >= 184000:
-            if job.resources.get("runtime") >= 4320:
-                partition = "intermediate";
-            else:
-                partition = "sapphire";
-    
+        if job.resources.get("mem"):
+            mem_mb = parse_mem_to_mb(job.resources.get("mem"))
+        elif job.resources.get("mem_gb"):
+            mem_mb = job.resources.get("mem_gb", 4) * 1000;
+        elif job.resources.get("mem_mb"):
+            mem_mb = job.resources.get("mem_mb", 4000)
         else:
-            partition = "serial_requeue";
+            job.resources.mem_mb = 4005
+            mem_mb = 4005  # Default memory in MB
+        # Convert to MB if necessary
+        
+        cpus = job.resources.get("cpus_per_task", 1)
+
+        runtime = job.resources.get("runtime", 30)
+
+        # GPU detection
+        slurm_extra = job.resources.get("slurm_extra")
+        if slurm_extra:
+            num_gpu = parse_slurm_extra(slurm_extra);
+        else:
+            num_gpu = job.resources.get("gpu", 0)
+        #print("Num GPU: ", num_gpu);
+
+        specified_resources = { "mem_mb" : mem_mb, "cpus_per_task": cpus, "runtime": runtime, "gpus": num_gpu }
+
+        ##########
+
+        partition = None
+        if job.resources.get("slurm_partition"):
+            partition = job.resources["slurm_partition"]
+
+        elif num_gpu > 0:
+            #print("Using GPU partition")
+            partition = "gpu"
+
+        else:
+            if mem_mb >= 1_000_000:
+                if runtime >= 4320:
+                    partition = "bigmem_intermediate"  
+                else:
+                    partition = "bigmem"
+
+            elif cpus > 100:
+                # High cpu demand, push to intermediate or sapphire
+                if runtime >= 4320:
+                    partition = "intermediate"
+                else:
+                    partition = "sapphire"
+
+            elif mem_mb >= 184_000:
+                if runtime >= 4320:
+                    partition = "intermediate"
+                else:
+                    partition = "sapphire"
+
+            else:
+                partition = "shared"
             # if self._fallback_partition is None:
             #     self._fallback_partition = self.get_default_partition(job)
             # partition = self._fallback_partition
@@ -735,14 +712,46 @@ We leave it to SLURM to resume your job(s)"""
         # print("Job resources:")
         # for key, value in job.resources.items():
         #     print(f"  {key}: {value}")
-        print("Partition: ", partition);
 
-        if any(job.resources.get(resource) > partitions[partition][resource] for resource in ["mem_mb", "cpus_per_task", "runtime"]):
+        # Print a table of the specified resources
+        header = f"\n{'Resource':<16}{'Requested':>12}"
+        separator = f"{'-'*16}{'-'*12}"
+        rows = [header, separator]
+        for resource, value in specified_resources.items():
+            rows.append(f"{resource:<16}{value:>12}")
+
+        # Add the selected partition to the table
+        rows.append(f"{'Partition':<16}{partition:>12}")
+
+        table_output = "\n".join(rows)
+        print("Specified Resources:")
+        print(table_output + "\n")
+
+        ##########
+
+        # Track which resources were violated
+        violations = []
+        for resource in ["mem_mb", "cpus_per_task", "runtime", "gpus"]:
+            requested = specified_resources.get(resource, 0)
+            allowed = partitions[partition].get(resource)
+            if isinstance(allowed, int) and requested > allowed:
+                violations.append((resource, requested, allowed))
+
+        if violations:
+            header = f"\n{'Resource':<16}{'Requested':>12}{'Allowed':>12}"
+            separator = f"{'-'*16}{'-'*12}{'-'*12}"
+            rows = [header, separator]
+            for resource, requested, allowed in violations:
+                rows.append(f"{resource:<16}{requested:>12}{allowed:>12}")
+
+            table_output = "\n".join(rows)
+
             raise WorkflowError(
-                f"The requested resources exceed the maximum allowed values for "
-                f"partition '{partition}'. Requested: {job.resources}. "
-                f"Allowed: {partitions[partition]}."
+                f"The requested resources exceed allowed limits for partition '{partition}':\n"
+                f"{table_output}\n"
             )
+
+        ##########
 
         if partition:
             return f" -p {partition}"

@@ -102,3 +102,69 @@ def set_gres_string(job: JobExecutorInterface) -> str:
         # we assume here, that the validator ensures that the 'gpu_string'
         # is an integer
         return f" --gpus={gpu_string}"
+
+def cannon_resources():
+    """
+    Function to return the resources for the Cannon cluster.
+    """
+
+    partitions = {
+            "sapphire":            {"cpus_per_task": 112, "mem_mb": 1013760, "runtime": 4320, "gpus": 0},
+            "shared":              {"cpus_per_task": 48, "mem_mb": 188416, "runtime": 4320, "gpus": 0},
+            "bigmem":              {"cpus_per_task": 112, "mem_mb": 2035712, "runtime": 4320, "gpus": 0},
+            "bigmem_intermediate": {"cpus_per_task": 64, "mem_mb": 2048000, "runtime": 20160, "gpus": 0},
+            "gpu":                 {"cpus_per_task": 64, "mem_mb": 1013760, "runtime": 4320, "gpus": 4},
+            "intermediate":        {"cpus_per_task": 112, "mem_mb": 1013760, "runtime": 20160, "gpus": 0},
+            "unrestricted":        {"cpus_per_task": 48, "mem_mb": 188416, "runtime": "none", "gpus": 0},
+            "test":                {"cpus_per_task": 112, "mem_mb": 1013760, "runtime": 720, "gpus": 0},
+            "gpu_test":            {"cpus_per_task": 64, "mem_mb": 498688, "runtime": 720, "gpus": 4}
+            #"serial_requeue":     {"cpus_per_task": "varies", "mem_mb": "varies", "runtime": 4320, "gpus": 0},
+            #"gpu_requeue":        {"cpus_per_task": "varies", "mem_mb": "varies", "runtime": 4320, "gpus": 4}
+        }
+    return partitions
+
+
+def parse_mem_to_mb(raw_mem):
+        """
+        Converts memory values like '16G', '512MB', '800kb', etc. to integer MB.
+        """
+
+        raw_mem = str(raw_mem).strip().upper()
+        match = re.match(r"^(\d+(?:\.\d+)?)([GMK]B?|B)?$", raw_mem)
+
+        if not match:
+            raise WorkflowError(f"Invalid memory format: '{raw_mem}'.")
+
+        value, unit = match.groups()
+        value = float(value)
+
+        unit = unit or "MB"  # Default to MB if unit omitted
+        unit_map = {
+            "K": 1 / 1000,
+            "KB": 1 / 1000,
+            "M": 1,
+            "MB": 1,
+            "G": 1000,
+            "GB": 1000,
+            # optionally, support binary units:
+            # "KI": 1 / 1024,
+            # "MI": 1,
+            # "GI": 1024
+        }
+
+        if unit not in unit_map:
+            raise WorkflowError(f"Unsupported memory unit '{unit}' in 'mem' resource.")
+
+        mem_mb = value * unit_map[unit]
+        return int(mem_mb)
+
+def parse_slurm_extra(slurm_extra):
+    """
+    Extract number of GPUs from --gres=gpu:<count> entry in slurm_extra.
+
+    Supports arbitrary ordering and ignores other --gres values.
+    """
+    gres_gpu_match = re.search(r"--gres=gpu(?::[^\s,:=]+)?:(\d+)", slurm_extra.lower())
+    if gres_gpu_match:
+        return int(gres_gpu_match.group(1))
+    return 0
