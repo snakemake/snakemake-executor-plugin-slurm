@@ -106,7 +106,15 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
-
+    resources: bool = field(
+        default=False,
+        metadata={
+            "help": "Prints a table of available resources for the cluster. "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
 
 # Required:
 # Specify common settings shared by various executors.
@@ -620,6 +628,76 @@ We leave it to SLURM to resume your job(s)"""
         """
 
         max_resources = { "mem_mb" : 2000000, "runtime": 20160, "cpus_per_task" : 112 }
+
+        partitions = {
+            "sapphire": {
+                "cpus_per_task": 112,
+                "mem_mb": 990 * 1024,     # 1013760
+                "runtime": 4320,
+                "gpus": 0,
+            },
+            "shared": {
+                "cpus_per_task": 48,
+                "mem_mb": 184 * 1024,     # 188416
+                "runtime": 4320,
+                "gpus": 0,
+            },
+            "bigmem": {
+                "cpus_per_task": 112,
+                "mem_mb": 1988 * 1024,    # 2035712
+                "runtime": 4320,
+                "gpus": 0,
+            },
+            "bigmem_intermediate": {
+                "cpus_per_task": 64,
+                "mem_mb": 2000 * 1024,    # 2048000
+                "runtime": 20160,
+                "gpus": 0,
+            },
+            "gpu": {
+                "cpus_per_task": 64,
+                "mem_mb": 990 * 1024,     # 1013760
+                "runtime": 4320,
+                "gpus": 4,
+            },
+            "intermediate": {
+                "cpus_per_task": 112,
+                "mem_mb": 990 * 1024,     # 1013760
+                "runtime": 20160,
+                "gpus": 0,
+            },
+            "unrestricted": {
+                "cpus_per_task": 48,
+                "mem_mb": 184 * 1024,     # 188416
+                "runtime": "none",
+                "gpus": 0,
+            },
+            "test": {
+                "cpus_per_task": 112,
+                "mem_mb": 990 * 1024,     # 1013760
+                "runtime": 720,
+                "gpus": 0,
+            },
+            "gpu_test": {
+                "cpus_per_task": 64,
+                "mem_mb": 487 * 1024,     # 498688
+                "runtime": 720,
+                "gpus": 4,
+            },
+            "serial_requeue": {
+                "cpus_per_task": "varies",
+                "mem_mb": "varies",
+                "runtime": 4320,
+                "gpus": 0,
+            },
+            "gpu_requeue": {
+                "cpus_per_task": "varies",
+                "mem_mb": "varies",
+                "runtime": 4320,
+                "gpus": 4,
+            }
+        }
+
         for resource, max_value in max_resources.items():
             if job.resources.get(resource, 0) > max_value:
                 raise WorkflowError(
@@ -627,10 +705,13 @@ We leave it to SLURM to resume your job(s)"""
                     f"value of {max_value}. Requested: {job.resources.get(resource)}."
                 )
 
+        gpu_job = job.resources.get("gpu") or "gpu" in job.resources.get("slurm_extra", "");
+
         if job.resources.get("slurm_partition"):
             partition = job.resources.slurm_partition
-
-        elif job.resources.get("gpu") or "gpu" in job.resources.get("gres", ""):
+   
+        elif gpu_job:
+            print("Using GPU partition")
             partition = "gpu";
 
         elif job.resources.get("mem_mb") >= 1000000:
@@ -646,10 +727,23 @@ We leave it to SLURM to resume your job(s)"""
                 partition = "sapphire";
     
         else:
-            partition = "sapphire";
+            partition = "serial_requeue";
             # if self._fallback_partition is None:
             #     self._fallback_partition = self.get_default_partition(job)
             # partition = self._fallback_partition
+
+        # print("Job resources:")
+        # for key, value in job.resources.items():
+        #     print(f"  {key}: {value}")
+        print("Partition: ", partition);
+
+        if any(job.resources.get(resource) > partitions[partition][resource] for resource in ["mem_mb", "cpus_per_task", "runtime"]):
+            raise WorkflowError(
+                f"The requested resources exceed the maximum allowed values for "
+                f"partition '{partition}'. Requested: {job.resources}. "
+                f"Allowed: {partitions[partition]}."
+            )
+
         if partition:
             return f" -p {partition}"
         else:

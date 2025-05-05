@@ -4,3 +4,4 @@
 4. Example/test cases
 5. Different resource scales (e.g. mem_gb, runtime_days, etc.)
 6. Default resources
+7. Resource table command line option
