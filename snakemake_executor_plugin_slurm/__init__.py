@@ -16,6 +16,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import List, Generator, Optional
 import uuid
+
+import pandas as pd
+
 from snakemake_interface_executor_plugins.executors.base import SubmittedJobInfo
 from snakemake_interface_executor_plugins.executors.remote import RemoteExecutor
 from snakemake_interface_executor_plugins.settings import (
@@ -26,10 +29,16 @@ from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
 from snakemake_interface_common.exceptions import WorkflowError
-from snakemake_executor_plugin_slurm_jobstep import get_cpu_setting
 
-from .utils import delete_slurm_environment, delete_empty_dirs, set_gres_string
-from .efficiency_report import fetch_sacct_data
+from .utils import (
+    delete_slurm_environment,
+    delete_empty_dirs,
+    set_gres_string,
+    colorize_message,
+)
+from .efficiency_report import time_to_seconds, parse_maxrss, parse_reqmem
+from .submit_string import get_submit_command
+import sys
 
 
 @dataclass
@@ -107,6 +116,15 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
+    efficiency_report: bool = field(
+        default=False,
+        metadata={
+            "help": "Generate an efficiency report at the end of the workflow. "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
 
 
 # Required:
@@ -136,9 +154,10 @@ common_settings = CommonSettings(
 # Required:
 # Implementation of your executor
 class Executor(RemoteExecutor):
-    def __post_init__(self):
+    def __post_init__(self, test_mode: bool = False):
         # run check whether we are running in a SLURM job context
         self.warn_on_jobcontext()
+        self.test_mode = test_mode
         self.run_uuid = str(uuid.uuid4())
         self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
@@ -150,7 +169,9 @@ class Executor(RemoteExecutor):
             else Path(".snakemake/slurm_logs").resolve()
         )
         atexit.register(self.clean_old_logs)
-        atexit.register(self.fetch_sacct_data)
+        if self.workflow.executor_settings.efficiency_report:
+            # Register the function to be called at exit
+            atexit.register(self.fetch_sacct_data)
 
     def clean_old_logs(self) -> None:
         """Delete files older than specified age from the SLURM log directory."""
@@ -161,7 +182,11 @@ class Executor(RemoteExecutor):
             return
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
-        self.logger.info(f"Cleaning up log files older than {age_cutoff} day(s)")
+        print(
+            colorize_message(
+                "info", f"Cleaning up log files older than {age_cutoff} day(s)."
+            )
+        )
         for path in self.slurm_logdir.rglob("*.log"):
             if path.is_file():
                 try:
@@ -169,12 +194,21 @@ class Executor(RemoteExecutor):
                     if file_age > cutoff_secs:
                         path.unlink()
                 except (OSError, FileNotFoundError) as e:
-                    self.logger.warning(f"Could not delete logfile {path}: {e}")
+                    print(
+                        colorize_message(
+                            "error", f"Could not delete logfile {path}: {e}"
+                        ),
+                        file=sys.stderr,
+                    )
         # we need a 2nd iteration to remove putatively empty directories
         try:
             delete_empty_dirs(self.slurm_logdir)
         except (OSError, FileNotFoundError) as e:
-            self.logger.warning(f"Could not delete empty directory {path}: {e}")
+            print(
+                colorize_message(
+                    "warning", f"Could not delete empty directory {path}: {e}"
+                )
+            )
 
     def warn_on_jobcontext(self, done=None):
         if not done:
@@ -227,31 +261,28 @@ class Executor(RemoteExecutor):
             comment_str = f"rule_{job.name}"
         else:
             comment_str = f"rule_{job.name}_wildcards_{wildcard_str}"
-        call = (
-            f"sbatch "
-            f"--parsable "
-            f"--job-name {self.run_uuid} "
-            f"--output '{slurm_logfile}' "
-            f"--export=ALL "
-            f"--comment '{comment_str}'"
-        )
+        # check whether the 'slurm_extra' parameter is used correctly
+        # prior to putatively setting in the sbatch call
+        if job.resources.get("slurm_extra"):
+            self.check_slurm_extra(job)
 
-        if not self.workflow.executor_settings.no_account:
-            call += self.get_account_arg(job)
+        job_params = {
+            "run_uuid": self.run_uuid,
+            "slurm_logfile": slurm_logfile,
+            "comment_str": comment_str,
+            "account": self.get_account_arg(job),
+            "partition": self.get_partition_arg(job),
+            "workdir": self.workflow.workdir_init,
+        }
 
-        call += self.get_partition_arg(job)
+        call = get_submit_command(job, job_params)
 
         if self.workflow.executor_settings.requeue:
             call += " --requeue"
 
         call += set_gres_string(job)
 
-        if job.resources.get("clusters"):
-            call += f" --clusters {job.resources.clusters}"
-
-        if job.resources.get("runtime"):
-            call += f" -t {job.resources.runtime}"
-        else:
+        if not job.resources.get("runtime"):
             self.logger.warning(
                 "No wall time information given. This might or might not "
                 "work on your cluster. "
@@ -259,28 +290,19 @@ class Executor(RemoteExecutor):
                 "default via --default-resources."
             )
 
-        if job.resources.get("constraint"):
-            call += f" -C '{job.resources.constraint}'"
-        if job.resources.get("mem_mb_per_cpu"):
-            call += f" --mem-per-cpu {job.resources.mem_mb_per_cpu}"
-        elif job.resources.get("mem_mb"):
-            call += f" --mem {job.resources.mem_mb}"
-        else:
+        if not job.resources.get("mem_mb_per_cpu") and not job.resources.get("mem_mb"):
             self.logger.warning(
                 "No job memory information ('mem_mb' or 'mem_mb_per_cpu') is given "
                 "- submitting without. This might or might not work on your cluster."
             )
 
-        if job.resources.get("nodes", False):
-            call += f" --nodes={job.resources.get('nodes', 1)}"
-
-        # fixes #40 - set ntasks regardless of mpi, because
-        # SLURM v22.05 will require it for all jobs
-        gpu_job = job.resources.get("gpu") or "gpu" in job.resources.get("gres", "")
-        if gpu_job:
-            call += f" --ntasks-per-gpu={job.resources.get('tasks', 1)}"
-        else:
-            call += f" --ntasks={job.resources.get('tasks', 1)}"
+            # fixes #40 - set ntasks regardless of mpi, because
+            # SLURM v22.05 introduced the requirement for all jobs
+            gpu_job = job.resources.get("gpu") or "gpu" in job.resources.get("gres", "")
+            if gpu_job:
+                call += f" --ntasks-per-gpu={job.resources.get('tasks', 1)}"
+            else:
+                call += f" --ntasks={job.resources.get('tasks', 1)}"
         # MPI job
         if job.resources.get("mpi", False):
             if not job.resources.get("tasks_per_node") and not job.resources.get(
@@ -292,19 +314,8 @@ class Executor(RemoteExecutor):
                     "Probably not what you want."
                 )
 
-        # we need to set cpus-per-task OR cpus-per-gpu, the function
-        # will return a string with the corresponding value
-        call += f" {get_cpu_setting(job, gpu_job)}"
-        if job.resources.get("slurm_extra"):
-            self.check_slurm_extra(job)
-            call += f" {job.resources.slurm_extra}"
-
         exec_job = self.format_job_exec(job)
 
-        # ensure that workdir is set correctly
-        # use short argument as this is the same in all slurm versions
-        # (see https://github.com/snakemake/snakemake/issues/2014)
-        call += f" -D {self.workflow.workdir_init}"
         # and finally the job to execute with all the snakemake parameters
         call += f' --wrap="{exec_job}"'
 
@@ -658,12 +669,14 @@ We leave it to SLURM to resume your job(s)"""
         tries to deduce the acccount from recent jobs,
         returns None, if none is found
         """
-        cmd = f'sacct -nu "{os.environ["USER"]}" -o Account%256 | head -n1'
+        cmd = f'sacct -nu "{os.environ["USER"]}" -o Account%256 | tail -1'
         try:
             sacct_out = subprocess.check_output(
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
-            return sacct_out.replace("(null)", "").strip()
+            possible_account = sacct_out.replace("(null)", "").strip()
+            if possible_account == "none":  # some clusters may not use an account
+                return None
         except subprocess.CalledProcessError as e:
             self.logger.warning(
                 f"No account was given, not able to get a SLURM account via sacct: "
@@ -714,7 +727,7 @@ We leave it to SLURM to resume your job(s)"""
             )
             return ""
 
-        if account not in accounts:
+        if account.lower() not in accounts:
             raise WorkflowError(
                 f"The given account {account} appears to be invalid. Available "
                 f"accounts:\n{', '.join(accounts)}"
@@ -759,3 +772,120 @@ We leave it to SLURM to resume your job(s)"""
                 "Please consult the documentation if you are unsure how to "
                 "query the status of your jobs."
             )
+
+    def fetch_sacct_data(self, efficiency_threshold=0.8):
+        """Fetch sacct job data for a Snakemake workflow and compute efficiency metrics."""
+
+        cmd = [
+            "sacct",
+            f"--name={self.run_uuid}",
+            "--format=JobID,JobName,Comment,Elapsed,TotalCPU,NNodes,NCPUS,MaxRSS,ReqMem",
+            "--parsable2",
+            "--noheader",
+        ]
+
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            lines = result.stdout.strip().split("\n")
+        except subprocess.CalledProcessError:
+            print(
+                colorize_message(
+                    "error",
+                    f"Error: Failed to retrieve job data for workflow ({self.run_uuid}).",
+                )
+            )
+            return None
+
+        # Convert to DataFrame
+        df = pd.DataFrame(
+            (l.split("|") for l in lines),
+            columns=[
+                "JobID",
+                "JobName",
+                "Comment",
+                "Elapsed",
+                "TotalCPU",
+                "NNodes",
+                "NCPUS",
+                "MaxRSS",
+                "ReqMem",
+            ],
+        )
+
+        # If the "Comment" column is empty,
+        # a) delete the column
+        # b) issue a warning
+        if df["Comment"].isnull().all():
+            print(
+                colorize_message(
+                    "warning",
+                    f"Warning: No comments found for workflow {self.run_uuid}. "
+                    "This field is used to store the rule name. "
+                    "Please ensure that the 'comment' field is set "
+                    "for your cluster. Administrators can set this up in the "
+                    "SLURM configuration.",
+                )
+            )
+            df.drop(columns=["Comment"], inplace=True)
+            # remember, that the comment column is not available
+            nocomment = True
+        # else: rename the column to 'RuleName'
+        else:
+            df.rename(columns={"Comment": "RuleName"}, inplace=True)
+            nocomment = False
+        # Convert types
+        df["NNodes"] = pd.to_numeric(df["NNodes"], errors="coerce")
+        df["NCPUS"] = pd.to_numeric(df["NCPUS"], errors="coerce")
+
+        # Convert time fields
+        df["Elapsed_sec"] = df["Elapsed"].apply(time_to_seconds)
+        df["TotalCPU_sec"] = df["TotalCPU"].apply(time_to_seconds)
+
+        # Compute CPU efficiency
+        df["CPU Efficiency (%)"] = (
+            df["TotalCPU_sec"] / (df["Elapsed_sec"] * df["NCPUS"])
+        ) * 100
+        df["CPU Efficiency (%)"] = df["CPU Efficiency (%)"].fillna(0).round(2)
+
+        # Convert MaxRSS
+        df["MaxRSS_MB"] = df["MaxRSS"].apply(parse_maxrss)
+
+        # Convert ReqMem and calculate memory efficiency
+        df["RequestedMem_MB"] = df["ReqMem"].apply(parse_reqmem)
+        df["Memory Usage (%)"] = (df["MaxRSS_MB"] / df["RequestedMem_MB"]) * 100
+        df["Memory Usage (%)"] = df["Memory Usage (%)"].fillna(0).round(2)
+
+        # Drop all rows containing "batch" or "extern" as job names
+        df = df[~df["JobName"].str.contains("batch|extern")]
+
+        # Log warnings for low efficiency
+        for _, row in df.iterrows():
+            if row["CPU Efficiency (%)"] < efficiency_threshold:
+                if nocomment:
+                    print(
+                        colorize_message(
+                            "warning",
+                            f"Job {row['JobID']} ({row['JobName']}) has low CPU efficiency: {row['CPU Efficiency (%)']}%.",
+                        )
+                    )
+                else:
+                    # if the comment column is available, we can use it to
+                    # identify the rule name
+                    print(
+                        colorize_message(
+                            "warning",
+                            f"Job {row['JobID']} for rule '{row['RuleName']}' ({row['JobName']}) has low CPU efficiency: {row['CPU Efficiency (%)']}%.",
+                        )
+                    )
+        logfile = f"efficiency_report_{self.run_uuid}.log"
+        # we will store the efficiency report in the logdir
+        logfile = self.slurm_logdir / logfile
+        df.to_csv(logfile)
+
+        # write out the efficiency report at normal verbosity in any case
+        print(
+            colorize_message(
+                "info",
+                f"Efficiency report for workflow {self.run_uuid} saved to {logfile}",
+            )
+        )
