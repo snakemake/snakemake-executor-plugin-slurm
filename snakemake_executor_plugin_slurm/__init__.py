@@ -618,12 +618,38 @@ We leave it to SLURM to resume your job(s)"""
         returns a default partition, if applicable
         else raises an error - implicetly.
         """
+
+        max_resources = { "mem_mb" : 2000000, "runtime": 20160, "cpus_per_task" : 112 }
+        for resource, max_value in max_resources.items():
+            if job.resources.get(resource, 0) > max_value:
+                raise WorkflowError(
+                    f"The requested resource '{resource}' exceeds the maximum allowed "
+                    f"value of {max_value}. Requested: {job.resources.get(resource)}."
+                )
+
         if job.resources.get("slurm_partition"):
             partition = job.resources.slurm_partition
+
+        elif job.resources.get("gpu") or "gpu" in job.resources.get("gres", ""):
+            partition = "gpu";
+
+        elif job.resources.get("mem_mb") >= 1000000:
+            if job.resources.get("runtime") >= 4320:
+                partition = "bigmem_intermediate";
+            else:
+                partition = "bigmem";
+    
+        elif job.resources.get("mem_mb") >= 184000:
+            if job.resources.get("runtime") >= 4320:
+                partition = "intermediate";
+            else:
+                partition = "sapphire";
+    
         else:
-            if self._fallback_partition is None:
-                self._fallback_partition = self.get_default_partition(job)
-            partition = self._fallback_partition
+            partition = "shared";
+            # if self._fallback_partition is None:
+            #     self._fallback_partition = self.get_default_partition(job)
+            # partition = self._fallback_partition
         if partition:
             return f" -p {partition}"
         else:

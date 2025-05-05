@@ -1,17 +1,19 @@
 [tool.poetry]
-name = "snakemake-executor-plugin-slurm"
+name = "snakemake-executor-plugin-cannon"
 version = "1.2.1"
-description = "A Snakemake executor plugin for submitting jobs to a SLURM cluster."
+description = "A Snakemake executor plugin for submitting jobs to the Harvard Cannon cluster."
 authors = [
     "Christian Meesters <meesters@uni-mainz.de>",
     "David Lähnemann <david.laehnemann@dkfz-heidelberg.de>",
     "Johannes Koester <johannes.koester@uni-due.de>",
+    "Gregg Thomas <gthomas@fas.harvard.edu>",
+    "Noor Sohail <nsohail@hsph.harvard.edu>"
 ]
 readme = "README.md"
 license = "MIT"
-repository = "https://github.com/snakemake/snakemake-executor-plugin-slurm"
-documentation = "https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html"
-keywords = ["snakemake", "plugin", "executor", "cluster", "slurm"]
+repository = "https://github.com/harvardinformatics/snakemake-executor-plugin-cannon"
+documentation = "https://github.com/harvardinformatics/snakemake-executor-plugin-cannon"
+keywords = ["snakemake", "plugin", "executor", "cluster", "slurm", "cannon", "harvard"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
