@@ -414,7 +414,7 @@ class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageB
     __test__ = True
 
     def get_executor(self) -> str:
-        return "slurm"
+        return "cannon"
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
         return ExecutorSettings(

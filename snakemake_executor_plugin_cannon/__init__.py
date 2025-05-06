@@ -3,6 +3,7 @@ __copyright__ = "Copyright 2023, David Lähnemann, Johannes Köster, Christian M
 __email__ = "johannes.koester@uni-due.de"
 __license__ = "MIT"
 
+import sys
 import atexit
 import csv
 from io import StringIO
@@ -108,8 +109,7 @@ class ExecutorSettings(ExecutorSettingsBase):
     resources: bool = field(
         default=False,
         metadata={
-            "help": "Prints a table of available resources for the cluster. "
-            "This flag has no effect, if not set.",
+            "help": "Print information about the Cannon cluster and exit.",
             "env_var": False,
             "required": False,
         },
@@ -143,6 +143,12 @@ common_settings = CommonSettings(
 # Implementation of your executor
 class Executor(RemoteExecutor):
     def __post_init__(self, test_mode: bool = False):
+
+        # The --cannon-resources flag is set, so we print the resources and exit
+        if self.workflow.executor_settings.resources:
+            self.logger.info(f"{format_cannon_resources()}");
+            sys.exit(0);
+        
         # run check whether we are running in a SLURM job context
         self.warn_on_jobcontext()
         self.test_mode = test_mode
@@ -628,48 +634,25 @@ We leave it to SLURM to resume your job(s)"""
 
         partitions = cannon_resources()
 
-        # # Dynamically find max values across all numeric partition resources
-        # max_values = {}
-        # for resource in ["mem_mb", "runtime", "cpus_per_task"]:
-        #     max_values[resource] = max(
-        #         val[resource]
-        #         for val in partitions.values()
-        #         if isinstance(val.get(resource), int)
-        #     )
 
-        # # Compare job requests to max values
-        # for resource, max_value in max_values.items():
-        #     requested = job.resources.get(resource, 0)
-        #     if requested > max_value:
-        #         raise WorkflowError(
-        #             f"The requested resource '{resource}' exceeds the cluster-wide maximum "
-        #             f"of {max_value}. Requested: {requested}."
-        #         )
-
-        ##########
-
-        if job.resources.get("mem"):
-            mem_mb = parse_mem_to_mb(job.resources.get("mem"))
-        elif job.resources.get("mem_gb"):
-            mem_mb = job.resources.get("mem_gb", 4) * 1000;
-        elif job.resources.get("mem_mb"):
-            mem_mb = job.resources.get("mem_mb", 4000)
-        else:
-            job.resources.mem_mb = 4005
-            mem_mb = 4005  # Default memory in MB
-        # Convert to MB if necessary
+        mem_mb, orig_mem = normalize_mem(job) # Uses default of 4005 
+        if orig_mem:
+            self.logger.warning(f"\nWARNING: requested mem {orig_mem}MB is too low; clamping to {mem_mb}MB\n")
+        job.resources.mem_mb = mem_mb
         
         cpus = job.resources.get("cpus_per_task", 1)
-
         runtime = job.resources.get("runtime", 30)
 
         # GPU detection
-        slurm_extra = job.resources.get("slurm_extra")
-        if slurm_extra:
-            num_gpu = parse_slurm_extra(slurm_extra);
-        else:
-            num_gpu = job.resources.get("gpu", 0)
-        #print("Num GPU: ", num_gpu);
+        # slurm_extra = job.resources.get("slurm_extra")
+        # if slurm_extra:
+        #     num_gpu = parse_slurm_extra(slurm_extra);
+        # if job.resources.get("gres"):
+
+        # else:
+        #     num_gpu = job.resources.get("gpu", 0)
+
+        num_gpu = parse_num_gpus(job)
 
         specified_resources = { "mem_mb" : mem_mb, "cpus_per_task": cpus, "runtime": runtime, "gpus": num_gpu }
 
@@ -678,6 +661,11 @@ We leave it to SLURM to resume your job(s)"""
         partition = None
         if job.resources.get("slurm_partition"):
             partition = job.resources["slurm_partition"]
+            if partition not in partitions:
+                raise WorkflowError(
+                    f"The requested partition '{partition}' is not valid. "
+                    f"Available partitions are: {', '.join(partitions.keys())}"
+                )
 
         elif num_gpu > 0:
             #print("Using GPU partition")
@@ -709,9 +697,7 @@ We leave it to SLURM to resume your job(s)"""
             #     self._fallback_partition = self.get_default_partition(job)
             # partition = self._fallback_partition
 
-        # print("Job resources:")
-        # for key, value in job.resources.items():
-        #     print(f"  {key}: {value}")
+        ##########
 
         # Print a table of the specified resources
         header = f"\n{'Resource':<16}{'Requested':>12}"
@@ -724,8 +710,10 @@ We leave it to SLURM to resume your job(s)"""
         rows.append(f"{'Partition':<16}{partition:>12}")
 
         table_output = "\n".join(rows)
-        print("Specified Resources:")
-        print(table_output + "\n")
+        self.logger.info("Specified Resources:")
+        self.logger.info(table_output + "\n")
+        #print(dir(job.resources));
+        #print("Nodes:\t", job.resources.get("nodes"));
 
         ##########
 

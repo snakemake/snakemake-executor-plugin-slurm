@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "snakemake-executor-plugin-cannon"
-version = "1.2.1"
+version = "1.2.1-A"
 description = "A Snakemake executor plugin for submitting jobs to the Harvard Cannon cluster."
 authors = [
     "Christian Meesters <meesters@uni-mainz.de>",

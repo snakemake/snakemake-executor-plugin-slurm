@@ -1,0 +1,24 @@
+set-resources:
+  a:
+    slurm_partition: sapphire
+    mem: 5G
+    cpus_per_task: 1
+    runtime: 30m
+
+  b:
+    slurm_partition: gpu_test
+    mem: 10G
+    cpus_per_task: 4
+    runtime: 2h
+    slurm_extra: "'--gres=gpu:2'"
+    #gpu: 2 # Doesn't work on Cannon? Splits to two nodes for some reason
+    #gres: "'gpu:2'" # Not parsing correctly
+
+  c:
+    cpus_per_task: 8
+    runtime: 4h
+
+  d:
+    mem: 7G
+    cpus_per_task: 5
+    runtime: 1h

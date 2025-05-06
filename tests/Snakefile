@@ -1,0 +1,52 @@
+OUTDIR = "test-out"
+
+rule all:
+    input:
+        os.path.join(OUTDIR, "test3.out"),
+        collect(os.path.join(OUTDIR, "res", "{somewildcard}.out"), somewildcard=["somedir1", "somedir2/subdir"])
+
+rule a:
+    output:
+        os.path.join(OUTDIR, "test1.out")
+    log:
+        os.path.join(OUTDIR, "a.log")
+    shell:
+        "touch {output} 2> {log}"
+
+
+rule b:
+    input:
+        os.path.join(OUTDIR, "test1.out")
+    output:
+        os.path.join(OUTDIR, "test2.out")
+    log:
+        os.path.join(OUTDIR, "b.log")
+    threads: 2
+    shell:
+        "cp {input} {output} 2> {log}"
+
+
+rule c:
+    input:
+        os.path.join(OUTDIR, "test2.out")
+    output:
+        report(
+            os.path.join(OUTDIR, "test3.out"),
+            caption="caption.rst",
+            category="Test",
+            subcategory="Subtest",
+            labels={"label1": "foo", "label2": "bar"},
+        )
+    log:
+        os.path.join(OUTDIR, "c.log")
+    resources:
+        mem="5MB"
+    shell:
+        "cp {input} {output} 2> {log}"
+
+
+rule d:
+    output:
+        os.path.join(OUTDIR, "res", "{somewildcard}.out")
+    shell:
+        "touch {output}"

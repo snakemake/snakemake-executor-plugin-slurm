@@ -109,20 +109,48 @@ def cannon_resources():
     """
 
     partitions = {
-            "sapphire":            {"cpus_per_task": 112, "mem_mb": 1013760, "runtime": 4320, "gpus": 0},
-            "shared":              {"cpus_per_task": 48, "mem_mb": 188416, "runtime": 4320, "gpus": 0},
-            "bigmem":              {"cpus_per_task": 112, "mem_mb": 2035712, "runtime": 4320, "gpus": 0},
-            "bigmem_intermediate": {"cpus_per_task": 64, "mem_mb": 2048000, "runtime": 20160, "gpus": 0},
-            "gpu":                 {"cpus_per_task": 64, "mem_mb": 1013760, "runtime": 4320, "gpus": 4},
-            "intermediate":        {"cpus_per_task": 112, "mem_mb": 1013760, "runtime": 20160, "gpus": 0},
-            "unrestricted":        {"cpus_per_task": 48, "mem_mb": 188416, "runtime": "none", "gpus": 0},
-            "test":                {"cpus_per_task": 112, "mem_mb": 1013760, "runtime": 720, "gpus": 0},
-            "gpu_test":            {"cpus_per_task": 64, "mem_mb": 498688, "runtime": 720, "gpus": 4}
+            "sapphire":            {"cpus_per_task": 112, "mem_mb": 990000, "runtime": 4320, "gpus": 0},
+            "shared":              {"cpus_per_task": 48, "mem_mb": 184000, "runtime": 4320, "gpus": 0},
+            "bigmem":              {"cpus_per_task": 112, "mem_mb": 1988000, "runtime": 4320, "gpus": 0},
+            "bigmem_intermediate": {"cpus_per_task": 64, "mem_mb": 2000000, "runtime": 20160, "gpus": 0},
+            "gpu":                 {"cpus_per_task": 64, "mem_mb": 990000, "runtime": 4320, "gpus": 4},
+            "intermediate":        {"cpus_per_task": 112, "mem_mb": 990000, "runtime": 20160, "gpus": 0},
+            "unrestricted":        {"cpus_per_task": 48, "mem_mb": 184000, "runtime": "none", "gpus": 0},
+            "test":                {"cpus_per_task": 112, "mem_mb": 990000, "runtime": 720, "gpus": 0},
+            "gpu_test":            {"cpus_per_task": 64, "mem_mb": 487000, "runtime": 720, "gpus": 4}
             #"serial_requeue":     {"cpus_per_task": "varies", "mem_mb": "varies", "runtime": 4320, "gpus": 0},
             #"gpu_requeue":        {"cpus_per_task": "varies", "mem_mb": "varies", "runtime": 4320, "gpus": 4}
         }
     return partitions
 
+
+def format_cannon_resources():
+    """Return a string that prints resources in a clean aligned table."""
+    
+    partitions = cannon_resources();
+    
+    # Header
+    lines = [
+        "Resources available on the Cannon cluster:",
+        "",
+        f"{'Partition':<22} {'CPUs':>5}  {'Mem (GB)':>9}  {'Runtime (min)':>14}  {'GPUs':>5}",
+        f"{'-'*22} {'-'*5}  {'-'*9}  {'-'*14}  {'-'*5}",
+    ]
+
+    for name, res in partitions.items():
+        cpus = res["cpus_per_task"]
+        mem = res["mem_mb"]
+        runtime = res["runtime"]
+        gpus = res["gpus"]
+
+        # Convert mem_mb → GB; handle "varies" or "none"
+        mem_gb = int(mem) // 1000 if isinstance(mem, int) else str(mem)
+        
+        lines.append(
+            f"{name:<22} {cpus:>5}  {str(mem_gb):>9}  {str(runtime):>14}  {str(gpus):>5}"
+        )
+
+    return "\n".join(lines)
 
 def parse_mem_to_mb(raw_mem):
         """
@@ -158,13 +186,74 @@ def parse_mem_to_mb(raw_mem):
         mem_mb = value * unit_map[unit]
         return int(mem_mb)
 
-def parse_slurm_extra(slurm_extra):
-    """
-    Extract number of GPUs from --gres=gpu:<count> entry in slurm_extra.
+def normalize_mem(job, default_mem_mb=8005):
+    if job.resources.get("mem"):
+        mem_mb = parse_mem_to_mb(job.resources.get("mem"))
+    elif job.resources.get("mem_gb"):
+        mem_mb = job.resources.get("mem_gb", 4) * 1000;
+    elif job.resources.get("mem_mb"):
+        mem_mb = job.resources.get("mem_mb", 4000)
+    else:
+        mem_mb = default_mem_mb  # Default memory in MB
+    # Convert to MB if necessary
 
-    Supports arbitrary ordering and ignores other --gres values.
+    orig_mem = False;
+    if mem_mb < default_mem_mb:
+        orig_mem = mem_mb;
+        mem_mb = default_mem_mb  # Minimum memory in MB
+
+    return mem_mb, orig_mem
+
+
+# def parse_slurm_extra(slurm_extra):
+#     """
+#     Extract number of GPUs from --gres=gpu:<count> entry in slurm_extra.
+
+#     Supports arbitrary ordering and ignores other --gres values.
+#     """
+#     gres_gpu_match = re.search(r"--gres=gpu(?::[^\s,:=]+)?:(\d+)", slurm_extra.lower())
+#     if gres_gpu_match:
+#         return int(gres_gpu_match.group(1))
+#     return 0
+
+def parse_num_gpus(job):
     """
-    gres_gpu_match = re.search(r"--gres=gpu(?::[^\s,:=]+)?:(\d+)", slurm_extra.lower())
-    if gres_gpu_match:
-        return int(gres_gpu_match.group(1))
+    Extract number of GPUs from job.resources in priority order:
+
+    1. If gpu and optional gpu_model are provided → use those
+    2. Else if gres is specified (e.g. "gpu:2" or "gpu:a100:4") → parse it
+    3. Else if slurm_extra contains --gres=gpu:... → extract from there
+    4. Else → assume 0 GPUs
+    """
+    gpu = job.resources.get("gpu", 0)
+    gpu_model = job.resources.get("gpu_model")
+    gres = job.resources.get("gres", None)
+    slurm_extra = str(job.resources.get("slurm_extra", ""))
+
+    # 1. GPU + optional model: gpu must be > 0
+    if gpu_model:
+        if not gpu or not isinstance(gpu, int):
+            raise WorkflowError("GPU model is set, but 'gpu' number is missing or invalid.")
+        if ":" in gpu_model:
+            raise WorkflowError("Invalid GPU model format — should not contain ':'.")
+        return int(gpu)  # interpreted with model separately
+
+    if isinstance(gpu, int) and gpu > 0:
+        return gpu
+
+    # 2. Parse "gres" string if present
+    if gres:
+        gres = str(gres)
+        match = re.match(r"^gpu(?::[a-zA-Z0-9_]+)?:(\d+)$", gres)
+        if match:
+            return int(match.group(1))
+        else:
+            raise WorkflowError(f"Invalid GRES format in resources.gres: '{gres}'")
+
+    # 3. Parse slurm_extra
+    match = re.search(r"--gres=gpu(?::[^\s,:=]+)?:(\d+)", slurm_extra.lower())
+    if match:
+        return int(match.group(1))
+
+    # 4. Fallback: no GPUs requested
     return 0

@@ -1,9 +1,10 @@
 __1. CPU logic__
 __2. Error checking by partition__
-3. Documentation 
-4. Example/test cases
+__3. Documentation__ 
+__4. Example/test cases__
 __5. Different resource scales (e.g. mem_gb, runtime_days, etc.)__
 __6. Default resources__
-7. Resource table command line option
-8. Upload to PyPI
-9. Upload to bioconda
+__7. Resource table command line option__
+__8. Pass all tests__
+9. Upload to PyPI
+10. Upload to bioconda
