@@ -29,7 +29,7 @@ These resources are typically omitted from Snakemake workflows to maintain platf
 To specify them at the command line, define them as default resources:
 
 ``` console
-$ snakemake --executor slurm --default-resources slurm_account=<your SLURM account> slurm_partition=<your SLURM partition>
+$ snakemake --executor cannon --default-resources slurm_account=<your SLURM account> slurm_partition=<your SLURM partition>
 ```
 
 The plugin does its best to _guess_ your account. That might not be possible. Particularly, when dealing with several SLURM accounts, users ought to set them per workflow.
@@ -38,7 +38,7 @@ Some clusters, however, have a pre-defined default per user and _do not_ allow u
 If individual rules require e.g. a different partition, you can override the default per rule:
 
 ``` console
-$ snakemake --executor slurm --default-resources slurm_account=<your SLURM account> slurm_partition=<your SLURM partition> --set-resources <somerule>:slurm_partition=<some other partition>
+$ snakemake --executor cannon --default-resources slurm_account=<your SLURM account> slurm_partition=<your SLURM partition> --set-resources <somerule>:slurm_partition=<some other partition>
 ```
 
 To ensure consistency and ease of management, it's advisable to persist such settings via a [configuration profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles), which can be provided system-wide, per user, or per workflow.
