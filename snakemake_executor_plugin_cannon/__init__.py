@@ -640,7 +640,12 @@ We leave it to SLURM to resume your job(s)"""
             self.logger.warning(f"\nWARNING: requested mem {orig_mem}MB is too low; clamping to {mem_mb}MB\n")
         job.resources.mem_mb = mem_mb
         
-        cpus = job.resources.get("cpus_per_task", 1)
+        #cpus = job.resources.get("cpus_per_task", 1)
+        print("THREADS:\t", job.threads)
+        effective_cpus = job.resources.get("cpus_per_task", job.threads)
+        if effective_cpus < job.threads:
+            self.logger.warning(f"\nWARNING: Potential oversubscription: {job.threads} threads > {job.resources.cpus_per_task} CPUs allocated.\n")
+
         runtime = job.resources.get("runtime", 30)
 
         # GPU detection
@@ -654,7 +659,7 @@ We leave it to SLURM to resume your job(s)"""
 
         num_gpu = parse_num_gpus(job)
 
-        specified_resources = { "mem_mb" : mem_mb, "cpus_per_task": cpus, "runtime": runtime, "gpus": num_gpu }
+        specified_resources = { "mem_mb" : mem_mb, "cpus_per_task": effective_cpus, "runtime": runtime, "gpus": num_gpu }
 
         ##########
 
@@ -678,7 +683,7 @@ We leave it to SLURM to resume your job(s)"""
                 else:
                     partition = "bigmem"
 
-            elif cpus > 100:
+            elif effective_cpus > 100:
                 # High cpu demand, push to intermediate or sapphire
                 if runtime >= 4320:
                     partition = "intermediate"

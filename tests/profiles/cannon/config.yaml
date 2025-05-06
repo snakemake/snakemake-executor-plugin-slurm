@@ -22,3 +22,6 @@ set-resources:
     mem: 7G
     cpus_per_task: 5
     runtime: 1h
+
+set-threads:
+  a: 3
