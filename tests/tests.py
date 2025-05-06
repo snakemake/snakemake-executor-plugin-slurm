@@ -4,9 +4,9 @@ from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
 from unittest.mock import MagicMock, patch
 import pytest
 
-from snakemake_executor_plugin_slurm import ExecutorSettings
-from snakemake_executor_plugin_slurm.utils import set_gres_string
-from snakemake_executor_plugin_slurm.submit_string import get_submit_command
+from snakemake_executor_plugin_cannon import ExecutorSettings
+from snakemake_executor_plugin_cannon.utils import set_gres_string
+from snakemake_executor_plugin_cannon.submit_string import get_submit_command
 from snakemake_interface_common.exceptions import WorkflowError
 
 
@@ -14,7 +14,7 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
     __test__ = True
 
     def get_executor(self) -> str:
-        return "slurm"
+        return "cannon"
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
         return ExecutorSettings(init_seconds_before_status_checks=1)
@@ -414,7 +414,7 @@ class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageB
     __test__ = True
 
     def get_executor(self) -> str:
-        return "slurm"
+        return "cannon"
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
         return ExecutorSettings(
@@ -438,3 +438,4 @@ class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageB
 
     # Verify no slashes remain in the wildcard string
     assert "/" not in wildcard_str
+

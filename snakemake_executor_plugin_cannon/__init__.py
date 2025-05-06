@@ -3,6 +3,7 @@ __copyright__ = "Copyright 2023, David Lähnemann, Johannes Köster, Christian M
 __email__ = "johannes.koester@uni-due.de"
 __license__ = "MIT"
 
+import sys
 import atexit
 import csv
 from io import StringIO
@@ -27,9 +28,8 @@ from snakemake_interface_executor_plugins.jobs import (
 )
 from snakemake_interface_common.exceptions import WorkflowError
 
-from .utils import delete_slurm_environment, delete_empty_dirs, set_gres_string
+from .utils import *
 from .submit_string import get_submit_command
-
 
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
@@ -106,7 +106,14 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
-
+    resources: bool = field(
+        default=False,
+        metadata={
+            "help": "Print information about the Cannon cluster and exit.",
+            "env_var": False,
+            "required": False,
+        },
+    )
 
 # Required:
 # Specify common settings shared by various executors.
@@ -136,6 +143,12 @@ common_settings = CommonSettings(
 # Implementation of your executor
 class Executor(RemoteExecutor):
     def __post_init__(self, test_mode: bool = False):
+
+        # The --cannon-resources flag is set, so we print the resources and exit
+        if self.workflow.executor_settings.resources:
+            self.logger.info(f"{format_cannon_resources()}");
+            sys.exit(0);
+        
         # run check whether we are running in a SLURM job context
         self.warn_on_jobcontext()
         self.test_mode = test_mode
@@ -618,12 +631,121 @@ We leave it to SLURM to resume your job(s)"""
         returns a default partition, if applicable
         else raises an error - implicetly.
         """
+
+        partitions = cannon_resources()
+
+
+        mem_mb, orig_mem = normalize_mem(job) # Uses default of 4005 
+        if orig_mem:
+            self.logger.warning(f"\nWARNING: requested mem {orig_mem}MB is too low; clamping to {mem_mb}MB\n")
+        job.resources.mem_mb = mem_mb
+        
+        #cpus = job.resources.get("cpus_per_task", 1)
+        print("THREADS:\t", job.threads)
+        effective_cpus = job.resources.get("cpus_per_task", job.threads)
+        if effective_cpus < job.threads:
+            self.logger.warning(f"\nWARNING: Potential oversubscription: {job.threads} threads > {job.resources.cpus_per_task} CPUs allocated.\n")
+
+        runtime = job.resources.get("runtime", 30)
+
+        # GPU detection
+        # slurm_extra = job.resources.get("slurm_extra")
+        # if slurm_extra:
+        #     num_gpu = parse_slurm_extra(slurm_extra);
+        # if job.resources.get("gres"):
+
+        # else:
+        #     num_gpu = job.resources.get("gpu", 0)
+
+        num_gpu = parse_num_gpus(job)
+
+        specified_resources = { "mem_mb" : mem_mb, "cpus_per_task": effective_cpus, "runtime": runtime, "gpus": num_gpu }
+
+        ##########
+
+        partition = None
         if job.resources.get("slurm_partition"):
-            partition = job.resources.slurm_partition
+            partition = job.resources["slurm_partition"]
+            if partition not in partitions:
+                raise WorkflowError(
+                    f"The requested partition '{partition}' is not valid. "
+                    f"Available partitions are: {', '.join(partitions.keys())}"
+                )
+
+        elif num_gpu > 0:
+            #print("Using GPU partition")
+            partition = "gpu"
+
         else:
-            if self._fallback_partition is None:
-                self._fallback_partition = self.get_default_partition(job)
-            partition = self._fallback_partition
+            if mem_mb >= 1_000_000:
+                if runtime >= 4320:
+                    partition = "bigmem_intermediate"  
+                else:
+                    partition = "bigmem"
+
+            elif effective_cpus > 100:
+                # High cpu demand, push to intermediate or sapphire
+                if runtime >= 4320:
+                    partition = "intermediate"
+                else:
+                    partition = "sapphire"
+
+            elif mem_mb >= 184_000:
+                if runtime >= 4320:
+                    partition = "intermediate"
+                else:
+                    partition = "sapphire"
+
+            else:
+                partition = "shared"
+            # if self._fallback_partition is None:
+            #     self._fallback_partition = self.get_default_partition(job)
+            # partition = self._fallback_partition
+
+        ##########
+
+        # Print a table of the specified resources
+        header = f"\n{'Resource':<16}{'Requested':>12}"
+        separator = f"{'-'*16}{'-'*12}"
+        rows = [header, separator]
+        for resource, value in specified_resources.items():
+            rows.append(f"{resource:<16}{value:>12}")
+
+        # Add the selected partition to the table
+        rows.append(f"{'Partition':<16}{partition:>12}")
+
+        table_output = "\n".join(rows)
+        self.logger.info("Specified Resources:")
+        self.logger.info(table_output + "\n")
+        #print(dir(job.resources));
+        #print("Nodes:\t", job.resources.get("nodes"));
+
+        ##########
+
+        # Track which resources were violated
+        violations = []
+        for resource in ["mem_mb", "cpus_per_task", "runtime", "gpus"]:
+            requested = specified_resources.get(resource, 0)
+            allowed = partitions[partition].get(resource)
+            if isinstance(allowed, int) and requested > allowed:
+                violations.append((resource, requested, allowed))
+
+        if violations:
+            header = f"\n{'Resource':<16}{'Requested':>12}{'Allowed':>12}"
+            separator = f"{'-'*16}{'-'*12}{'-'*12}"
+            rows = [header, separator]
+            for resource, requested, allowed in violations:
+                rows.append(f"{resource:<16}{requested:>12}{allowed:>12}")
+
+            table_output = "\n".join(rows)
+
+            raise WorkflowError(
+                f"The requested resources exceed allowed limits for partition '{partition}':\n"
+                f"{table_output}\n"
+            )
+
+        ##########
+
         if partition:
             return f" -p {partition}"
         else:

@@ -16,7 +16,7 @@ Additionally, we recommend installing the `snakemake-storage-plugin-fs` for auto
 #### Reporting Bugs and Feature Requests
 
 We welcome bug reports and feature requests!
-Please report issues specific to this plugin [in the plugin's GitHub repository](https://github.com/snakemake/snakemake-executor-plugin-slurm/issue).
+Please report issues specific to this plugin [in the plugin's GitHub repository](https://github.com/harvardinformatics/snakemake-executor-plugin-cannon/issues).
 For other concerns, refer to the [Snakemake main repository](https://github.com/snakemake/snakemake/issues) or the relevant Snakemake plugin repository.
 Cluster-related issues should be directed to your cluster administrator.
 
@@ -29,7 +29,7 @@ These resources are typically omitted from Snakemake workflows to maintain platf
 To specify them at the command line, define them as default resources:
 
 ``` console
-$ snakemake --executor slurm --default-resources slurm_account=<your SLURM account> slurm_partition=<your SLURM partition>
+$ snakemake --executor cannon --default-resources slurm_account=<your SLURM account> slurm_partition=<your SLURM partition>
 ```
 
 The plugin does its best to _guess_ your account. That might not be possible. Particularly, when dealing with several SLURM accounts, users ought to set them per workflow.
@@ -38,7 +38,7 @@ Some clusters, however, have a pre-defined default per user and _do not_ allow u
 If individual rules require e.g. a different partition, you can override the default per rule:
 
 ``` console
-$ snakemake --executor slurm --default-resources slurm_account=<your SLURM account> slurm_partition=<your SLURM partition> --set-resources <somerule>:slurm_partition=<some other partition>
+$ snakemake --executor cannon --default-resources slurm_account=<your SLURM account> slurm_partition=<your SLURM partition> --set-resources <somerule>:slurm_partition=<some other partition>
 ```
 
 To ensure consistency and ease of management, it's advisable to persist such settings via a [configuration profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles), which can be provided system-wide, per user, or per workflow.
@@ -63,6 +63,18 @@ rule a:
 
 Snakemake knows the `cpus_per_task`, similar to SLURM, as an alternative to `threads`.
 Parameters in the `resources` section will take precedence.
+
+The following resource flags (and default values) are available to be set in rules, with there being multiple ways to specify the amount of memory for a job.
+
+| Resources     | Default Value | Units                                    | 
+|---------------|:-------------:|:----------------------------------------:|
+| mem           | 4G            | G (gigabyte), M (megabyte), T (terabyte) |
+| mem_mb        | 4000          | megabyte                                  |
+| mem_gb        | 4             | gigabyte                                  |
+| runtime       | 30m           | m (minutes), h (hours), d (days)         |
+| cpus_per_task | 1             |                                          |
+
+If you want to specify usage of GPUs in resources, you will have to use the `slurm_extra` tag, which there are examples of below in the GPU Jobs section.
 
 To avoid hard-coding resource parameters into your Snakefiles, it is advisable to create a cluster-specific workflow profile.
 This profile should be named `config.yaml` and placed in a directory named `profiles` relative to your workflow directory.
@@ -177,16 +189,14 @@ rule gpu_task:
     output:
         "output_file"
     resources:
-        gpu=2,
-        gpu_model="a100"
+        slurm_extra: "'--gres=gpu:a100:2'"
     shell:
         "your_gpu_application --input {input} --output {output}"
 ```
 
 In this configuration:
 
-- `gpu=2` requests two GPUs for the job.
-- `gpu_model="a100"` specifies the desired GPU model.
+- `gpu:a100:2` requests two GPUs of the a100 model for the job
 
 Snakemake translates these resource requests into SLURM's `--gpus` flag, resulting in a submission command like sbatch `--gpus=a100:2`.
 It is important to note that the `gpu` resource must be specified as a numerical value.
@@ -195,26 +205,6 @@ It is important to note that the `gpu` resource must be specified as a numerical
 However, SLURM does not know the distinction between model and manufacturer.
 Essentially, the preferred way to request an accelerator will depend on your specific cluster setup.
 
-#### Alternative Method: Using the gres Resource
-
-Alternatively, you can define GPU requirements using the gres resource, which corresponds directly to SLURM's `--gres` flag.
-The syntax for this method is either `<resource_type>:<number>` or `<resource_type>:<model>:<number>`.
-For instance:
-
-```Python
-rule gpu_task:
-    input:
-        "input_file"
-    output:
-        "output_file"
-    resources:
-        gres="gpu:a100:2"
-    shell:
-        "your_gpu_application --input {input} --output {output}"
-```
-
-Here, `gres="gpu:a100:2"` requests two GPUs of the a100 model.
-This approach offers flexibility, especially on clusters where specific GPU models are available.
 
 #### Additional Considerations: CPU Allocation per GPU
 
@@ -245,16 +235,15 @@ To streamline the management of resource specifications across multiple rules, y
 ```YAML
 set-resources:
     single_gpu_rule:
-        gpu: 1
+        slurm_extra: "'--gres=gpu:1'"
         cpus_per_gpu: 4
 
     multi_gpu_rule:
-        gpu: 2
-        gpu_model: "a100"
+        slurm_extra: "'--gres=gpu:a100:2'"
         cpus_per_gpu: 8
 
     gres_request_rule:
-        gres: "gpu:rtx3090:2"
+        slurm_extra: "'--gres=gpu:rtx3090:2'"
         cpus_per_gpu: 6
 ```
 
