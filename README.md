@@ -13,7 +13,7 @@ In order to test if this plugin works, we can run several small test slurm jobs 
 1. Log onto the Cannon cluster
 2. Clone this repository
 3. Run: `pip install -e .` to install the plugin
-4. Navigate to the `test` folder and run: `snakemake -J 5 -e cannon --profiles profiles/cannon/`
+4. Navigate to the `test` folder and run: `snakemake -j 5 -e cannon --profile profiles/cannon/`
 
 These test scripts can also be used as a template for setting up profiles and rules that are compatible with this plugin.
 
