@@ -640,8 +640,6 @@ We leave it to SLURM to resume your job(s)"""
             self.logger.warning(f"\nWARNING: requested mem {orig_mem}MB is too low; clamping to {mem_mb}MB\n")
         job.resources.mem_mb = mem_mb
         
-        #cpus = job.resources.get("cpus_per_task", 1)
-        print("THREADS:\t", job.threads)
         effective_cpus = job.resources.get("cpus_per_task", job.threads)
         if effective_cpus < job.threads:
             self.logger.warning(f"\nWARNING: Potential oversubscription: {job.threads} threads > {job.resources.cpus_per_task} CPUs allocated.\n")
