@@ -1,3 +1,1 @@
-[SLURM](https://slurm.schedmd.com/documentation.html) is a widely used
-batch system for performance compute clusters.
-This executor plugin allows to use it in a seamless and straightforward way.
+Automatic partition selection for the [Cannon compute cluster at Harvard](https://docs.rc.fas.harvard.edu/kb/running-jobs/) when running SLURM jobs through Snakemake.
