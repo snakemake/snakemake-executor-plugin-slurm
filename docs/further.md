@@ -66,14 +66,14 @@ Parameters in the `resources` section will take precedence.
 
 The following resource flags (and default values) are available to be set in rules, with there being multiple ways to specify the amount of memory for a job.
 
-| Resources     | Default Value | 
-|---------------|:-------------:|
-| mem           | 4G            |
-| mem_mb        | 4000M         |
-| mem_gb        | 4G            |
-| runtime       | 30m           |
-| cpus_per_task | 1             |
-| gpus          | 0             |
+| Resources     | Default Value | Units                                    | 
+|---------------|:-------------:|:----------------------------------------:|
+| mem           | 4G            | G (gigabyte), M (megabyte), T (terabyte) |
+| mem_mb        | 4000          | megabyte                                  |
+| mem_gb        | 4             | gigabyte                                  |
+| runtime       | 30m           | m (minutes), h (hours), d (days)         |
+| cpus_per_task | 1             |                                          |
+| gpus          | 0             |                                          |
 
 To avoid hard-coding resource parameters into your Snakefiles, it is advisable to create a cluster-specific workflow profile.
 This profile should be named `config.yaml` and placed in a directory named `profiles` relative to your workflow directory.
