@@ -35,8 +35,9 @@ jobs:
 
           if [ "$result" -eq 42 ]; then
             echo "sync-needed=true" >> "$output_file"
-            version=$(echo "$upstream_output" | grep '^Upstream version' | awk '{ print $3 }')
-            echo "::notice::Extracted upstream version: $version" # for debugging
+
+            version=$(echo "$upstream_output" | sed -n 's/^Upstream version.*= *//p')
+            echo "::notice::Extracted upstream version: $version"
             echo "upstream-version=$version" >> "$output_file"
           elif [ "$result" -eq 0 ]; then
             echo "sync-needed=false" >> "$output_file"
@@ -70,19 +71,23 @@ jobs:
           BRANCH="sync-upstream-$(date +'%Y%m%d')"
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
 
+          # Add upstream and fetch to get upstream/main
+          git remote add upstream https://github.com/snakemake/snakemake-executor-plugin-slurm
+          git fetch upstream
+
           # Create branch from upstream/main
           git checkout -b $BRANCH upstream/main
 
-          # Restore .github/workflows from your fork's default branch to avoid GitHub push restriction
+          # Fetch fork's main so we can restore its .github folder
           git fetch origin main
 
-          # Remove all .github/ content from upstream and replace with our fork's to avoid workflow push permission errors
+          # Remove all .github/ changes from upstream and restore from our fork (origin/main)
           rm -rf .github/
           git checkout origin/main -- .github/
 
-          # Stage and commit remaining changes if any
+          # Stage and possibly commit changes
           git add -A
-          git diff --cached --quiet || git commit -m "Sync with upstream (excluding workflow files)"
+          git diff --cached --quiet && echo "No changes to commit." || git commit -m "Sync with upstream (excluding workflow files)"
 
       - name: Show staged changes (for debug)
         run: git diff --cached --name-status
