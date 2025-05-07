@@ -1,5 +1,3 @@
-name: Sync with Upstream
-
 on:
   workflow_run:
     workflows: ["Check for Upstream Release"]
@@ -8,10 +6,31 @@ on:
 
 jobs:
   sync:
-    if: ${{ github.event.workflow_run.outputs.sync-needed == 'true' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
+      - name: Download workflow artifacts
+        uses: dawidd6/action-download-artifact@v3
+
+      - name: Download upstream-version output
+        id: get-outputs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runId = context.payload.workflow_run.id;
+            const resp = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId
+            });
+
+            const outputs = resp.data.outputs || {};
+            return {
+              version: outputs["upstream-version"] ?? "unknown"
+            };
+        result-encoding: string
+
       - name: Checkout fork
         uses: actions/checkout@v3
         with:
@@ -38,5 +57,5 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: sync-upstream-$(date +'%Y%m%d')
-          title: "Sync with upstream changes"
-          body: "This PR was auto-generated after detecting a new upstream release."
+          title: "Sync with upstream release v${{ steps.get-outputs.outputs.version }}"
+          body: "This PR was auto-generated to sync with upstream version v${{ steps.get-outputs.outputs.version }}."

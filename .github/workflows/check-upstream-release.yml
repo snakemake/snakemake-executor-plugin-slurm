@@ -8,8 +8,11 @@ on:
 jobs:
   check-release:
     runs-on: ubuntu-latest
+
     outputs:
       sync-needed: ${{ steps.detect.outputs.sync-needed }}
+      upstream-version: ${{ steps.detect.outputs.upstream-version }}
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -26,14 +29,26 @@ jobs:
         id: detect
         run: |
           result=0
-          python .github/scripts/check_upstream_release.py || result=$?
+          upstream_version=""
+          output_file="$GITHUB_OUTPUT"
+
+          export UPSTREAM_VERSION=""
+          
+          # Run the script, capturing stdout
+          upstream_output=$(python .github/scripts/check_upstream_release.py) || result=$?
+
+          echo "$upstream_output"
 
           if [ "$result" -eq 42 ]; then
             echo "New upstream version detected"
-            echo "sync-needed=true" >> $GITHUB_OUTPUT
+            echo "sync-needed=true" >> "$output_file"
+
+            # Extract version from script output using grep/awk/sed
+            version=$(echo "$upstream_output" | grep '^Upstream version' | awk '{ print $3 }')
+            echo "upstream-version=$version" >> "$output_file"
           elif [ "$result" -eq 0 ]; then
             echo "No new upstream release"
-            echo "sync-needed=false" >> $GITHUB_OUTPUT
+            echo "sync-needed=false" >> "$output_file"
           else
             echo "Script failed (exit code $result)"
             exit $result
