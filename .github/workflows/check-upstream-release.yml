@@ -180,9 +180,7 @@ jobs:
             --base main \
             --head ${{ env.BRANCH }} \
             --title "Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}" \
-            --body "Auto-created sync PR for upstream version v${{ needs.check-release.outputs.upstream-version }}" \
-            --label "automated" \
-            --label "upstream-sync"
+            --body "Auto-created sync PR for upstream version v${{ needs.check-release.outputs.upstream-version }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
