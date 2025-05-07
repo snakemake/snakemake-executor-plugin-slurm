@@ -112,7 +112,7 @@ jobs:
           base: ${{ github.event.repository.default_branch }}
           branch: ${{ env.BRANCH }}
           title: "Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}"
-          body:  |
+          body: |
             This PR was auto-generated to sync with upstream version v${{ needs.check-release.outputs.upstream-version }}, excluding CI workflow changes.
           labels: |
             automated
