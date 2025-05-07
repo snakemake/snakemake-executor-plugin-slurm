@@ -173,20 +173,20 @@ jobs:
         if: steps.create-branch.outputs.has-changes == 'true'
         run: git push origin ${{ env.BRANCH }}
 
-      - name: Open PR
+      - name: Install GitHub CLI
+        uses: cli/cli-action@v2
+
+      - name: Create PR
         if: steps.create-branch.outputs.has-changes == 'true'
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: ${{ github.event.repository.default_branch }}
-          branch: ${{ env.BRANCH }}
-          title: "Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}"
-          body: |
-            This PR was auto-generated to sync with upstream version v${{ needs.check-release.outputs.upstream-version }}, excluding CI workflow changes.
-          labels: |
-            automated
-            upstream-sync
-          commit-message: "auto-sync: Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}"
+        run: |
+          gh pr create \
+            --base main \
+            --head ${{ env.BRANCH }} \
+            --title "Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}" \
+            --body "Auto-created sync PR for upstream version v${{ needs.check-release.outputs.upstream-version }}" \
+            --label "automated,upstream-sync"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Skip info (no commit to push)
         if: ${{ steps.create-branch.outputs.has-changes != 'true' }}
