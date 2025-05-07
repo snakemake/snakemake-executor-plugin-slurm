@@ -1,4 +1,4 @@
-name: Check for Upstream Release
+name: Check and Sync Upstream
 
 on:
   schedule:
@@ -8,7 +8,6 @@ on:
 jobs:
   check-release:
     runs-on: ubuntu-latest
-
     outputs:
       sync-needed: ${{ steps.detect.outputs.sync-needed }}
       upstream-version: ${{ steps.detect.outputs.upstream-version }}
@@ -29,27 +28,54 @@ jobs:
         id: detect
         run: |
           result=0
-          upstream_version=""
           output_file="$GITHUB_OUTPUT"
-
-          export UPSTREAM_VERSION=""
-          
-          # Run the script, capturing stdout
           upstream_output=$(python .github/scripts/check_upstream_release.py) || result=$?
 
           echo "$upstream_output"
 
           if [ "$result" -eq 42 ]; then
-            echo "New upstream version detected"
             echo "sync-needed=true" >> "$output_file"
-
-            # Extract version from script output using grep/awk/sed
             version=$(echo "$upstream_output" | grep '^Upstream version' | awk '{ print $3 }')
             echo "upstream-version=$version" >> "$output_file"
           elif [ "$result" -eq 0 ]; then
-            echo "No new upstream release"
             echo "sync-needed=false" >> "$output_file"
           else
-            echo "Script failed (exit code $result)"
             exit $result
           fi
+
+  sync:
+    needs: check-release
+    if: needs.check-release.outputs.sync-needed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream and fetch
+        run: |
+          git remote add upstream https://github.com/snakemake/snakemake-executor-plugin-slurm-jobstep
+          git fetch upstream
+
+      - name: Create sync branch
+        id: create-branch
+        run: |
+          BRANCH="sync-upstream-$(date +'%Y%m%d')"
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+          git checkout -b $BRANCH upstream/main
+          git push origin $BRANCH
+
+      - name: Open PR
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ env.BRANCH }}
+          title: "Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}"
+          body: "This PR was auto-generated to sync with upstream version v${{ needs.check-release.outputs.upstream-version }}."
