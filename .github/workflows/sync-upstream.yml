@@ -1,0 +1,42 @@
+name: Sync with Upstream
+
+on:
+  workflow_run:
+    workflows: ["Check for Upstream Release"]
+    types:
+      - completed
+
+jobs:
+  sync:
+    if: ${{ github.event.workflow_run.outputs.sync-needed == 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream and fetch
+        run: |
+          git remote add upstream https://github.com/snakemake/snakemake-executor-plugin-slurm-jobstep
+          git fetch upstream
+
+      - name: Create sync branch
+        run: |
+          BRANCH="sync-upstream-$(date +'%Y%m%d')"
+          git checkout -b $BRANCH upstream/main
+          git push origin $BRANCH
+
+      - name: Open PR
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: sync-upstream-$(date +'%Y%m%d')
+          title: "Sync with upstream changes"
+          body: "This PR was auto-generated after detecting a new upstream release."

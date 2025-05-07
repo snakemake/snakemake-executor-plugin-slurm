@@ -1,29 +1,40 @@
 name: Check for Upstream Release
 
 on:
-  # Run daily at 6 AM UTC
   schedule:
     - cron: '0 6 * * *'
-  # Also allow manual triggering
   workflow_dispatch:
 
 jobs:
   check-release:
     runs-on: ubuntu-latest
-
+    outputs:
+      sync-needed: ${{ steps.detect.outputs.sync-needed }}
     steps:
-      - name: Checkout the repo
+      - name: Checkout repo
         uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Install tools
-        run: |
-          pip install pyyaml requests packaging toml
+      - name: Install dependencies
+        run: pip install requests toml pyyaml packaging
 
-      - name: Check for new upstream release
-        run: |
-          python .github/scripts/check_upstream_release.py
+      - name: Run check script
+          id: detect
+          run: |
+            result=0
+            python .github/scripts/check_upstream_release.py || result=$?
+
+            if [ "$result" -eq 42 ]; then
+              echo "New upstream version detected"
+              echo "sync-needed=true" >> $GITHUB_OUTPUT
+            elif [ "$result" -eq 0 ]; then
+              echo "No new upstream release"
+              echo "sync-needed=false" >> $GITHUB_OUTPUT
+            else
+              echo "Script failed (exit code $result)"
+              exit $result
+            }
