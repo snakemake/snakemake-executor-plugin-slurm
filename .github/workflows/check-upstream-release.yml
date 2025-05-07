@@ -67,32 +67,43 @@ jobs:
           BRANCH="sync-upstream-$(date +'%Y%m%d')"
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
 
-          # Add upstream and fetch to get upstream/main
-          # Add and fetch upstream safely
+          # Add upstream if not present
           if ! git remote get-url upstream &>/dev/null; then
             git remote add upstream https://github.com/snakemake/snakemake-executor-plugin-slurm
           fi
-          git fetch upstream
 
-          # Create branch from upstream/main
+          # Fetch upstream and create new branch from upstream/main
+          git fetch upstream
           git checkout -b $BRANCH upstream/main
 
-          # Fetch fork's main so we can restore its .github folder
+          # Fetch fork's main for .github restoration
           git fetch origin main
-
-          # Remove all .github/ changes from upstream and restore from our fork (origin/main)
           rm -rf .github/
           git checkout origin/main -- .github/
 
-          # Stage changes
+          # ============ Remap: slurm ➜ cannon with `mv` ============
+
+          if [ -d snakemake_executor_plugin_slurm ]; then
+            echo "Renaming upstream's 'slurm' dir to 'cannon'..."
+
+            # Remove your fork's version (clean slate)
+            rm -rf snakemake_executor_plugin_cannon
+
+            # Rename upstream's slurm dir to use your fork's cannon name
+            mv snakemake_executor_plugin_slurm snakemake_executor_plugin_cannon
+          else
+            echo "No 'snakemake_executor_plugin_slurm/' folder present in upstream."
+          fi
+
+          # Stage all changes (new contents/renames/etc)
           git add -A
 
-          # Check and commit only if there are changes
+          # Conditionally commit if there are changes
           if git diff --cached --quiet; then
             echo "No changes to commit."
             echo "has-changes=false" >> "$GITHUB_OUTPUT"
           else
-            git commit -m "Sync with upstream (excluding workflow files)"
+            git commit -m "Sync with upstream (renamed slurm → cannon)"
             echo "has-changes=true" >> "$GITHUB_OUTPUT"
           fi
 
