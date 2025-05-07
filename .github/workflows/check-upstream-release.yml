@@ -1,0 +1,29 @@
+name: Check for Upstream Release
+
+on:
+  # Run daily at 6 AM UTC
+  schedule:
+    - cron: '0 6 * * *'
+  # Also allow manual triggering
+  workflow_dispatch:
+
+jobs:
+  check-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install tools
+        run: |
+          pip install pyyaml requests packaging toml
+
+      - name: Check for new upstream release
+        run: |
+          python .github/scripts/check_upstream_release.py

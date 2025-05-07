@@ -6,5 +6,5 @@ __5. Different resource scales (e.g. mem_gb, runtime_days, etc.)__
 __6. Default resources__
 __7. Resource table command line option__
 __8. Pass all tests__
-9. Upload to PyPI
+__9. Upload to PyPI__
 10. Upload to bioconda
