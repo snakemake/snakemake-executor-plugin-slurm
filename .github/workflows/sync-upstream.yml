@@ -1,3 +1,5 @@
+name: Sync with Upstream
+
 on:
   workflow_run:
     workflows: ["Check for Upstream Release"]
