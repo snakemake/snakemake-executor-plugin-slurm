@@ -3,7 +3,7 @@ import toml
 import sys
 from packaging.version import Version, InvalidVersion
 
-UPSTREAM_REPO = "snakemake/snakemake-executor-plugin-slurm-jobstep"
+UPSTREAM_REPO = "snakemake/snakemake-executor-plugin-slurm"
 PYPROJECT = "pyproject.toml"
 
 EXIT_OK = 0         # no changes
@@ -32,9 +32,8 @@ def get_local_main_version():
     try:
         data = toml.load(PYPROJECT)
         version_str = data["tool"]["poetry"]["version"]
-
-        # Split out base version (e.g. 1.2.1 from 1.2.1.post2)
-        return Version(version_str).base_version
+        base = Version(version_str).base_version  # base_version is a str
+        return Version(base)  # convert base_version string back to Version object
     except Exception as e:
         error(f"Could not parse pyproject.toml version: {e}")
 
@@ -43,7 +42,7 @@ def main():
     local = get_local_main_version()
 
     print(f"Local main version = {local}")
-    print(f"Upstream version    = {upstream}")
+    print(f"Upstream version   = {upstream}")
 
     if upstream > local:
         print("New upstream release detected!")
