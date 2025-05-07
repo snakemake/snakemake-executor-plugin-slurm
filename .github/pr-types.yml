@@ -1,0 +1,14 @@
+# .github/semantic.yml
+types:
+  - feat
+  - fix
+  - chore
+  - docs
+  - style
+  - refactor
+  - test
+  - perf
+  - build
+  - ci
+  - revert
+  - auto-sync

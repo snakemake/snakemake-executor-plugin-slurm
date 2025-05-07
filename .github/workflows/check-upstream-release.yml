@@ -36,6 +36,7 @@ jobs:
           if [ "$result" -eq 42 ]; then
             echo "sync-needed=true" >> "$output_file"
             version=$(echo "$upstream_output" | grep '^Upstream version' | awk '{ print $3 }')
+            echo "::notice::Extracted upstream version: $version" # for debugging
             echo "upstream-version=$version" >> "$output_file"
           elif [ "$result" -eq 0 ]; then
             echo "sync-needed=false" >> "$output_file"
@@ -75,7 +76,10 @@ jobs:
 
           # Restore .github/workflows from your fork's default branch to avoid GitHub push restriction
           git fetch origin main
-          git restore --source=origin/main --staged --worktree .github/
+
+          # Remove all .github/ content from upstream and replace with our fork's to avoid workflow push permission errors
+          rm -rf .github/
+          git checkout origin/main -- .github/
 
           # Stage and commit remaining changes if any
           git add -A
@@ -91,6 +95,11 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ github.event.repository.default_branch }}
           branch: ${{ env.BRANCH }}
           title: "Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}"
           body: "This PR was auto-generated to sync with upstream version v${{ needs.check-release.outputs.upstream-version }}, excluding CI workflow changes."
+          labels: |
+            automated
+            upstream-sync
+          commit-message: "auto-sync: Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}"
