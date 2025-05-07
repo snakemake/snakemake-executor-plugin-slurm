@@ -31,7 +31,6 @@ jobs:
             return {
               version: outputs["upstream-version"] ?? "unknown"
             };
-        result-encoding: string
 
       - name: Checkout fork
         uses: actions/checkout@v3
