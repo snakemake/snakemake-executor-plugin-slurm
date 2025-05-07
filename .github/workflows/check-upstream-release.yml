@@ -61,49 +61,98 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Create sync branch from upstream
+      - name: Create sync branch with 3-way merge
         id: create-branch
         run: |
-          BRANCH="sync-upstream-$(date +'%Y%m%d')"
-          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+          set -euo pipefail
 
-          # Add upstream if not present
+          BRANCH="sync-upstream-$(date +'%Y%m%d')"
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+
+          git switch -c "$BRANCH" origin/main
+
+          # Add remote for upstream if not already defined
           if ! git remote get-url upstream &>/dev/null; then
             git remote add upstream https://github.com/snakemake/snakemake-executor-plugin-slurm
           fi
 
-          # Fetch upstream and create new branch from upstream/main
           git fetch upstream
-          git checkout -b $BRANCH upstream/main
+          git fetch origin
 
-          # Fetch fork's main for .github restoration
-          git fetch origin main
-          rm -rf .github/
+          # Get merge base between fork and upstream
+          BASE_COMMIT=$(git merge-base origin/main upstream/main)
+          echo "Using merge base: $BASE_COMMIT"
+
+          # Restore your fork's .github/ workflows
+          rm -rf .github
           git checkout origin/main -- .github/
 
-          # ============ Remap: slurm ➜ cannon with `mv` ============
+          # === Define excluded paths relative to repo root ===
+          EXCLUDES=(
+            "TODO.md"
+            "tests/Snakefile"
+            "tests/tests.py"
+            "tests/__pycache__"
+            "tests/profiles"
+          )
 
-          if [ -d snakemake_executor_plugin_slurm ]; then
-            echo "Renaming upstream's 'slurm' dir to 'cannon'..."
+          # Track if anything changed
+          MERGED=false
 
-            # Remove your fork's version (clean slate)
-            rm -rf snakemake_executor_plugin_cannon
+          # Traverse all paths in upstream repo
+          UPSTREAM_FILES=$(git ls-tree -r --name-only upstream/main)
 
-            # Rename upstream's slurm dir to use your fork's cannon name
-            mv snakemake_executor_plugin_slurm snakemake_executor_plugin_cannon
-          else
-            echo "No 'snakemake_executor_plugin_slurm/' folder present in upstream."
-          fi
+          for SRC in $UPSTREAM_FILES; do
+            # Skip excluded files and folders
+            for EXCLUDE in "${EXCLUDES[@]}"; do
+              if [[ "$SRC" == "$EXCLUDE"* ]]; then
+                continue 2
+              fi
+            done
 
-          # Stage all changes (new contents/renames/etc)
+            # Map slurm/ → cannon/ path
+            if [[ "$SRC" == snakemake_executor_plugin_slurm/* ]]; then
+              DEST=${SRC/snakemake_executor_plugin_slurm/snakemake_executor_plugin_cannon}
+            else
+              DEST=$SRC
+            fi
+
+            # Safety: skip if destination file does not exist in origin
+            [ ! -f "$DEST" ] && continue
+
+            echo "Merging $SRC → $DEST"
+
+            # Set up temp files for 3-way merge
+            TMP_BASE=base.py
+            TMP_THEIRS=upstream.py
+            TMP_MINE=mine.py
+
+            git show "$BASE_COMMIT:$SRC" > "$TMP_BASE" || continue
+            git show "upstream/main:$SRC" > "$TMP_THEIRS" || continue
+            cp "$DEST" "$TMP_MINE"
+
+            # Perform the 3-way merge in-place on mine
+            if git merge-file --marker-size=30 "$TMP_MINE" "$TMP_BASE" "$TMP_THEIRS"; then
+              echo "Merge succeeded for $DEST"
+              cp "$TMP_MINE" "$DEST"
+              MERGED=true
+            else
+              echo "::warning:: Conflict detected in $DEST"
+              cp "$TMP_MINE" "$DEST"
+              MERGED=true
+            fi
+
+            # Clean up temp files
+            rm -f "$TMP_BASE" "$TMP_THEIRS" "$TMP_MINE"
+          done
+
+          # Stage & commit if anything changed
           git add -A
-
-          # Conditionally commit if there are changes
-          if git diff --cached --quiet; then
+          if git diff --cached --quiet || [ "$MERGED" = false ]; then
             echo "No changes to commit."
             echo "has-changes=false" >> "$GITHUB_OUTPUT"
           else
-            git commit -m "Sync with upstream (renamed slurm → cannon)"
+            git commit -m "Sync upstream changes via 3-way merge"
             echo "has-changes=true" >> "$GITHUB_OUTPUT"
           fi
 
