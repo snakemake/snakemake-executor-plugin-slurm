@@ -173,9 +173,6 @@ jobs:
         if: steps.create-branch.outputs.has-changes == 'true'
         run: git push origin ${{ env.BRANCH }}
 
-      - name: Install GitHub CLI
-        uses: cli/cli-action@v2
-
       - name: Create PR
         if: steps.create-branch.outputs.has-changes == 'true'
         run: |
