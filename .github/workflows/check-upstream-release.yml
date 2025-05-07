@@ -24,17 +24,17 @@ jobs:
 
       - name: Run check script
         id: detect
-          run: |
-            result=0
-            python .github/scripts/check_upstream_release.py || result=$?
+        run: |
+          result=0
+          python .github/scripts/check_upstream_release.py || result=$?
 
-            if [ "$result" -eq 42 ]; then
-              echo "New upstream version detected"
-              echo "sync-needed=true" >> $GITHUB_OUTPUT
-            elif [ "$result" -eq 0 ]; then
-              echo "No new upstream release"
-              echo "sync-needed=false" >> $GITHUB_OUTPUT
-            else
-              echo "Script failed (exit code $result)"
-              exit $result
-            }
+          if [ "$result" -eq 42 ]; then
+            echo "New upstream version detected"
+            echo "sync-needed=true" >> $GITHUB_OUTPUT
+          elif [ "$result" -eq 0 ]; then
+            echo "No new upstream release"
+            echo "sync-needed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Script failed (exit code $result)"
+            exit $result
+          }
