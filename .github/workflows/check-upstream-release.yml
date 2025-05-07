@@ -73,17 +73,19 @@ jobs:
           # Create branch from upstream/main
           git checkout -b $BRANCH upstream/main
 
-          # Remove workflow file changes before committing (both staged and in worktree)
-          git restore --source=HEAD --staged --worktree .github/workflows/
+          # Restore .github/workflows from your fork's default branch to avoid GitHub push restriction
+          git fetch origin main
+          git restore --source=origin/main --staged --worktree .github/
 
-          # Add changes to staging area (if needed)
+          # Stage and commit remaining changes if any
           git add -A
+          git diff --cached --quiet || git commit -m "Sync with upstream (excluding workflow files)"
 
-          # Commit if needed
-          git diff --cached --quiet || git commit -m "Sync with upstream (excluding workflows)"
+      - name: Show staged changes (for debug)
+        run: git diff --cached --name-status
 
-          # Push to origin
-          git push origin $BRANCH
+      - name: Push sync branch
+        run: git push origin ${{ env.BRANCH }}
 
       - name: Open PR
         uses: peter-evans/create-pull-request@v5
