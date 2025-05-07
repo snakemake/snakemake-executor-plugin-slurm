@@ -112,12 +112,13 @@ jobs:
           base: ${{ github.event.repository.default_branch }}
           branch: ${{ env.BRANCH }}
           title: "Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}"
-          body: "This PR was auto-generated to sync with upstream version v${{ needs.check-release.outputs.upstream-version }}, excluding CI workflow changes."
+          body:  |
+            This PR was auto-generated to sync with upstream version v${{ needs.check-release.outputs.upstream-version }}, excluding CI workflow changes.
           labels: |
             automated
             upstream-sync
           commit-message: "auto-sync: Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}"
 
       - name: Skip info (no commit to push)
-        if: steps.create-branch.outputs.has-changes != 'true'
+        if: ${{ steps.create-branch.outputs.has-changes != 'true' }}
         run: echo "Skip: No changes staged, nothing to push or show."
