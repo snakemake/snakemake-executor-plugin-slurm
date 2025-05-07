@@ -69,7 +69,20 @@ jobs:
         run: |
           BRANCH="sync-upstream-$(date +'%Y%m%d')"
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+
+          # Create branch from upstream/main
           git checkout -b $BRANCH upstream/main
+
+          # Remove workflow file changes before committing (both staged and in worktree)
+          git restore --source=HEAD --staged --worktree .github/workflows/
+
+          # Add changes to staging area (if needed)
+          git add -A
+
+          # Commit if needed
+          git diff --cached --quiet || git commit -m "Sync with upstream (excluding workflows)"
+
+          # Push to origin
           git push origin $BRANCH
 
       - name: Open PR
@@ -78,4 +91,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ env.BRANCH }}
           title: "Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}"
-          body: "This PR was auto-generated to sync with upstream version v${{ needs.check-release.outputs.upstream-version }}."
+          body: "This PR was auto-generated to sync with upstream version v${{ needs.check-release.outputs.upstream-version }}, excluding CI workflow changes."
