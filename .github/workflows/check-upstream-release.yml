@@ -142,6 +142,11 @@ jobs:
               MERGED=true
             fi
 
+            # Check if the merge changed the file
+            if ! diff -q "$DEST" "${TMP_MINE}.orig" >/dev/null; then
+              echo "::notice:: Detected changes in $DEST"
+            fi
+
             # Clean up temp files
             rm -f "$TMP_BASE" "$TMP_THEIRS" "$TMP_MINE"
           done
@@ -156,9 +161,13 @@ jobs:
             echo "has-changes=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Show staged changes (for debug)
+      - name: Show working changes
         if: steps.create-branch.outputs.has-changes == 'true'
-        run: git diff --cached --name-status
+        run: |
+          echo "=== git status ==="
+          git status
+          echo "=== git diff (against origin/main) ==="
+          git diff origin/main
 
       - name: Push sync branch
         if: steps.create-branch.outputs.has-changes == 'true'
