@@ -84,17 +84,28 @@ jobs:
           rm -rf .github/
           git checkout origin/main -- .github/
 
-          # Stage and possibly commit changes
+          # Stage changes
           git add -A
-          git diff --cached --quiet && echo "No changes to commit." || git commit -m "Sync with upstream (excluding workflow files)"
+
+          # Check and commit only if there are changes
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            echo "has-changes=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "Sync with upstream (excluding workflow files)"
+            echo "has-changes=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Show staged changes (for debug)
+        if: steps.create-branch.outputs.has-changes == 'true'
         run: git diff --cached --name-status
 
       - name: Push sync branch
+        if: steps.create-branch.outputs.has-changes == 'true'
         run: git push origin ${{ env.BRANCH }}
 
       - name: Open PR
+        if: steps.create-branch.outputs.has-changes == 'true'
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -106,3 +117,7 @@ jobs:
             automated
             upstream-sync
           commit-message: "auto-sync: Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}"
+
+      - name: Skip info (no commit to push)
+        if: steps.create-branch.outputs.has-changes != 'true'
+        run: echo "Skip: No changes staged, nothing to push or show."
