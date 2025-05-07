@@ -23,7 +23,7 @@ jobs:
         run: pip install requests toml pyyaml packaging
 
       - name: Run check script
-          id: detect
+        id: detect
           run: |
             result=0
             python .github/scripts/check_upstream_release.py || result=$?
