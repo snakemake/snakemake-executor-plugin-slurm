@@ -62,8 +62,7 @@ jobs:
 
       - name: Add upstream and fetch
         run: |
-          git remote add upstream https://github.com/snakemake/snakemake-executor-plugin-slurm-jobstep
-          git fetch upstream
+          git remote add upstream https://github.com/snakemake/snakemake-executor-plugin-slurm
 
       - name: Create sync branch
         id: create-branch
