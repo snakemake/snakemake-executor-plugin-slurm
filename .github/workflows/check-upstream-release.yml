@@ -61,18 +61,17 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Add upstream and fetch
-        run: |
-          git remote add upstream https://github.com/snakemake/snakemake-executor-plugin-slurm
-
-      - name: Create sync branch
+      - name: Create sync branch from upstream
         id: create-branch
         run: |
           BRANCH="sync-upstream-$(date +'%Y%m%d')"
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
 
           # Add upstream and fetch to get upstream/main
-          git remote add upstream https://github.com/snakemake/snakemake-executor-plugin-slurm
+          # Add and fetch upstream safely
+          if ! git remote get-url upstream &>/dev/null; then
+            git remote add upstream https://github.com/snakemake/snakemake-executor-plugin-slurm
+          fi
           git fetch upstream
 
           # Create branch from upstream/main
