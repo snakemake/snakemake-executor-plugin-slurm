@@ -262,6 +262,13 @@ class Executor(RemoteExecutor):
                 "- submitting without. This might or might not work on your cluster."
             )
 
+            # fixes #40 - set ntasks regardless of mpi, because
+            # SLURM v22.05 introduced the requirement for all jobs
+            gpu_job = job.resources.get("gpu") or "gpu" in job.resources.get("gres", "")
+            if gpu_job:
+                call += f" --ntasks-per-gpu={job.resources.get('tasks', 1)}"
+            else:
+                call += f" --ntasks={job.resources.get('tasks', 1)}"
         # MPI job
         if job.resources.get("mpi", False):
             if not job.resources.get("tasks_per_node") and not job.resources.get(
@@ -649,12 +656,14 @@ We leave it to SLURM to resume your job(s)"""
         tries to deduce the acccount from recent jobs,
         returns None, if none is found
         """
-        cmd = f'sacct -nu "{os.environ["USER"]}" -o Account%256 | head -n1'
+        cmd = f'sacct -nu "{os.environ["USER"]}" -o Account%256 | tail -1'
         try:
             sacct_out = subprocess.check_output(
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
-            return sacct_out.replace("(null)", "").strip()
+            possible_account = sacct_out.replace("(null)", "").strip()
+            if possible_account == "none":  # some clusters may not use an account
+                return None
         except subprocess.CalledProcessError as e:
             self.logger.warning(
                 f"No account was given, not able to get a SLURM account via sacct: "
@@ -666,7 +675,7 @@ We leave it to SLURM to resume your job(s)"""
         """
         tests whether the given account is registered, raises an error, if not
         """
-        cmd = "sshare -U --format Account --noheader"
+        cmd = "sshare -U --format Account%256 --noheader"
         try:
             accounts = subprocess.check_output(
                 cmd, shell=True, text=True, stderr=subprocess.PIPE

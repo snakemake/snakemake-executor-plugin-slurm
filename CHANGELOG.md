@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.2.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.1...v1.2.2) (2025-05-08)
+
+
+### Bug Fixes
+
+* checking for double nested strings in gres and gpu settings ([#251](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/251)) ([a7eac3a](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/a7eac3a0aeff74a83ab06578c0528c7473c92afa))
+* Increase account charecter limit ([#260](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/260)) ([1264de3](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/1264de3123ac638132ba76ffbf5187ff500a9a9b))
+
+## [1.2.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.0...v1.2.1) (2025-04-11)
+
+
+### Bug Fixes
+
+* add lost code back in ([#254](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/254)) ([6523889](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6523889f4bec2b42a2be2b7de6381bd9e8477d76))
+
+## [1.2.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.1.0...v1.2.0) (2025-04-04)
+
+
+### Features
+
+* added new 'qos' resource ([#241](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/241)) ([c8cdfc4](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/c8cdfc4e122c87499495ce9789cb7058dde98013))
+
+
+### Bug Fixes
+
+* account and partition settings corrected ([#249](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/249)) ([e7a248f](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/e7a248f4aeb50886535f13f5b8d4b56036951d87))
+* case insensitive matching of declared slurm account  ([#244](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/244)) ([dc9a4fd](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/dc9a4fd754fee372482e66fe1e5eff6a71558eba))
+
 ## [1.1.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.0.1...v1.1.0) (2025-03-14)
 
 
