@@ -177,7 +177,7 @@ jobs:
         if: steps.create-branch.outputs.has-changes == 'true'
         run: |
           echo "Waiting briefly to ensure GitHub registers the pushed branch..."
-              sleep 5
+              sleep 15
 
           gh pr create \
             --base main \
