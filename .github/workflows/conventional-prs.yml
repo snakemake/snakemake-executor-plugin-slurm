@@ -25,6 +25,6 @@ jobs:
               ci
               chore
               revert
-              auto-sync
+              autosync
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

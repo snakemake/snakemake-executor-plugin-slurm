@@ -204,7 +204,7 @@ jobs:
             --body-file pr_body.md \
             --label "automated" \
             --label "upstream-sync" \
-            --reviewer gwct
+            --assignee @me
 
       - name: Skip info (no commit to push)
         if: ${{ steps.create-branch.outputs.has-changes != 'true' }}
