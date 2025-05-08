@@ -175,23 +175,17 @@ jobs:
 
       - name: Create PR
         if: steps.create-branch.outputs.has-changes == 'true'
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: main
-          branch: ${{ env.BRANCH }}
-          title: "Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}"
-          body: |
-            This PR was auto-generated to sync with upstream version v${{ needs.check-release.outputs.upstream-version }}.
+        run: |
+          echo "Waiting briefly to ensure GitHub registers the pushed branch..."
+              sleep 5
 
-            It avoids syncing CI-related files and only pulls in source updates.
-          labels: |
-            automated
-            upstream-sync
-          commit-message: "auto-sync: Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}"
-          signoff: false
-          create-when-empty: true
-          delete-branch: false
+          gh pr create \
+            --base main \
+            --head ${{ env.BRANCH }} \
+            --title "Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}" \
+            --body "Auto-created sync PR for upstream version v${{ needs.check-release.outputs.upstream-version }}"
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
 
       - name: Skip info (no commit to push)
         if: ${{ steps.create-branch.outputs.has-changes != 'true' }}
