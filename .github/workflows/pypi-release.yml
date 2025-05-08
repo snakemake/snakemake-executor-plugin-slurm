@@ -45,7 +45,8 @@ jobs:
             NEXT=1
           fi
           NEW="${UPSTREAM}.post${NEXT}"
-          poetry version "$NEW"
+          #poetry version "$NEW"
+          echo "New version: $NEW"
           echo "new_version=$NEW" >> "$GITHUB_OUTPUT"
 
       - name: Commit bumped version
@@ -55,7 +56,9 @@ jobs:
           git commit -am "Bump version to ${{ steps.bump.outputs.new_version }}"
 
       - name: Tag release
-        run: git tag "v${{ steps.bump.outputs.new_version }}"
+        run: |
+          echo "Tagging v${{ steps.bump.outputs.new_version }} 
+          git tag "v${{ steps.bump.outputs.new_version }}"
 
       - name: Push commit & tag
         env:
@@ -67,7 +70,9 @@ jobs:
   publish:
     name: Build & Publish to PyPI
     # Only run when a tag is pushed (not on main-branch pushes or manual dispatch)
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && 
+        startsWith(github.ref, 'refs/tags/v') &&
+        false
     runs-on: ubuntu-latest
 
     steps:
