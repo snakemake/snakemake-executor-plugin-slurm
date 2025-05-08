@@ -1,5 +1,5 @@
 # .github/workflows/release.yml
-name: Bump & Publish
+name: PyPI Release
 
 on:
   push:
