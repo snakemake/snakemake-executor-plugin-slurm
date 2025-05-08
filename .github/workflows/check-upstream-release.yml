@@ -180,15 +180,19 @@ jobs:
         if: steps.create-branch.outputs.has-changes == 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_DEBUG: api
+          GH_TRACE: 1
         run: |
           echo "Waiting briefly to ensure GitHub registers the pushed branch..."
               sleep 15
 
           gh pr create \
+            --repo harvardinformatics/snakemake-executor-plugin-cannon \
             --base main \
-            --head ${{ github.repository_owner }}:${{ env.BRANCH }} \
+            --head harvardinformatics:${{ env.BRANCH }} \
             --title "Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}" \
-            --body "Auto-created sync PR for upstream version v${{ needs.check-release.outputs.upstream-version }}"
+            --body "Auto-created sync PR for upstream version v${{ needs.check-release.outputs.upstream-version }}" \
+            --dry-run
 
       - name: Skip info (no commit to push)
         if: ${{ steps.create-branch.outputs.has-changes != 'true' }}
