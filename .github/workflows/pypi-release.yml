@@ -45,7 +45,7 @@ jobs:
             NEXT=1
           fi
           NEW="${UPSTREAM}.post${NEXT}"
-          #poetry version "$NEW"
+          poetry version "$NEW"
           echo "New version: $NEW"
           echo "new_version=$NEW" >> "$GITHUB_OUTPUT"
 
@@ -53,7 +53,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -am "Bump version to ${{ steps.bump.outputs.new_version }}"
+          git commit -am "Version ${{ steps.bump.outputs.new_version }}"
 
       - name: Tag release
         run: |
