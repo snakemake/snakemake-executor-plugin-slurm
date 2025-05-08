@@ -1,7 +1,13 @@
 [tool.poetry]
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< mine.py
 name = "snakemake-executor-plugin-cannon"
 version = "1.2.1.post1"
 description = "A Snakemake executor plugin for submitting jobs to the Harvard Cannon cluster."
+==============================
+name = "snakemake-executor-plugin-slurm"
+version = "1.2.2"
+description = "A Snakemake executor plugin for submitting jobs to a SLURM cluster."
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> upstream.py
 authors = [
     "Christian Meesters <meesters@uni-mainz.de>",
     "David Lähnemann <david.laehnemann@dkfz-heidelberg.de>",

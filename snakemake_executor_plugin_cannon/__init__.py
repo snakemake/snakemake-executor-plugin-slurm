@@ -773,7 +773,7 @@ We leave it to SLURM to resume your job(s)"""
         """
         tests whether the given account is registered, raises an error, if not
         """
-        cmd = "sshare -U --format Account --noheader"
+        cmd = "sshare -U --format Account%256 --noheader"
         try:
             accounts = subprocess.check_output(
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
