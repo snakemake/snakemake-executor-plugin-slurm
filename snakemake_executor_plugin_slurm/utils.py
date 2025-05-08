@@ -140,7 +140,9 @@ colors = {
 }
 
 
-def colorize_message(level, message):
+def colorize_message(level, *message):
     """Colorize a message based on the log level."""
     color = colors.get(level.upper(), WHITE)
+    # concatenate multi string messages
+    message = " ".join(_ for _ in message)
     return f"{COLOR_SEQ % (30 + color)}{message}{RESET_SEQ}"
