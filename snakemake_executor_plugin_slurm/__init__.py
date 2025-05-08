@@ -16,6 +16,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import List, Generator, Optional
 import uuid
+
+import pandas as pd
+
 from snakemake_interface_executor_plugins.executors.base import SubmittedJobInfo
 from snakemake_interface_executor_plugins.executors.remote import RemoteExecutor
 from snakemake_interface_executor_plugins.settings import (
@@ -27,8 +30,15 @@ from snakemake_interface_executor_plugins.jobs import (
 )
 from snakemake_interface_common.exceptions import WorkflowError
 
-from .utils import delete_slurm_environment, delete_empty_dirs, set_gres_string
+from .utils import (
+    delete_slurm_environment,
+    delete_empty_dirs,
+    set_gres_string,
+    colorize_message,
+)
+from .efficiency_report import time_to_seconds, parse_maxrss, parse_reqmem
 from .submit_string import get_submit_command
+import sys
 
 
 @dataclass
@@ -106,6 +116,15 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
+    efficiency_report: bool = field(
+        default=False,
+        metadata={
+            "help": "Generate an efficiency report at the end of the workflow. "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
 
 
 # Required:
@@ -150,6 +169,9 @@ class Executor(RemoteExecutor):
             else Path(".snakemake/slurm_logs").resolve()
         )
         atexit.register(self.clean_old_logs)
+        if self.workflow.executor_settings.efficiency_report:
+            # Register the function to be called at exit
+            atexit.register(self.fetch_sacct_data)
 
     def clean_old_logs(self) -> None:
         """Delete files older than specified age from the SLURM log directory."""
@@ -160,7 +182,11 @@ class Executor(RemoteExecutor):
             return
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
-        self.logger.info(f"Cleaning up log files older than {age_cutoff} day(s)")
+        print(
+            colorize_message(
+                "info", f"Cleaning up log files older than {age_cutoff} day(s)."
+            )
+        )
         for path in self.slurm_logdir.rglob("*.log"):
             if path.is_file():
                 try:
@@ -168,12 +194,21 @@ class Executor(RemoteExecutor):
                     if file_age > cutoff_secs:
                         path.unlink()
                 except (OSError, FileNotFoundError) as e:
-                    self.logger.warning(f"Could not delete logfile {path}: {e}")
+                    print(
+                        colorize_message(
+                            "error", f"Could not delete logfile {path}: {e}"
+                        ),
+                        file=sys.stderr,
+                    )
         # we need a 2nd iteration to remove putatively empty directories
         try:
             delete_empty_dirs(self.slurm_logdir)
         except (OSError, FileNotFoundError) as e:
-            self.logger.warning(f"Could not delete empty directory {path}: {e}")
+            print(
+                colorize_message(
+                    "warning", f"Could not delete empty directory {path}: {e}"
+                )
+            )
 
     def warn_on_jobcontext(self, done=None):
         if not done:
@@ -737,3 +772,120 @@ We leave it to SLURM to resume your job(s)"""
                 "Please consult the documentation if you are unsure how to "
                 "query the status of your jobs."
             )
+
+    def fetch_sacct_data(self, efficiency_threshold=0.8):
+        """Fetch sacct job data for a Snakemake workflow and compute efficiency metrics."""
+
+        cmd = [
+            "sacct",
+            f"--name={self.run_uuid}",
+            "--format=JobID,JobName,Comment,Elapsed,TotalCPU,NNodes,NCPUS,MaxRSS,ReqMem",
+            "--parsable2",
+            "--noheader",
+        ]
+
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            lines = result.stdout.strip().split("\n")
+        except subprocess.CalledProcessError:
+            print(
+                colorize_message(
+                    "error",
+                    f"Error: Failed to retrieve job data for workflow ({self.run_uuid}).",
+                )
+            )
+            return None
+
+        # Convert to DataFrame
+        df = pd.DataFrame(
+            (l.split("|") for l in lines),
+            columns=[
+                "JobID",
+                "JobName",
+                "Comment",
+                "Elapsed",
+                "TotalCPU",
+                "NNodes",
+                "NCPUS",
+                "MaxRSS",
+                "ReqMem",
+            ],
+        )
+
+        # If the "Comment" column is empty,
+        # a) delete the column
+        # b) issue a warning
+        if df["Comment"].isnull().all():
+            print(
+                colorize_message(
+                    "warning",
+                    f"Warning: No comments found for workflow {self.run_uuid}. "
+                    "This field is used to store the rule name. "
+                    "Please ensure that the 'comment' field is set "
+                    "for your cluster. Administrators can set this up in the "
+                    "SLURM configuration.",
+                )
+            )
+            df.drop(columns=["Comment"], inplace=True)
+            # remember, that the comment column is not available
+            nocomment = True
+        # else: rename the column to 'RuleName'
+        else:
+            df.rename(columns={"Comment": "RuleName"}, inplace=True)
+            nocomment = False
+        # Convert types
+        df["NNodes"] = pd.to_numeric(df["NNodes"], errors="coerce")
+        df["NCPUS"] = pd.to_numeric(df["NCPUS"], errors="coerce")
+
+        # Convert time fields
+        df["Elapsed_sec"] = df["Elapsed"].apply(time_to_seconds)
+        df["TotalCPU_sec"] = df["TotalCPU"].apply(time_to_seconds)
+
+        # Compute CPU efficiency
+        df["CPU Efficiency (%)"] = (
+            df["TotalCPU_sec"] / (df["Elapsed_sec"] * df["NCPUS"])
+        ) * 100
+        df["CPU Efficiency (%)"] = df["CPU Efficiency (%)"].fillna(0).round(2)
+
+        # Convert MaxRSS
+        df["MaxRSS_MB"] = df["MaxRSS"].apply(parse_maxrss)
+
+        # Convert ReqMem and calculate memory efficiency
+        df["RequestedMem_MB"] = df["ReqMem"].apply(parse_reqmem)
+        df["Memory Usage (%)"] = (df["MaxRSS_MB"] / df["RequestedMem_MB"]) * 100
+        df["Memory Usage (%)"] = df["Memory Usage (%)"].fillna(0).round(2)
+
+        # Drop all rows containing "batch" or "extern" as job names
+        df = df[~df["JobName"].str.contains("batch|extern")]
+
+        # Log warnings for low efficiency
+        for _, row in df.iterrows():
+            if row["CPU Efficiency (%)"] < efficiency_threshold:
+                if nocomment:
+                    print(
+                        colorize_message(
+                            "warning",
+                            f"Job {row['JobID']} ({row['JobName']}) has low CPU efficiency: {row['CPU Efficiency (%)']}%.",
+                        )
+                    )
+                else:
+                    # if the comment column is available, we can use it to
+                    # identify the rule name
+                    print(
+                        colorize_message(
+                            "warning",
+                            f"Job {row['JobID']} for rule '{row['RuleName']}' ({row['JobName']}) has low CPU efficiency: {row['CPU Efficiency (%)']}%.",
+                        )
+                    )
+        logfile = f"efficiency_report_{self.run_uuid}.log"
+        # we will store the efficiency report in the logdir
+        logfile = self.slurm_logdir / logfile
+        df.to_csv(logfile)
+
+        # write out the efficiency report at normal verbosity in any case
+        print(
+            colorize_message(
+                "info",
+                f"Efficiency report for workflow {self.run_uuid} saved to {logfile}",
+            )
+        )
