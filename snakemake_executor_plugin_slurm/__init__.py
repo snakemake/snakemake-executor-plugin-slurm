@@ -765,23 +765,27 @@ We leave it to SLURM to resume your job(s)"""
         jobname = re.compile(r"--job-name[=?|\s+]|-J\s?")
         if re.search(jobname, job.resources.slurm_extra):
             raise WorkflowError(
-                "The --job-name option is not allowed in the 'slurm_extra' "
-                "parameter. The job name is set by snakemake and must not be "
-                "overwritten. It is internally used to check the stati of the "
-                "all submitted jobs by this workflow."
+                "The --job-name option is not allowed in the 'slurm_extra' parameter. "
+                "The job name is set by snakemake and must not be overwritten. "
+                "It is internally used to check the stati of the all submitted jobs "
+                "by this workflow."
                 "Please consult the documentation if you are unsure how to "
                 "query the status of your jobs."
             )
 
     def fetch_sacct_data(self, efficiency_threshold=0.8):
-        """Fetch sacct job data for a Snakemake workflow and compute efficiency metrics."""
+        """
+        Fetch sacct job data for a Snakemake workflow
+        and compute efficiency metrics.
+        """
 
         cmd = [
-            "sacct",
-            f"--name={self.run_uuid}",
-            "--format=JobID,JobName,Comment,Elapsed,TotalCPU,NNodes,NCPUS,MaxRSS,ReqMem",
-            "--parsable2",
-            "--noheader",
+            "sacct ",
+            f" --name={self.run_uuid}",
+            " --format=JobID,JobName,Comment,Elapsed,TotalCPU,"
+            "NNodes,NCPUS,MaxRSS,ReqMem",
+            " --parsable2",
+            " --noheader",
         ]
 
         try:
@@ -791,14 +795,15 @@ We leave it to SLURM to resume your job(s)"""
             print(
                 colorize_message(
                     "error",
-                    f"Error: Failed to retrieve job data for workflow ({self.run_uuid}).",
+                    "Error: Failed to retrieve job data for workflow",
+                    f" ({self.run_uuid}).",
                 )
             )
             return None
 
         # Convert to DataFrame
         df = pd.DataFrame(
-            (l.split("|") for l in lines),
+            (line.split("|") for line in lines),
             columns=[
                 "JobID",
                 "JobName",
@@ -819,10 +824,10 @@ We leave it to SLURM to resume your job(s)"""
             print(
                 colorize_message(
                     "warning",
-                    f"Warning: No comments found for workflow {self.run_uuid}. "
-                    "This field is used to store the rule name. "
-                    "Please ensure that the 'comment' field is set "
-                    "for your cluster. Administrators can set this up in the "
+                    f"Warning: No comments found for workflow {self.run_uuid}.",
+                    "This field is used to store the rule name.",
+                    "Please ensure that the 'comment' field is set",
+                    "for your cluster. Administrators can set this up in the",
                     "SLURM configuration.",
                 )
             )
@@ -865,7 +870,8 @@ We leave it to SLURM to resume your job(s)"""
                     print(
                         colorize_message(
                             "warning",
-                            f"Job {row['JobID']} ({row['JobName']}) has low CPU efficiency: {row['CPU Efficiency (%)']}%.",
+                            f"Job {row['JobID']} ({row['JobName']})",
+                            f"has low CPU efficiency: {row['CPU Efficiency (%)']}%.",
                         )
                     )
                 else:
@@ -874,7 +880,9 @@ We leave it to SLURM to resume your job(s)"""
                     print(
                         colorize_message(
                             "warning",
-                            f"Job {row['JobID']} for rule '{row['RuleName']}' ({row['JobName']}) has low CPU efficiency: {row['CPU Efficiency (%)']}%.",
+                            f"Job {row['JobID']} for rule '{row['RuleName']}'",
+                            f"({row['JobName']}) has low CPU efficiency:"
+                            f"{row['CPU Efficiency (%)']}%.",
                         )
                     )
         logfile = f"efficiency_report_{self.run_uuid}.log"
