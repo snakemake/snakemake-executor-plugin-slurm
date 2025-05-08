@@ -200,7 +200,7 @@ jobs:
             --repo harvardinformatics/snakemake-executor-plugin-cannon \
             --base main \
             --head harvardinformatics:${{ env.BRANCH }} \
-            --title "auto-sync: upstream release v${{ needs.check-release.outputs.upstream-version }}" \
+            --title "autosync: upstream release v${{ needs.check-release.outputs.upstream-version }}" \
             --body-file pr_body.md \
             --label "automated" \
             --label "upstream-sync" \
