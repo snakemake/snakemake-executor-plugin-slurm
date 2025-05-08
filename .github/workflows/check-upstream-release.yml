@@ -179,7 +179,7 @@ jobs:
       - name: Create PR
         if: steps.create-branch.outputs.has-changes == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           echo "Waiting briefly to ensure GitHub registers the pushed branch..."
               sleep 15
