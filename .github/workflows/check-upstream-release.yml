@@ -143,9 +143,9 @@ jobs:
             fi
 
             # Check if the merge changed the file
-            if ! diff -q "$DEST" "${TMP_MINE}.orig" >/dev/null; then
-              echo "::notice:: Detected changes in $DEST"
-            fi
+            #if ! diff -q "$DEST" "${TMP_MINE}.orig" >/dev/null; then
+            #  echo "::notice:: Detected changes in $DEST"
+            #fi
 
             # Clean up temp files
             rm -f "$TMP_BASE" "$TMP_THEIRS" "$TMP_MINE"
@@ -201,7 +201,7 @@ jobs:
             --base main \
             --head harvardinformatics:${{ env.BRANCH }} \
             --title "auto-sync: upstream release v${{ needs.check-release.outputs.upstream-version }}" \
-            --body-file pr_body.md
+            --body-file pr_body.md \
             --label "automated" \
             --label "upstream-sync" \
             --reviewer gwct
