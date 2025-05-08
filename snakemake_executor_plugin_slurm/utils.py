@@ -58,6 +58,9 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     gres_re = re.compile(r"^[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?:\d+$")
     # gpu model arguments can be of type "string"
     gpu_model_re = re.compile(r"^[a-zA-Z0-9_]+$")
+    # any arguments should not start and end with ticks or
+    # quotation marks:
+    string_check = re.compile(r"^[^'\"].*[^'\"]$")
     # The Snakemake resources can be only be of type "int",
     # hence no further regex is needed.
 
@@ -81,20 +84,36 @@ def set_gres_string(job: JobExecutorInterface) -> str:
         # Validate GRES format (e.g., "gpu:1", "gpu:tesla:2")
         gres = job.resources.gres
         if not gres_re.match(gres):
-            raise WorkflowError(
-                f"Invalid GRES format: {gres}. Expected format: "
-                "'<name>:<number>' or '<name>:<type>:<number>' "
-                "(e.g., 'gpu:1' or 'gpu:tesla:2')"
-            )
+            if not string_check.match(gres):
+                raise WorkflowError(
+                    "GRES format should not be a nested string (start "
+                    "and end with ticks or quotation marks). "
+                    "Expected format: "
+                    "'<name>:<number>' or '<name>:<type>:<number>' "
+                    "(e.g., 'gpu:1' or 'gpu:tesla:2')"
+                )
+            else:
+                raise WorkflowError(
+                    f"Invalid GRES format: {gres}. Expected format: "
+                    "'<name>:<number>' or '<name>:<type>:<number>' "
+                    "(e.g., 'gpu:1' or 'gpu:tesla:2')"
+                )
         return f" --gres={job.resources.gres}"
 
     if gpu_model and gpu_string:
         # validate GPU model format
         if not gpu_model_re.match(gpu_model):
-            raise WorkflowError(
-                f"Invalid GPU model format: {gpu_model}."
-                " Expected format: '<name>' (e.g., 'tesla')"
-            )
+            if not string_check.match(gpu_model):
+                raise WorkflowError(
+                    "GPU model format should not be a nested string (start "
+                    "and end with ticks or quotation marks). "
+                    "Expected format: '<name>' (e.g., 'tesla')"
+                )
+            else:
+                raise WorkflowError(
+                    f"Invalid GPU model format: {gpu_model}."
+                    " Expected format: '<name>' (e.g., 'tesla')"
+                )
         return f" --gpus={gpu_model}:{gpu_string}"
     elif gpu_model and not gpu_string:
         raise WorkflowError("GPU model is set, but no GPU number is given")
