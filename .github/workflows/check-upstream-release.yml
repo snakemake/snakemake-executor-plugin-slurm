@@ -179,7 +179,7 @@ jobs:
       - name: Create PR
         if: steps.create-branch.outputs.has-changes == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Waiting briefly to ensure GitHub registers the pushed branch..."
               sleep 15
@@ -189,7 +189,6 @@ jobs:
             --head ${{ github.repository_owner }}:${{ env.BRANCH }} \
             --title "Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}" \
             --body "Auto-created sync PR for upstream version v${{ needs.check-release.outputs.upstream-version }}"
-
 
       - name: Skip info (no commit to push)
         if: ${{ steps.create-branch.outputs.has-changes != 'true' }}
