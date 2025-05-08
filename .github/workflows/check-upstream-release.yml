@@ -171,21 +171,25 @@ jobs:
 
       - name: Push sync branch
         if: steps.create-branch.outputs.has-changes == 'true'
-        run: git push origin ${{ env.BRANCH }}
+        run: |
+          git config --global user.name  "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git push --set-upstream origin ${{ env.BRANCH }}
 
       - name: Create PR
         if: steps.create-branch.outputs.has-changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           echo "Waiting briefly to ensure GitHub registers the pushed branch..."
               sleep 15
 
           gh pr create \
             --base main \
-            --head ${{ env.BRANCH }} \
+            --head ${{ github.repository_owner }}:${{ env.BRANCH }} \
             --title "Sync with upstream release v${{ needs.check-release.outputs.upstream-version }}" \
             --body "Auto-created sync PR for upstream version v${{ needs.check-release.outputs.upstream-version }}"
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+
 
       - name: Skip info (no commit to push)
         if: ${{ steps.create-branch.outputs.has-changes != 'true' }}
