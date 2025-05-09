@@ -81,16 +81,16 @@ jobs:
 
           if [ -n "$existing_title" ] && [ "$existing_title" = "$PR_TITLE" ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "::notice:: A sync PR already exists: '$existing_title'"
+            #echo "::notice:: A sync PR already exists: '$existing_title'"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "::notice:: No matching sync PR found; proceeding."
+            echo "::notice:: No matching sync PR found; proceeding with merge and PR creation."
           fi
 
       - name: Skip sync (PR exists)
         if: steps.pr-check.outputs.exists == 'true'
         run: |
-          echo "Skipping: a sync PR titled '${{ env.PR_TITLE }}' is already open on branch '${{ env.BRANCH}}'."
+          echo "::notice:: A sync PR titled '${{ env.PR_TITLE }}' is already open on branch '${{ env.BRANCH}}'. Skipping sync."
 
 
       - name: Create sync branch with 3-way merge
@@ -237,8 +237,7 @@ jobs:
             --body-file pr_body.md \
             --label "automated" \
             --label "upstream-sync" \
-            --reviewer gwct \
-            --dry-run
+            --reviewer gwct
 
       - name: Skip info (no commit to push)
         if: steps.pr-check.outputs.exists == 'false' && steps.create-branch.outputs.has-changes != 'true'
