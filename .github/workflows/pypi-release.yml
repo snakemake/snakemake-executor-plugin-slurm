@@ -11,15 +11,17 @@ on:
 
 jobs:
   bump-and-tag:
-    name: Bump version & Tag
+    name: Bump version & (optionally) Tag
     # Only run on:
     #  • manual dispatch, OR
-    #  • pushes to main that have “[bump]” in the commit message
+    #  • pushes to main that have “[bump-]” in the commit message
+    #  • use “[bump-local]” to just bump the version number without tagging and releasing
+    #  • use “[bump-release]” in the commit message to create a tag and trigger a release to pypi
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' &&
        startsWith(github.ref, 'refs/heads/main') &&
-       contains(github.event.head_commit.message, '[bump]'))
+       contains(github.event.head_commit.message, '[bump-]'))
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -34,6 +36,17 @@ jobs:
           python-version: '3.x'
       - run: pip install poetry
 
+      - name: Detect bump mode
+        id: mode
+        run: |
+          MSG="${{ github.event.head_commit.message }}"
+          if [[ "$MSG" == *"[bump-release]"* ]]; then
+            echo "MODE=release" >> "$GITHUB_ENV"
+          else
+            echo "MODE=local"   >> "$GITHUB_ENV"
+          fi
+          echo "::notice:: Detected bump mode: $MODE"
+
       - name: Compute next post-release version
         id: bump
         run: |
@@ -46,8 +59,8 @@ jobs:
           fi
           NEW="${UPSTREAM}.post${NEXT}"
           poetry version "$NEW"
-          echo "New version: $NEW"
           echo "new_version=$NEW" >> "$GITHUB_OUTPUT"
+          echo "::notice:: Will bump to: $NEW"
 
       - name: Commit bumped version
         run: |
@@ -55,17 +68,20 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -am "Version ${{ steps.bump.outputs.new_version }}"
 
-      - name: Tag release
+      - name: Tag release (only in release mode)
+        if: env.MODE == 'release'
         run: |
           echo "Tagging v${{ steps.bump.outputs.new_version }} 
           git tag "v${{ steps.bump.outputs.new_version }}"
 
-      - name: Push commit & tag
+      - name: Push commit (always) and tag (only in release mode)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git push origin HEAD
-          git push origin "v${{ steps.bump.outputs.new_version }}"
+          if [ "${MODE}" = "release" ]; then
+            git push origin "v${{ steps.bump.outputs.new_version }}"
+          fi
 
   publish:
     name: Build & Publish to PyPI
