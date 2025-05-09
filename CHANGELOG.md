@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.1...v1.2.2) (2025-05-08)
+
+
+### Bug Fixes
+
+* checking for double nested strings in gres and gpu settings ([#251](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/251)) ([a7eac3a](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/a7eac3a0aeff74a83ab06578c0528c7473c92afa))
+* Increase account charecter limit ([#260](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/260)) ([1264de3](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/1264de3123ac638132ba76ffbf5187ff500a9a9b))
+
 ## [1.2.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.0...v1.2.1) (2025-04-11)
 
 

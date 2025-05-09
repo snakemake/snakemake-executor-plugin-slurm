@@ -215,6 +215,42 @@ class TestGresString:
             ):
                 set_gres_string(job)
 
+    def test_nested_string_raise(self, mock_job):
+        """Test error case when gres is a nested string."""
+        job = mock_job(gres="'gpu:1'")
+        # Patch subprocess.Popen to simulate job submission
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to simulate successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+            # Ensure the error is raised when both GRES and GPU are set
+            with pytest.raises(
+                WorkflowError,
+                match="GRES format should not be a nested string",
+            ):
+                set_gres_string(job)
+
+    def test_gpu_model_nested_string_raise(self, mock_job):
+        """Test error case when gpu_model is a nested string."""
+        job = mock_job(gpu_model="'tesla'", gpu="2")
+        # Patch subprocess.Popen to simulate job submission
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to simulate successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+            # Ensure the error is raised when both GRES and GPU are set
+            with pytest.raises(
+                WorkflowError,
+                match="GPU model format should not be a nested string",
+            ):
+                set_gres_string(job)
+
 
 class TestSLURMResources(TestWorkflows):
     """
