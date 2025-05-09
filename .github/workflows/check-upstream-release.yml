@@ -90,7 +90,7 @@ jobs:
       - name: Skip sync (PR exists)
         if: steps.pr-check.outputs.exists == 'true'
         run: |
-          run: echo "Skipping: a sync PR titled '${{ env.PR_TITLE }}' is already open on branch '${{ env.BRANCH}}'."
+          echo "Skipping: a sync PR titled '${{ env.PR_TITLE }}' is already open on branch '${{ env.BRANCH}}'."
 
 
       - name: Create sync branch with 3-way merge
