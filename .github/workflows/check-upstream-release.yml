@@ -61,30 +61,36 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Define sync branch name
+      - name: Define sync branch name and PR title
         id: branch
         run: |
           echo "BRANCH=sync-upstream-$(date +'%Y%m%d')" >> "$GITHUB_ENV"
+          echo "PR_TITLE=autosync: upstream release v${{ needs.check-release.outputs.upstream-version }}" >> "$GITHUB_ENV"
 
       - name: Check for existing sync PR
         id: pr-check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if gh pr view \
-              --repo harvardinformatics/snakemake-executor-plugin-cannon \
-              --head harvardinformatics:${{ env.BRANCH }} \
-              --json number \
-              > /dev/null 2>&1; then
+          set -euo pipefail
+
+          existing_title=$(gh pr view "$BRANCH" \
+            --repo harvardinformatics/snakemake-executor-plugin-cannon \
+            --json title \
+            -q .title 2>/dev/null || echo "")
+
+          if [ -n "$existing_title" ] && [ "$existing_title" = "$PR_TITLE" ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "::notice:: A sync PR already exists: '$existing_title'"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice:: No matching sync PR found; proceeding."
           fi
 
       - name: Skip sync (PR exists)
         if: steps.pr-check.outputs.exists == 'true'
         run: |
-          echo "A sync PR for branch '${{ env.BRANCH }}' is already open; skipping merge and PR creation."
+          run: echo "Skipping: a sync PR titled '${{ env.PR_TITLE }}' is already open on branch '${{ env.BRANCH}}'."
 
 
       - name: Create sync branch with 3-way merge
@@ -227,7 +233,7 @@ jobs:
             --repo harvardinformatics/snakemake-executor-plugin-cannon \
             --base main \
             --head harvardinformatics:${{ env.BRANCH }} \
-            --title "autosync: upstream release v${{ needs.check-release.outputs.upstream-version }}" \
+            --title "${{ env.PR_TITLE }}" \
             --body-file pr_body.md \
             --label "automated" \
             --label "upstream-sync" \
