@@ -36,7 +36,7 @@ While this plugin does automatic partition selection, the user is still responsi
 
 See the [profile setup page]() for mor information. 
 
-An example profile can be found at [tests/cannon-test-profile/config.yaml]()
+An example profile can be found at [`tests/cannon-test-profile/config.yaml`]()
 
 ## Features
 
