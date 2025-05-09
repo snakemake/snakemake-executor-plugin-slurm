@@ -47,7 +47,7 @@ Currently, on the Cannon cluster, this plugin only supports GPU specification vi
 
 ## Example profile
 
-As a template, you can use the [`tests/cannon-test-profile/config.yaml`](), which will need to be modified with the necessary changes for the workflow that you want to run.
+As a template, you can use the [`tests/cannon-test-profile/config.yaml`](https://github.com/harvardinformatics/snakemake-executor-plugin-cannon/blob/main/tests/cannon-test-profile/config.yaml), which will need to be modified with the necessary changes for the workflow that you want to run.
 
 
 ## Specifying the executor in the profile

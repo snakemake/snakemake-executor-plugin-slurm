@@ -24,7 +24,7 @@ To use the executor with Snakemake, either specify it in the command line as:
 snakemake -e cannon ...
 ```
 
-Or add it to your [profile]():
+Or add it to your [profile](https://github.com/harvardinformatics/snakemake-executor-plugin-cannon/blob/main/docs/profile.md):
 
 ```YAML
 executor: cannon
@@ -34,9 +34,9 @@ executor: cannon
 
 While this plugin does automatic partition selection, the user is still responsible for specifying other resources for rules in their workflow. This is usually done through a cluster **profile**, but this may differ based on your workflow. 
 
-See the [profile setup page]() for mor information. 
+See the [profile setup page](https://github.com/harvardinformatics/snakemake-executor-plugin-cannon/blob/main/docs/profile.md) for mor information. 
 
-An example profile can be found at [`tests/cannon-test-profile/config.yaml`]()
+An example profile can be found at [`tests/cannon-test-profile/config.yaml`](https://github.com/harvardinformatics/snakemake-executor-plugin-cannon/blob/main/tests/cannon-test-profile/config.yaml)
 
 ## Features
 

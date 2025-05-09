@@ -1,6 +1,6 @@
 ### How this Plugin works
 
-In this plugin, Snakemake submits itself as a job script when operating on an HPC cluster using the SLURM batch system.
+This plugin is based off of the general SLURM plugin, but with added logic for automatic partition selection specifically on the Cannon cluster at Harvard University. With this plugin, Snakemake submits itself as a job script when operating on the Cannon cluster. 
 Consequently, the SLURM log file will duplicate the output of the corresponding rule.
 To avoid redundancy, the plugin deletes the SLURM log file for successful jobs, relying instead on the rule-specific logs.
 
@@ -18,24 +18,34 @@ Additionally, we recommend installing the `snakemake-storage-plugin-fs` for auto
 We welcome bug reports and feature requests!
 Please report issues specific to this plugin [in the plugin's GitHub repository](https://github.com/harvardinformatics/snakemake-executor-plugin-cannon/issues).
 For other concerns, refer to the [Snakemake main repository](https://github.com/snakemake/snakemake/issues) or the relevant Snakemake plugin repository.
-Cluster-related issues should be directed to your cluster administrator.
+Cluster-related issues should be directed to [FAS Research Computing](https://www.rc.fas.harvard.edu/) or [FAS Informatics](https://informatics.fas.harvard.edu/).
 
-### Specifying Account and Partition
+### Partition selection
 
-In SLURM, an **account** is used for resource accounting and allocation, while a **partition** designates a subset of compute nodes grouped for specific purposes, such as high-memory or GPU tasks.
+On a computinng cluster, a **partition** designates a subset of compute nodes grouped for specific purposes, such as high-memory or GPU tasks.
 
-These resources are typically omitted from Snakemake workflows to maintain platform independence, allowing the same workflow to run on different systems without modification.
+The Cannon plugin uses the provided resources (see below) to best place a job on a [partition on the cluster](https://docs.rc.fas.harvard.edu/kb/running-jobs/). Briefly, the plugin first checks if any GPUs are required and, if so, assigns the job to the *gpu* partition. Next, if the job requires a lot of memory, it will be assigned to one of the *bigmem* partitions. If the job requires many CPUs, it will be assigned to *intermediate* or *sapphire* depending on memory an runtime requirements. If the job doesn't exceed either the memory or CPU threshold, it will be put on the *shared* partition.
 
-To specify them at the command line, define them as default resources:
+If a partition for a particular rule is provided in the rule, the command line, or in the profile, that partition will be used regardless.
+
+After partition selection, the plugin does some checks to ensure the selected partition has the resources requested and will inform the user if not.
+
+### Specifying Account
+
+In SLURM, an **account** is used for resource accounting and allocation.
+
+This resource is typically omitted from Snakemake workflows to maintain platform independence, allowing the same workflow to run on different systems without modification.
+
+To specify it at the command line, define it as default resources:
 
 ``` console
-$ snakemake --executor cannon --default-resources slurm_account=<your SLURM account> slurm_partition=<your SLURM partition>
+$ snakemake --executor cannon --default-resources slurm_account=<your SLURM account>
 ```
 
 The plugin does its best to _guess_ your account. That might not be possible. Particularly, when dealing with several SLURM accounts, users ought to set them per workflow.
 Some clusters, however, have a pre-defined default per user and _do not_ allow users to set their account or partition. The plugin will always attempt to set an account. To override this behavior, the `--slurm-no-account` flag can be used.
 
-If individual rules require e.g. a different partition, you can override the default per rule:
+If individual rules require *e.g.* a different partition, you can override the default per rule:
 
 ``` console
 $ snakemake --executor cannon --default-resources slurm_account=<your SLURM account> slurm_partition=<your SLURM partition> --set-resources <somerule>:slurm_partition=<some other partition>
@@ -110,11 +120,72 @@ In this configuration:
 
 By utilizing a configuration profile, you can maintain a clean and platform-independent workflow definition while tailoring resource specifications to the requirements of your SLURM cluster environment.
 
+#### Cannon plugin profile example
+
+Because profiles may contain multiple files, the profile argument is passed a directory path. However, for resource specification, the file you need to create is `config.yaml`, in which you can specify the resources for the rules of your pipeline, *e.g.* for a workflow with rules named *a* and *b*:
+
+```YAML
+executor: cannon
+
+set-resources:
+  a:
+    slurm_partition: sapphire
+    mem: 5G
+    cpus_per_task: 1
+    runtime: 30m
+
+  b:
+    mem: 10G
+    cpus_per_task: 4
+    runtime: 2h
+    slurm_extra: "'--gres=gpu:2'"
+```
+
+Note that the `slurm_partition:` specification can be blank or omitted, as in rule *b*, since this plugin will select the partition for you based on the other resources provided. However, if `slurm_partition:` is provided with a value, as in rule *a*, that partition will be used.
+
+Any resource fields implemented in Snakemake are available to be used in the profile and with this plugin, but only memory (`mem:` or `mem_mb:` or `mem_gb`), `cpus_per_task:`, `runtime:`, and GPUs via `slurm_extra:` (see below) will affect partition selection. If fields are left blank, the plugin has default values to fall back on.
+
+In summary, the following resource flags (and default values) are available to be set in rules, with there being multiple ways to specify the amount of memory for a job.
+
+| Resources       | Default Value | Units                                    | 
+|-----------------|:-------------:|:----------------------------------------:|
+| `mem`           | 4G            | G (gigabyte), M (megabyte), T (terabyte) |
+| `mem_mb`        | 4000          | megabyte                                 |
+| `mem_gb`        | 4             | gigabyte                                 |
+| `runtime`       | 30m           | m (minutes), h (hours), d (days)         |
+| `cpus_per_task` | 1             |                                          |
+
+Note that only one of `mem`, `mem_gb`, and `mem_mb` should be set. If multiple are set, only one will be used with the order of precedence being `mem` > `mem_gb` > `mem_mb`.
+
+###### Setting GPUs
+
+Currently, on the Cannon cluster, this plugin only supports GPU specification via the `slurm_extra:` field. See your *b* above for an example requesting 2 GPUs.
+
+###### Example profile
+
+As a template, you can use the [`tests/cannon-test-profile/config.yaml`](https://github.com/harvardinformatics/snakemake-executor-plugin-cannon/blob/main/tests/cannon-test-profile/config.yaml), which will need to be modified with the necessary changes for the workflow that you want to run.
+
+
+###### Specifying the executor in the profile
+
+Note the first line of the profile:
+
+```YAML
+executor: cannon
+```
+
+This tells Snakemake which plugin to use to execute job submission. Alternatively, if this line is excluded from the profile, one could specify the plugin directly from the command line:
+
+```bash
+snakemake -e cannon ...
+```
+
+Either method is acceptable.
+
 ### MPI jobs
 
 Snakemake's SLURM executor supports the execution of MPI ([Message Passing Interface](https://en.wikipedia.org/wiki/Message_Passing_Interface)) jobs, facilitating parallel computations across multiple nodes.
 To effectively utilize MPI within a Snakemake workflow, it's recommended to use `srun` as the MPI launcher when operating in a SLURM environment.
-
 
 Here's an example of defining an MPI rule in a Snakefile:
 
