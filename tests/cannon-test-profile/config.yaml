@@ -1,3 +1,5 @@
+executor: cannon
+
 set-resources:
   a:
     slurm_partition: sapphire

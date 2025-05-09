@@ -3,11 +3,11 @@ name = "snakemake-executor-plugin-cannon"
 version = "1.2.1.post1"
 description = "A Snakemake executor plugin for submitting jobs to the Harvard Cannon cluster."
 authors = [
+    "Gregg Thomas <gthomas@fas.harvard.edu>",
+    "Noor Sohail <nsohail@hsph.harvard.edu>",
     "Christian Meesters <meesters@uni-mainz.de>",
     "David Lähnemann <david.laehnemann@dkfz-heidelberg.de>",
-    "Johannes Koester <johannes.koester@uni-due.de>",
-    "Gregg Thomas <gthomas@fas.harvard.edu>",
-    "Noor Sohail <nsohail@hsph.harvard.edu>"
+    "Johannes Koester <johannes.koester@uni-due.de>"
 ]
 readme = "README.md"
 license = "MIT"
