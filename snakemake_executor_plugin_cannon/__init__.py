@@ -28,8 +28,10 @@ from snakemake_interface_executor_plugins.jobs import (
 )
 from snakemake_interface_common.exceptions import WorkflowError
 
-from .utils import *
+from .utils import delete_slurm_environment, delete_empty_dirs, set_gres_string
 from .submit_string import get_submit_command
+
+from . import cannon as CANNON
 
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
@@ -146,8 +148,8 @@ class Executor(RemoteExecutor):
 
         # The --cannon-resources flag is set, so we print the resources and exit
         if self.workflow.executor_settings.resources:
-            self.logger.info(f"{format_cannon_resources()}");
-            sys.exit(0);
+            CANNON.format_cannon_resources(self.logger.info)
+            sys.exit(0)
         
         # run check whether we are running in a SLURM job context
         self.warn_on_jobcontext()
@@ -632,30 +634,21 @@ We leave it to SLURM to resume your job(s)"""
         else raises an error - implicetly.
         """
 
-        partitions = cannon_resources()
+        partitions = CANNON.get_cannon_partitions()
 
-
-        mem_mb, orig_mem = normalize_mem(job) # Uses default of 4005 
-        if orig_mem:
-            self.logger.warning(f"\nWARNING: requested mem {orig_mem}MB is too low; clamping to {mem_mb}MB\n")
+        mem_mb = CANNON.normalize_mem(job, self.logger) # Uses default of 4005 
         job.resources.mem_mb = mem_mb
+        # Parse memory, and reset the job.resources.mem_mb in case we did a conversion
         
         effective_cpus = job.resources.get("cpus_per_task", job.threads)
         if effective_cpus < job.threads:
-            self.logger.warning(f"\nWARNING: Potential oversubscription: {job.threads} threads > {job.resources.cpus_per_task} CPUs allocated.\n")
+            self.logger.warning(f"WARNING: Potential oversubscription: {job.threads} threads > {job.resources.cpus_per_task} CPUs allocated.")
+        # If no cpus_per_task is specified, use the number of threads (which defaults to 1)
 
         runtime = job.resources.get("runtime", 30)
 
-        # GPU detection
-        # slurm_extra = job.resources.get("slurm_extra")
-        # if slurm_extra:
-        #     num_gpu = parse_slurm_extra(slurm_extra);
-        # if job.resources.get("gres"):
-
-        # else:
-        #     num_gpu = job.resources.get("gpu", 0)
-
-        num_gpu = parse_num_gpus(job)
+        num_gpu = CANNON.parse_num_gpus(job, self.logger)
+        # Parse number of GPUs
 
         specified_resources = { "mem_mb" : mem_mb, "cpus_per_task": effective_cpus, "runtime": runtime, "gpus": num_gpu }
 
@@ -663,6 +656,7 @@ We leave it to SLURM to resume your job(s)"""
 
         partition = None
         if job.resources.get("slurm_partition"):
+            # If a partition is specified, use it, but also check if it is valid
             partition = job.resources["slurm_partition"]
             if partition not in partitions:
                 raise WorkflowError(
@@ -670,26 +664,27 @@ We leave it to SLURM to resume your job(s)"""
                     f"Available partitions are: {', '.join(partitions.keys())}"
                 )
 
+        
         elif num_gpu > 0:
+            # If no partition is specified, and GPUs are requested, use the GPU partition
             #print("Using GPU partition")
             partition = "gpu"
 
         else:
-            if mem_mb >= 1_000_000:
-                if runtime >= 4320:
+            # If no partition is specified, and no GPUs are requested, decide based on
+            # requested memory and CPU requirements and runtime
+            if mem_mb >= 990_000:
+                # High memory demand
+                if runtime >= 4320 and effective_cpus <= 64:
+                    # If runtime is long and cpus low, use bigmem_intermediate
                     partition = "bigmem_intermediate"  
                 else:
                     partition = "bigmem"
 
-            elif effective_cpus > 100:
+            elif effective_cpus > 64:
                 # High cpu demand, push to intermediate or sapphire
-                if runtime >= 4320:
-                    partition = "intermediate"
-                else:
-                    partition = "sapphire"
-
-            elif mem_mb >= 184_000:
-                if runtime >= 4320:
+                if runtime >= 4320 or mem_mb >= 184_000:
+                    # If runtime is long or memory high, use intermediate
                     partition = "intermediate"
                 else:
                     partition = "sapphire"
@@ -702,45 +697,9 @@ We leave it to SLURM to resume your job(s)"""
 
         ##########
 
-        # Print a table of the specified resources
-        header = f"\n{'Resource':<16}{'Requested':>12}"
-        separator = f"{'-'*16}{'-'*12}"
-        rows = [header, separator]
-        for resource, value in specified_resources.items():
-            rows.append(f"{resource:<16}{value:>12}")
-
-        # Add the selected partition to the table
-        rows.append(f"{'Partition':<16}{partition:>12}")
-
-        table_output = "\n".join(rows)
-        self.logger.info("Specified Resources:")
-        self.logger.info(table_output + "\n")
-        #print(dir(job.resources));
-        #print("Nodes:\t", job.resources.get("nodes"));
-
-        ##########
-
-        # Track which resources were violated
-        violations = []
-        for resource in ["mem_mb", "cpus_per_task", "runtime", "gpus"]:
-            requested = specified_resources.get(resource, 0)
-            allowed = partitions[partition].get(resource)
-            if isinstance(allowed, int) and requested > allowed:
-                violations.append((resource, requested, allowed))
-
-        if violations:
-            header = f"\n{'Resource':<16}{'Requested':>12}{'Allowed':>12}"
-            separator = f"{'-'*16}{'-'*12}{'-'*12}"
-            rows = [header, separator]
-            for resource, requested, allowed in violations:
-                rows.append(f"{resource:<16}{requested:>12}{allowed:>12}")
-
-            table_output = "\n".join(rows)
-
-            raise WorkflowError(
-                f"The requested resources exceed allowed limits for partition '{partition}':\n"
-                f"{table_output}\n"
-            )
+        # Print a summary of the requested resources, and check if any exceed those available
+        # on the specified partition. If so, raise an error.
+        CANNON.check_resources(specified_resources, partitions, partition, job.name, self.logger)
 
         ##########
 
