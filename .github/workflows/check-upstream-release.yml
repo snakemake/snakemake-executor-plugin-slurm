@@ -61,13 +61,37 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Define sync branch name
+        id: branch
+        run: |
+          echo "BRANCH=sync-upstream-$(date +'%Y%m%d')" >> "$GITHUB_ENV"
+
+      - name: Check for existing sync PR
+        id: pr-check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh pr view \
+              --repo harvardinformatics/snakemake-executor-plugin-cannon \
+              --head harvardinformatics:${{ env.BRANCH }} \
+              --json number \
+              > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip sync (PR exists)
+        if: steps.pr-check.outputs.exists == 'true'
+        run: |
+          echo "A sync PR for branch '${{ env.BRANCH }}' is already open; skipping merge and PR creation."
+
+
       - name: Create sync branch with 3-way merge
+        if: steps.pr-check.outputs.exists == 'false'
         id: create-branch
         run: |
           set -euo pipefail
-
-          BRANCH="sync-upstream-$(date +'%Y%m%d')"
-          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
 
           git switch -c "$BRANCH" origin/main
 
@@ -162,7 +186,7 @@ jobs:
           fi
 
       - name: Show working changes
-        if: steps.create-branch.outputs.has-changes == 'true'
+        if: steps.pr-check.outputs.exists == 'false' && steps.create-branch.outputs.has-changes == 'true'
         run: |
           echo "=== git status ==="
           git status
@@ -170,13 +194,14 @@ jobs:
           git diff origin/main
 
       - name: Push sync branch
-        if: steps.create-branch.outputs.has-changes == 'true'
+        if: steps.pr-check.outputs.exists == 'false' && steps.create-branch.outputs.has-changes == 'true'
         run: |
           git config --global user.name  "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git push --set-upstream origin ${{ env.BRANCH }}
 
       - name: Generate PR body file
+        if: steps.pr-check.outputs.exists == 'false' && steps.create-branch.outputs.has-changes == 'true'
         run: |
           cat <<EOF > pr_body.md
           #### Sync with upstream v${{ needs.check-release.outputs.upstream-version }}
@@ -189,7 +214,7 @@ jobs:
           EOF
 
       - name: Create PR
-        if: steps.create-branch.outputs.has-changes == 'true'
+        if: steps.pr-check.outputs.exists == 'false' && steps.create-branch.outputs.has-changes == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # GH_DEBUG: api
@@ -206,8 +231,9 @@ jobs:
             --body-file pr_body.md \
             --label "automated" \
             --label "upstream-sync" \
-            --reviewer gwct
+            --reviewer gwct \
+            --dry-run
 
       - name: Skip info (no commit to push)
-        if: ${{ steps.create-branch.outputs.has-changes != 'true' }}
+        if: steps.pr-check.outputs.exists == 'false' && steps.create-branch.outputs.has-changes != 'true'
         run: echo "No changes staged, nothing to push or show."
