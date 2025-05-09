@@ -1,21 +1,43 @@
 # Snakemake executor plugin: cannon
 
-This is a fork of the [SLURM executor plugin for Snakemake](https://github.com/snakemake/snakemake-executor-plugin-slurm) for the [Cannon cluster at Harvard University](https://docs.rc.fas.harvard.edu/kb/running-jobs/). This plugin performs automatic partition selection based on the resources specified in a given Snakemake rule. It also offers some error checking for partition selection.
+This is a fork of the [SLURM executor plugin for Snakemake](https://github.com/snakemake/snakemake-executor-plugin-slurm) for the [Cannon cluster at Harvard University](https://docs.rc.fas.harvard.edu/kb/running-jobs/). It has all the same features as the SLURM plugin, but performs automatic partition selection for the Cannon cluster based on the resources specified in a given Snakemake rule. It also offers some error checking for partition selection.
+
+## Installation
+
+The executor can be installed with either pip:
+
+```bash
+pip install snakemake-executor-plugin-cannon
+```
+
+Or conda/mamba:
+
+```bash
+mamba install snakemake-executor-plugin-cannon
+```
+
+## Specifying the executor
+
+To use the executor with Snakemake, either specify it in the command line as:
+
+```bash
+snakemake -e cannon ...
+```
+
+Or add it to your [profile]():
+
+```YAML
+executor: cannon
+```
 
 ## Setting up your profile
 
-As a template, you can use the `tests/profiles/cannon/config.yaml` which will need to be modified with the necessary changes for the workflow that you want to run.
+While this plugin does automatic partition selection, the user is still responsible for specifying other resources for rules in their workflow. This is usually done through a cluster **profile**, but this may differ based on your workflow. 
 
-## Example
+See the [profile setup page]() for mor information. 
 
-In order to test if this plugin works, we can run several small test slurm jobs with the following steps:
-
-1. Log onto the Cannon cluster
-2. Clone this repository
-3. Run: `pip install -e .` to install the plugin
-4. Navigate to the `test` folder and run: `snakemake -j 5 -e cannon --profile profiles/cannon/`
-
-These test scripts can also be used as a template for setting up profiles and rules that are compatible with this plugin.
+An example profile can be found at [`tests/cannon-test-profile/config.yaml`]()
 
 ## Features
-For documentation, see the [Snakemake plugin catalog](https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html).
+
+For documentation, see the [Snakemake plugin catalog](https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/cannon.html).
