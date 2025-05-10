@@ -12,19 +12,22 @@ on:
 jobs:
   bump-and-tag:
     name: Bump version & (optionally) Tag
-    # Only run on:
-    #  • manual dispatch, OR
-    #  • pushes to main that have “[bump-]” in the commit message
-    #  • use “[bump-local]” to just bump the version number without tagging and releasing
-    #  • use “[bump-release]” in the commit message to create a tag and trigger a release to pypi
+    # Only run on manual dispatch or [bump-*] pushes to main
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' &&
-       startsWith(github.ref, 'refs/heads/main') &&
-       contains(github.event.head_commit.message, '[bump'))
+      (
+        github.event_name == 'push' &&
+        startsWith(github.ref, 'refs/heads/main') &&
+        contains(github.event.head_commit.message, '[bump-')
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
+    # ← Add these outputs, pointing at your detect + bump steps below
+    outputs:
+      mode: ${{ steps.mode.outputs.mode }}
+      new_version: ${{ steps.bump.outputs.new_version }}
 
     steps:
       - name: Checkout
@@ -86,8 +89,8 @@ jobs:
 
   publish:
     name: Build & Publish to PyPI
-    # Only run when a tag is pushed (not on main-branch pushes or manual dispatch)
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: bump-and-tag
+    if: needs.bump-and-tag.outputs.mode == 'release'
     runs-on: ubuntu-latest
 
     steps:
