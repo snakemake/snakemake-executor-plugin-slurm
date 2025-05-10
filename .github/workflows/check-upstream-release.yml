@@ -1,4 +1,4 @@
-name: Check and Notify Upstream
+name: Check Upstream and Notify
 
 on:
   schedule:
