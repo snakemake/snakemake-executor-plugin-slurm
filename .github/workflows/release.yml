@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  publish:
+    name: Build & Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Ensure commit matches tag
+        run: |
+          echo "Tag: ${{ github.ref }}"
+          echo "Commit: $(git rev-parse HEAD)"
+          echo "Version in pyproject.toml:"
+          grep '^version' pyproject.toml || grep 'version = ' pyproject.toml
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install build tools
+        run: pip install build
+
+      - name: Build distributions
+        run: python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            **Release ${{ github.ref_name }}**
+
+            This release was auto-generated.
+          draft: false
+          prerelease: false
