@@ -76,28 +76,28 @@ jobs:
       - name: Generate issue body file
         if: steps.issue-check.outputs.issue_exists == '0'
         run: |
-          cat <<EOF > issue_body.md
-          #### Sync with upstream v${{ needs.check-release.outputs.upstream-version }}
+          cat <<EOF | sed 's/^ \{12\}//' > issue_body.md
+            #### Sync with upstream v${{ needs.check-release.outputs.upstream-version }}
 
-          This issue was auto-generated on detection of a new upstream version. Performe the following to manually sync:
+            This issue was auto-generated on detection of a new upstream version. Perform the following to manually sync:
 
-          ```bash
-          git fetch upstream
-          git checkout main
-          git merge upstream/main
-          #
-          # Resolve any conflicts, if necessary
-          #
-          git add -A
-          git commit -m "Merge remote-tracking branch 'upstream/main'"
-          git push origin main
-          ```
+            ```bash
+            git fetch upstream
+            git checkout main
+            git merge upstream/main
+            #
+            # Resolve any conflicts, if necessary
+            #
+            git add -A
+            git commit -m "Merge remote-tracking branch 'upstream/main'"
+            git push origin main
+            ```
 
-          Or using VSCode's command palette (Ctrl+Shift+P):
+            Or using VS Code's command palette (Ctrl+Shift+P):
 
-          1. Git: Fetch from… → choose upstream.
-          2. Git: Merge Branch… → pick upstream/main.
-          3. If there are conflicts, VS Code will show them in the editor; resolve, then commit and push. 
+            1. Git: Fetch from… → choose upstream.
+            2. Git: Merge Branch… → pick upstream/main.
+            3. If there are conflicts, VS Code will show them in the editor; resolve, then commit and push. 
           EOF
 
       - name: Create issue
