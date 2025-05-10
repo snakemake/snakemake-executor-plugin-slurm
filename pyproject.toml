@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "snakemake-executor-plugin-slurm"
-version = "1.2.2.post1"
-description = "A Snakemake executor plugin for submitting jobs to a SLURM cluster."
+name = "snakemake-executor-plugin-cannon"
+version = "1.2.2.post0"
+description = "A Snakemake executor plugin for submitting jobs to the Cannon cluster at Harvard University."
 authors = [
     "Gregg Thomas <gthomas@fas.harvard.edu>",
     "Noor Sohail <nsohail@hsph.harvard.edu>",
