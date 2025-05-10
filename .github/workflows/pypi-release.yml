@@ -48,6 +48,7 @@ jobs:
           else
             MODE=local
           fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
           echo "MODE=$MODE" >> "$GITHUB_ENV"
           echo "::notice:: Detected bump mode: $MODE"
 
