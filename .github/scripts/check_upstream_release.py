@@ -54,19 +54,19 @@ def main():
 if __name__ == "__main__":
     ######
     ## TESTS
-    # # Simulated version for testing
-    # simulated_upstream_version = "1.2.99"
+    # Simulated version for testing
+    simulated_upstream_version = "1.2.99"
 
-    # # Print output GitHub Actions will parse
-    # print(f"Local main version = 1.2.1")
-    # print(f"Upstream version   = {simulated_upstream_version}")
-    # print("New upstream release detected!")
+    # Print output GitHub Actions will parse
+    print(f"Local main version = 1.2.1")
+    print(f"Upstream version   = {simulated_upstream_version}")
+    print("New upstream release detected!")
 
-    # # Emit output for GitHub Actions
-    # #print(f"upstream-version={simulated_upstream_version}")
+    # Emit output for GitHub Actions
+    #print(f"upstream-version={simulated_upstream_version}")
 
-    # # Exit code triggers the sync workflow
-    # sys.exit(42)
+    # Exit code triggers the sync workflow
+    sys.exit(42)
     ######
 
     main()

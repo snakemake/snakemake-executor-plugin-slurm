@@ -1,4 +1,4 @@
-name: Check and Sync Upstream
+name: Check and Notify Upstream
 
 on:
   schedule:
@@ -45,200 +45,74 @@ jobs:
             exit $result
           fi
 
-  sync:
+  notify:
     needs: check-release
     if: needs.check-release.outputs.sync-needed == 'true'
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout fork
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
-      - name: Set up Git
+      - name: Define issue title
+        id: title
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          echo "ISSUE_TITLE=Detected upstream release v${{ needs.check-release.outputs.upstream-version }}" >> "$GITHUB_ENV"
 
-      - name: Define sync branch name and PR title
-        id: branch
-        run: |
-          echo "BRANCH=sync-upstream-$(date +'%Y%m%d')" >> "$GITHUB_ENV"
-          echo "PR_TITLE=autosync: upstream release v${{ needs.check-release.outputs.upstream-version }}" >> "$GITHUB_ENV"
-
-      - name: Check for existing sync PR
-        id: pr-check
+      - name: Check for existing issue
+        id: issue-check
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
         run: |
-          set -euo pipefail
-
-          existing_title=$(gh pr view "$BRANCH" \
+          count=$(gh issue list \
             --repo harvardinformatics/snakemake-executor-plugin-cannon \
+            --state open \
             --json title \
-            -q .title 2>/dev/null || echo "")
-
-          if [ -n "$existing_title" ] && [ "$existing_title" = "$PR_TITLE" ]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            #echo "::notice:: A sync PR already exists: '$existing_title'"
+            --jq "map(select(.title == \"${{ env.ISSUE_TITLE }}\")) | length")
+          echo "issue_exists=$count" >> "$GITHUB_OUTPUT"
+          if [ "$count" -gt 0 ]; then
+            echo "::notice:: Found $count existing issue(s) titled '${{ env.ISSUE_TITLE }}'. Skipping issue creation."
           else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "::notice:: No matching sync PR found; proceeding with merge and PR creation."
+            echo "::notice:: No existing issue titled '${{ env.ISSUE_TITLE }}', will create one."
           fi
 
-      - name: Skip sync (PR exists)
-        if: steps.pr-check.outputs.exists == 'true'
+      - name: Generate issue body file
+        if: steps.issue-check.outputs.issue_exists == '0'
         run: |
-          echo "::notice:: A sync PR titled '${{ env.PR_TITLE }}' is already open on branch '${{ env.BRANCH}}'. Skipping sync."
-
-
-      - name: Create sync branch with 3-way merge
-        if: steps.pr-check.outputs.exists == 'false'
-        id: create-branch
-        run: |
-          set -euo pipefail
-
-          git switch -c "$BRANCH" origin/main
-
-          # Add remote for upstream if not already defined
-          if ! git remote get-url upstream &>/dev/null; then
-            git remote add upstream https://github.com/snakemake/snakemake-executor-plugin-slurm
-          fi
-
-          git fetch upstream
-          git fetch origin
-
-          # Get merge base between fork and upstream
-          BASE_COMMIT=$(git merge-base origin/main upstream/main)
-          echo "Using merge base: $BASE_COMMIT"
-
-          # Restore your fork's .github/ workflows
-          rm -rf .github
-          git checkout origin/main -- .github/
-
-          # === Define excluded paths relative to repo root ===
-          EXCLUDES=(
-            "TODO.md"
-            "tests/Snakefile"
-            "tests/tests.py"
-            "tests/__pycache__"
-            "tests/profiles"
-          )
-
-          # Track if anything changed
-          MERGED=false
-
-          # Traverse all paths in upstream repo
-          UPSTREAM_FILES=$(git ls-tree -r --name-only upstream/main)
-
-          for SRC in $UPSTREAM_FILES; do
-            # Skip excluded files and folders
-            for EXCLUDE in "${EXCLUDES[@]}"; do
-              if [[ "$SRC" == "$EXCLUDE"* ]]; then
-                continue 2
-              fi
-            done
-
-            # Map slurm/ → cannon/ path
-            if [[ "$SRC" == snakemake_executor_plugin_slurm/* ]]; then
-              DEST=${SRC/snakemake_executor_plugin_slurm/snakemake_executor_plugin_cannon}
-            else
-              DEST=$SRC
-            fi
-
-            # Safety: skip if destination file does not exist in origin
-            [ ! -f "$DEST" ] && continue
-
-            echo "Merging $SRC → $DEST"
-
-            # Set up temp files for 3-way merge
-            TMP_BASE=base.py
-            TMP_THEIRS=upstream.py
-            TMP_MINE=mine.py
-
-            git show "$BASE_COMMIT:$SRC" > "$TMP_BASE" || continue
-            git show "upstream/main:$SRC" > "$TMP_THEIRS" || continue
-            cp "$DEST" "$TMP_MINE"
-
-            # Perform the 3-way merge in-place on mine
-            if git merge-file --marker-size=30 "$TMP_MINE" "$TMP_BASE" "$TMP_THEIRS"; then
-              echo "Merge succeeded for $DEST"
-              cp "$TMP_MINE" "$DEST"
-              MERGED=true
-            else
-              echo "::warning:: Conflict detected in $DEST"
-              cp "$TMP_MINE" "$DEST"
-              MERGED=true
-            fi
-
-            # Check if the merge changed the file
-            #if ! diff -q "$DEST" "${TMP_MINE}.orig" >/dev/null; then
-            #  echo "::notice:: Detected changes in $DEST"
-            #fi
-
-            # Clean up temp files
-            rm -f "$TMP_BASE" "$TMP_THEIRS" "$TMP_MINE"
-          done
-
-          # Stage & commit if anything changed
-          git add -A
-          if git diff --cached --quiet || [ "$MERGED" = false ]; then
-            echo "No changes to commit."
-            echo "has-changes=false" >> "$GITHUB_OUTPUT"
-          else
-            git commit -m "Sync upstream changes via 3-way merge"
-            echo "has-changes=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Show working changes
-        if: steps.pr-check.outputs.exists == 'false' && steps.create-branch.outputs.has-changes == 'true'
-        run: |
-          echo "=== git status ==="
-          git status
-          echo "=== git diff (against origin/main) ==="
-          git diff origin/main
-
-      - name: Push sync branch
-        if: steps.pr-check.outputs.exists == 'false' && steps.create-branch.outputs.has-changes == 'true'
-        run: |
-          git config --global user.name  "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git push --set-upstream origin ${{ env.BRANCH }}
-
-      - name: Generate PR body file
-        if: steps.pr-check.outputs.exists == 'false' && steps.create-branch.outputs.has-changes == 'true'
-        run: |
-          cat <<EOF > pr_body.md
+          cat <<EOF > issue_body.md
           #### Sync with upstream v${{ needs.check-release.outputs.upstream-version }}
 
-          This pull request was auto-generated by a 3-way merge workflow.
+          This issue was auto-generated on detection of a new upstream version. Performe the following to manually sync:
 
-          *NOTE: Conflicts may have occurred even if the PR reports no conflicts found!* This is because we add the conflict markers in the 3-way merge step.
+          ```bash
+          git fetch upstream
+          git checkout main
+          git merge upstream/main
+          #
+          # Resolve any conflicts, if necessary
+          #
+          git add -A
+          git commit -m "Merge remote-tracking branch 'upstream/main'"
+          git push origin main
+          ```
 
-          **PRIOR TO MERGING:** remember to edit pyproject.toml to reset the fork version to .post0 and the name from slurm to cannon. Resolve any other conflicts.
+          Or using VSCode's command palette (Ctrl+Shift+P):
+
+          1. Git: Fetch from… → choose upstream.
+          2. Git: Merge Branch… → pick upstream/main.
+          3. If there are conflicts, VS Code will show them in the editor; resolve, then commit and push. 
           EOF
 
-      - name: Create PR
-        if: steps.pr-check.outputs.exists == 'false' && steps.create-branch.outputs.has-changes == 'true'
+      - name: Create issue
+        if: steps.issue-check.outputs.issue_exists == '0'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # GH_DEBUG: api
-          # GH_TRACE: 1
         run: |
-          echo "Waiting briefly to ensure GitHub registers the pushed branch..."
-              sleep 15
-
-          gh pr create \
+          gh issue create \
             --repo harvardinformatics/snakemake-executor-plugin-cannon \
-            --base main \
-            --head harvardinformatics:${{ env.BRANCH }} \
-            --title "${{ env.PR_TITLE }}" \
-            --body-file pr_body.md \
-            --label "automated" \
-            --label "upstream-sync" \
-            --reviewer gwct
+            --title "$ISSUE_TITLE" \
+            --body-file issue_body.md \
+            --label automated \
+            --label upstream-sync \
+            --assignee "${{ github.actor }}"
 
-      - name: Skip info (no commit to push)
-        if: steps.pr-check.outputs.exists == 'false' && steps.create-branch.outputs.has-changes != 'true'
-        run: echo "No changes staged, nothing to push or show."
+      - name: Skip creating issue
+        if: steps.issue-check.outputs.issue_exists != '0'
+        run: echo "An open issue already exists for upstream v${{ needs.check-release.outputs.upstream-version }}. No new issue created."
