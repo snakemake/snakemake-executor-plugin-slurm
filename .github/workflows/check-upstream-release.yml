@@ -68,15 +68,15 @@ jobs:
             --jq "map(select(.title == \"${{ env.ISSUE_TITLE }}\")) | length")
           echo "issue_exists=$count" >> "$GITHUB_OUTPUT"
           if [ "$count" -gt 0 ]; then
-            echo "::notice:: Found $count existing issue(s) titled '${{ env.ISSUE_TITLE }}'. Skipping issue creation."
+            echo "::notice:: Found $count existing issue(s) titled for version ${{ needs.check-release.outputs.upstream-version }}". Skipping issue creation."
           else
-            echo "::notice:: No existing issue titled '${{ env.ISSUE_TITLE }}', will create one."
+            echo "::notice:: Creating issue for new release: '${{ env.ISSUE_TITLE }}'"
           fi
 
       - name: Generate issue body file
         if: steps.issue-check.outputs.issue_exists == '0'
         run: |
-          cat <<EOF | sed 's/^ \{12\}//' > issue_body.md
+          cat <<EOF | sed 's/^[[:space:]]*//' > issue_body.md
             #### Sync with upstream v${{ needs.check-release.outputs.upstream-version }}
 
             This issue was auto-generated on detection of a new upstream version. Perform the following to manually sync:
@@ -113,6 +113,6 @@ jobs:
             --label upstream-sync \
             --assignee "${{ github.actor }}"
 
-      - name: Skip creating issue
-        if: steps.issue-check.outputs.issue_exists != '0'
-        run: echo "An open issue already exists for upstream v${{ needs.check-release.outputs.upstream-version }}. No new issue created."
+      # - name: Skip creating issue
+      #   if: steps.issue-check.outputs.issue_exists != '0'
+      #   run: echo "An open issue already exists for upstream v${{ needs.check-release.outputs.upstream-version }}. No new issue created."
