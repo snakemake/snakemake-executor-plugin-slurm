@@ -68,7 +68,7 @@ jobs:
             --jq "map(select(.title == \"${{ env.ISSUE_TITLE }}\")) | length")
           echo "issue_exists=$count" >> "$GITHUB_OUTPUT"
           if [ "$count" -gt 0 ]; then
-            echo "::notice:: Found $count existing issue(s) titled for version ${{ needs.check-release.outputs.upstream-version }}". Skipping issue creation."
+            echo "::notice:: Found $count existing issue(s) titled for version ${{ needs.check-release.outputs.upstream-version }}. Skipping issue creation."
           else
             echo "::notice:: Creating issue for new release: '${{ env.ISSUE_TITLE }}'"
           fi
