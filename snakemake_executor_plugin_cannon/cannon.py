@@ -115,8 +115,8 @@ def parse_num_gpus(job, logger):
     """
     Extract number of GPUs from job.resources in priority order:
 
-    1. If gpu and optional gpu_model are provided → use those
-    2. Else if gres is specified (e.g. "gpu:2" or "gpu:a100:4") → parse it
+    1. (DISABLED) If gpu and optional gpu_model are provided → use those
+    2. (DISABLED) Else if gres is specified (e.g. "gpu:2" or "gpu:a100:4") → parse it
     3. Else if slurm_extra contains --gres=gpu:... → extract from there
     4. Else → assume 0 GPUs
     """
