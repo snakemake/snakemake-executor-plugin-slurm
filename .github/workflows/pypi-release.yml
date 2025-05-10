@@ -113,3 +113,18 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}         # e.g. 'refs/tags/v1.2.3' → the action strips 'refs/tags/'
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            **Release ${{ github.ref_name }}**
+
+            This release was auto-generated.
+          draft: false
+          prerelease: false
+          # generate_release_notes: true # auto-generate release notes. text from body will be prepended to the generated notes

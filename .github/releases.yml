@@ -1,0 +1,33 @@
+# .github/release.yml
+changelog:
+  # PRs carrying any of these labels will be omitted entirely
+  exclude:
+    labels:
+      - ignore-for-release
+    authors:
+      - dependabot[bot]
+
+  # Now define one or more categories for PRs you _do_ want to include
+  categories:
+    - title: Features
+      labels:
+        - feat
+
+    - title: Bug Fixes
+      labels:
+        - fix
+      # within this category you could also skip certain labels/authors
+      exclude:
+        labels:
+          - docs
+
+    - title: Maintenance
+      labels:
+        - chore
+        - ci
+        - refactor
+      exclude:
+        - build
+        - test
+        - perf
+        - style
