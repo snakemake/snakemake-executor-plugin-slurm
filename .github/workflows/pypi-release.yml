@@ -128,11 +128,11 @@ jobs:
       - name: Build distributions
         run: python -m build
 
-      # - name: Publish to PyPI
-      #   uses: pypa/gh-action-pypi-publish@release/v1
-      #   with:
-      #     user: __token__
-      #     password: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
@@ -147,4 +147,4 @@ jobs:
             This release was auto-generated.
           draft: false
           prerelease: false
-          # generate_release_notes: true # auto-generate release notes. text from body will be prepended to the generated notes
+          generate_release_notes: true # auto-generate release notes. text from body will be prepended to the generated notes
