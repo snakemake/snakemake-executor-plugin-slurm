@@ -115,14 +115,29 @@ jobs:
       - name: Install build tools
         run: pip install build twine
 
+      - name: Ensure version correctness
+        run: |
+          EXPECT="${{ needs.bump-and-tag.outputs.new_version }}"
+          ACTUAL=$(poetry version -s)
+
+          echo "Expected: $EXPECT"
+          echo "Actual:   $ACTUAL"
+
+          if [ "$EXPECT" != "$ACTUAL" ]; then
+            echo "::error:: Version mismatch! Expected '$EXPECT' but found '$ACTUAL'"
+            exit 1
+          fi
+          echo "::error:: Test exit"
+          exit 1
+
       - name: Build distributions
         run: python -m build
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
+      # - name: Publish to PyPI
+      #   uses: pypa/gh-action-pypi-publish@release/v1
+      #   with:
+      #     user: __token__
+      #     password: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
