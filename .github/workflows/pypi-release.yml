@@ -95,20 +95,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout correct tag
+      - name: Checkout tag
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - name: Install Poetry
-        run: pip install poetry
-
-      - name: Ensure checkout matches tag ref
-        run: |
-          git fetch --tags
-          git checkout ${{ github.ref }}
-          git log -1 --oneline
-          grep version pyproject.toml
+          ref: v${{ needs.bump-and-tag.outputs.new_version }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -117,6 +108,9 @@ jobs:
 
       - name: Install build tools
         run: pip install build twine
+
+      - name: Install Poetry
+        run: pip install poetry
 
       - name: Ensure version correctness
         run: |
