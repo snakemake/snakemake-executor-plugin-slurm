@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.4](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.3...v1.2.4) (2025-05-11)
+
+
+### Bug Fixes
+
+* update mastodon action ([#265](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/265)) ([23ba7ce](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/23ba7ce9073e79966102878feac617ac503d42b1))
+
 ## [1.2.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.2...v1.2.3) (2025-05-11)
 
 
