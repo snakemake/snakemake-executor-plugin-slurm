@@ -124,8 +124,6 @@ jobs:
             echo "::error:: Version mismatch! Expected '$EXPECT' but found '$ACTUAL'"
             exit 1
           fi
-          echo "::error:: Test exit"
-          exit 1
 
       - name: Build distributions
         run: python -m build
