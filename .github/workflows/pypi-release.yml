@@ -100,6 +100,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install Poetry
+        run: pip install poetry
+
       - name: Ensure checkout matches tag ref
         run: |
           git fetch --tags
