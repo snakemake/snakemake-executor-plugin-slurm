@@ -97,7 +97,9 @@ jobs:
 
             1. Git: Fetch from… → choose upstream.
             2. Git: Merge Branch… → pick upstream/main.
-            3. If there are conflicts, VS Code will show them in the editor; resolve, then commit and push. 
+            3. If there are conflicts, VS Code will show them in the editor; resolve, then commit and push.
+
+            Then consider releasing a new version of this plugin by committing with [bump-release] or manually running the PyPI release workflow.
           EOF
 
       - name: Create issue
