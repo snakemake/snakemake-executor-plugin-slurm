@@ -139,10 +139,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}         # e.g. 'refs/tags/v1.2.3' → the action strips 'refs/tags/'
-          release_name: Release ${{ github.ref_name }}
+          tag_name: v${{ needs.bump-and-tag.outputs.new_version }}
+          release_name: Release v${{ needs.bump-and-tag.outputs.new_version }}
           body: |
-            **Release ${{ github.ref_name }}**
+            **Release v${{ needs.bump-and-tag.outputs.new_version }}**
 
             This release was auto-generated.
           draft: false
