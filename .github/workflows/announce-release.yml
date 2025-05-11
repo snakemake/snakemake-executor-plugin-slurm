@@ -17,6 +17,7 @@ jobs:
     steps:
       - name: Post to Mastodon
         uses: snakemake/mastodon-release-post-action@v1.0.3
+
         with:
           message: |
             Beep, Beep - I am your friendly #Snakemake release announcement bot.
