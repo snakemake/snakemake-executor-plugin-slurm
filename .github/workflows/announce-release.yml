@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Post to Mastodon
-        uses: snakemake/mastodon-release-post-action@v1
+        uses: snakemake/mastodon-release-post-action@v1.0.2
         with:
           message: |
             Beep, Beep - I am your friendly #Snakemake release announcement bot.
