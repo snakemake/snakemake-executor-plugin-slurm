@@ -4,13 +4,13 @@ This is a fork of the [SLURM executor plugin for Snakemake](https://github.com/s
 
 ## Installation
 
-The executor can be installed with either pip:
+The executor can be installed [from PyPI](https://pypi.org/project/snakemake-executor-plugin-cannon/) with pip:
 
 ```bash
 pip install snakemake-executor-plugin-cannon
 ```
 
-Or conda/mamba:
+Or [from bioconda](https://bioconda.github.io/recipes/snakemake-executor-plugin-cannon/README.html) with conda/mamba:
 
 ```bash
 mamba install snakemake-executor-plugin-cannon
@@ -34,7 +34,7 @@ executor: cannon
 
 While this plugin does automatic partition selection, the user is still responsible for specifying other resources for rules in their workflow. This is usually done through a cluster **profile**, but this may differ based on your workflow. 
 
-See the [profile setup page](https://github.com/harvardinformatics/snakemake-executor-plugin-cannon/blob/main/docs/profile.md) for mor information. 
+See the [profile setup page](https://github.com/harvardinformatics/snakemake-executor-plugin-cannon/blob/main/docs/profile.md) for more information. 
 
 An example profile can be found at [`tests/cannon-test-profile/config.yaml`](https://github.com/harvardinformatics/snakemake-executor-plugin-cannon/blob/main/tests/cannon-test-profile/config.yaml)
 
