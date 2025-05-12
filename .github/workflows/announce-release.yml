@@ -19,6 +19,7 @@ jobs:
         uses: snakemake/mastodon-release-post-action@v1.0.3
 
         with:
+          access-token: ${{ secrets.MASTODONBOT }}
           message: |
             Beep, Beep - I am your friendly #Snakemake release announcement bot.
             
