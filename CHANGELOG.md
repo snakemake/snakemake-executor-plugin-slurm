@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.5](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.4...v1.2.5) (2025-05-12)
+
+
+### Bug Fixes
+
+* mastodon secret used workflow, not action ([#267](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/267)) ([7e4f7c9](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/7e4f7c9d4966bc711e2a1cb66ae7a86ea82e1158))
+* secret in workflow ([#269](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/269)) ([d2bd734](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/d2bd734e858b2211ea08c3e6d149e6b2f25d0192))
+
 ## [1.2.4](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.3...v1.2.4) (2025-05-11)
 
 
