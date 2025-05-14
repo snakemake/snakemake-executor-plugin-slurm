@@ -20,7 +20,7 @@ jobs:
 
         with:
           access-token: ${{ secrets.MASTODONBOT }}
-          pr-title: ${{ github.event.release.tag_name }}
+          pr-title: ${{ github.event.head_commit.message }}
           message: |
             Beep, Beep - I am your friendly #Snakemake release announcement bot.
             
