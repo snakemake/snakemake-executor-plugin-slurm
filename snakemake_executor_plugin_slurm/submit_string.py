@@ -50,6 +50,11 @@ def get_submit_command(job, params):
     if job.resources.get("nodes", False):
         call += f" --nodes={job.resources.get('nodes', 1)}"
 
+    # Specify reservation for job if any. Reservation name is in
+    # single quotes since reservation names may include spaces.
+    if job.resources.get("reservation"):
+        call += f" --reservation='{job.resources.reservation}'"
+
     # fixes #40 - set ntasks regardless of mpi, because
     # SLURM v22.05 will require it for all jobs
     gpu_job = job.resources.get("gpu") or "gpu" in job.resources.get("gres", "")
