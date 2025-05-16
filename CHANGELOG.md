@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.17](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.16...v1.2.17) (2025-05-16)
+
+
+### Bug Fixes
+
+* tolerant argparsing for mastodon announcements ([#296](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/296)) ([3b4fbe0](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/3b4fbe0db352bd56af5df8bb669879dbd28b7264))
+
 ## [1.2.16](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.15...v1.2.16) (2025-05-16)
 
 
