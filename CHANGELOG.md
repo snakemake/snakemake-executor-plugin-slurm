@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.17...v1.3.0) (2025-05-17)
+
+
+### Features
+
+* attempt to gain full release notes posted on mastodon ([#298](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/298)) ([b207279](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/b2072798961723ded86ac002b5bc606bd114a780))
+
 ## [1.2.17](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.16...v1.2.17) (2025-05-16)
 
 
