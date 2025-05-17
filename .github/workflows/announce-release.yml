@@ -19,7 +19,7 @@ jobs:
         id: extract-release-notes
         uses: ffurrer2/extract-release-notes@v2
         with:
-          changelog: ${{ github.workspace }}/CHANGELOG.md
+          changelog_file: ${{ github.workspace }}/CHANGELOG.md
       - name: Post to Mastodon
         uses: snakemake/mastodon-release-post-action@v1.2.3
         with:
