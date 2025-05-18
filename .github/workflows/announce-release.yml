@@ -15,11 +15,6 @@ jobs:
     if: "${{ contains(github.event.head_commit.message, 'chore(main): release') }}"
     runs-on: ubuntu-latest
     steps:
-      - name: Extract release notes
-        id: extract-release-notes
-        uses: ffurrer2/extract-release-notes@v2
-        with:
-          changelog_file: ${{ GITHUB_WORKSPACE }}/CHANGELOG.md
       - name: Post to Mastodon
         uses: snakemake/mastodon-release-post-action@v1.2.3
         with:
