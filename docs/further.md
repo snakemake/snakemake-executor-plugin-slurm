@@ -157,15 +157,12 @@ Some of these are [central snakemake command-line arguments determining its beha
   To reduce the burden of regular status checks,  this time automatically increases in 10 second steps with every status check whenever no finished jobs are found.
   But this will never go beyond a wait time of 180 seconds (3 minutes), to avoid long wait times once jobs do finish.
   Also, as soon as finished jobs are found, this gets reset to 40 seconds.
-  (TODO: respect the `--seconds-between-status-checks` option in the plugin and use it as the minimum wait time.)
 * With `--max-status-checks-per-second`, you can limit the frequency of individual attempts of querying the job status database within a round of status checks.
   Within a round, repeated attempts will happen whenever the `sacct` command used for the status query comes back with an error.
-  (TODO: set a reasonable default here; also double-check this is what we want to happen, here.)
 
 Or you might sometimes want to decrease certain wait times for small workflow runs during development.
 For example, the plugin waits 40 seconds before performing the first job status check.
-You can reduce this with the `--slurm-init-seconds-before-status-checks=<time in seconds>` option, to minimize turn-around times for test runs.
-TODO: add wait times and frequencies arguments to SLURM-specific table
+You can reduce this value with the `--slurm-init-seconds-before-status-checks=<time in seconds>` option, to minimize turn-around times for test runs.
 
 ##### Retry failed Jobs
 
