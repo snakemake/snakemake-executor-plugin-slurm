@@ -31,9 +31,9 @@ For issues that are specific to your local cluster-setup, please contact your cl
 
 A command line invocation of the plugin could look like:
 
-TODO: Include common configuration options and locations, especially the setting or invocation of the `--executor slurm` and link out to the respective sections in these docs.
 ```console
-$ snakemake -j unlimited \ # assuming an unlimited number of jobs
+$ snakemake --executor slurm \
+> -j unlimited \ # assuming an unlimited number of jobs
 > --workflow-profile <profile directory with a `config.yaml`>
 > --configfile config/config.yaml \
 > --directory <path> # assuming a data path on a different file system than the workflow
