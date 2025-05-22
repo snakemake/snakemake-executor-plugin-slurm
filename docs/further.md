@@ -650,5 +650,19 @@ If you want to contribute similar statistics, please run `/usr/bin/time -v snake
 Running Snakemake within a SLURM job can lead to unpredictable behavior, as the execution environment may not be properly configured for job submission.
 The SLURM executor plugin detects when it's operating inside a SLURM job and issues a warning, pausing for 5 seconds before proceeding.
 
-If your administrators require running Snakemake within a job and encounter issues, please report the specific problems as issues on the plugin's GitHub repository.
+If your administrators require running Snakemake within a job and you encounter issues, please report the specific problems as issues on the plugin's GitHub repository.
 While it may be possible to adapt the plugin for different cluster configurations, it's important to note that the plugin is primarily designed for use in production environments, and not all specialized cluster setups can be accounted for.
+
+#### How to run Snakemake in an interactive SLURM Job
+
+If you really need run Snakemake inside an HPC job, we recommend relying on interactive jobs. Doing so, will preserve Snakemake's output and ease debugging. You can start your interactive job like this:
+
+```console
+$ salloc -A <your SLURM account> -p <your partition> \
+> --time <enough time> \
+> <further arguments, e.g. memory>
+```
+
+You need to consider the extra waiting time for jobs to start on your cluster, when chosing a value for the `--time` flag.
+
+Consider that `salloc` will start a particular subshell. Before you start another interactive job in the _same_ terminal, you need to type `exit`. Even if your job has ended already.
