@@ -80,7 +80,7 @@ Where appropriate, they are mapped to respective configurations in SLURM:
 
 | Snakemake            | Description                             | SLURM              |
 |----------------------|-----------------------------------------|--------------------|
-| `gpu`                | number of gpus needed                   | 
+| `gpu`                | number of gpus needed                   | `--gpus`           |
 | `mem`, `mem_mb`      | memory a cluster node must provide      | `--mem`            |
 |                      | (`mem`: string with unit, `mem_mb`: int)|                    |
 | `runtime`            | the walltime per job in minutes         | `--time`           |
