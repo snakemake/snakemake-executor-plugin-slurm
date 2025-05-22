@@ -655,7 +655,7 @@ While it may be possible to adapt the plugin for different cluster configuration
 
 #### How to run Snakemake in an interactive SLURM Job
 
-If you really need run Snakemake inside an HPC job, we recommend relying on interactive jobs. Doing so, will preserve Snakemake's output and ease debugging. You can start your interactive job like this:
+If you really need to run Snakemake inside an HPC job, we recommend relying on interactive jobs. Doing so, will preserve Snakemake's output and ease debugging. You can start your interactive job like this:
 
 ```console
 $ salloc -A <your SLURM account> -p <your partition> \
