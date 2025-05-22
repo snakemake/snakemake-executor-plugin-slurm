@@ -199,11 +199,9 @@ TODO: Also, what exactly does the `--slurm-requeue` mode do? I assume it makes s
 
 #### MPI-specific Resources
 
-TODO: From what I can see, snakemake-executor-plugin-slurm does not do anything special to mpi jobs. So it might be sufficient to point to the main snakemake MPI support docs at https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html and maybe extend those (or clean them up). The only Slurm-specific info is probably to use `mpi="srun"` instead of `mpi="mpiexec"`, right? But maybe I am also overlooking any special things happening in the software package stack of the plugin (or the jobstep)?
-
 Snakemake's SLURM executor plugin supports the execution of MPI ([Message Passing Interface](https://en.wikipedia.org/wiki/Message_Passing_Interface)) jobs.
-Per default, jobs can only run on a single cluster node (or machine) and parallelization is thus limited by the maximum number of cores that is available on any machine in the cluster.
-MPI jobs enable parallel computations spanning across multiple nodes, thus potentially parallelizing to more cores than any machine in you cluster can offer.
+
+Per default, jobs can only run on a single cluster node (or machine) and parallelization is thus limited by the maximum number of cores that is available on any machine in the cluster. MPI jobs enable parallel computations spanning across multiple nodes, thus potentially parallelizing to more cores than any machine in you cluster can offer. [See the main documentation section of Snakemake, too.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#mpi-support)
 
 | Snakemake     | Description                                 |
 |---------------|---------------------------------------------|
@@ -211,7 +209,7 @@ MPI jobs enable parallel computations spanning across multiple nodes, thus poten
 | `tasks`       | The number of SLURM tasks - equivalent to MPI-ranks |
 
 
-To effectively utilize MPI within a Snakemake workflow, it's recommended to use `srun` as the MPI launcher when operating in a SLURM environment.
+To effectively utilize MPI within a Snakemake workflow, it's recommended to use `srun` as the MPI launcher when operating in a SLURM environment. However, some programs do not work well with this MPI launcer or require a detailed topology layout - this can be added to the `srun` statement, if required.
 
 Here's an example of defining an MPI rule in a Snakefile:
 
