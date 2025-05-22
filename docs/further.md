@@ -44,7 +44,7 @@ $ snakemake --executor slurm \
 Snakemake offers great [capabilities to specify and thereby limit resources](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#resources) used by a workflow as a whole and by individual jobs.
 The SLURM executor plugin takes care of mapping all the [standard resources to SLURM specific configurations](#standard-resources) and also [provides control over SLURM-specific resources and configurations](#slurm-specific-resources).
 
-#### Where to set resources and configurations
+#### Where to set Resources and Configurations
 
 Required resources and configuration options can be specified in three different places:
 
@@ -61,7 +61,7 @@ For example, system administators might want to set useful defaults in a system-
 In contrast, users might want to set defaults in their user or workflow profiles, or even adjust them for a particular workflow run .
 See the [snakemake documentation on profiles](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles) for further details.
 
-#### Dynamic resource specification
+#### Dynamic Resource Specification
 
 Where to set configurations can also depend on how generically we are able to set them.
 Using [dynamic resource specification](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources), we can generalize resource requirements.
@@ -71,7 +71,7 @@ Classical examples are determining the memory requirement based on the size of i
 [There are detailed examples for these in the snakemake documentation.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources)
 
 
-#### Standard resources
+#### Standard Resources
 
 The SLURM executor plugin should respect all of [snakemake's standard resources](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#standard-resources) by default.
 These are usually set directly in the workflow rule, optimally as [dynamic resources](#dynamic-resource-specification) that will, for example, adapt to input file sizes.
@@ -88,7 +88,7 @@ Where appropriate, they are mapped to respective configurations in SLURM:
 One classical example is the `runtime` resource that defines the walltime limit for a rule, which gets translated to the `--time` argument of SLURM.
 Similarly, memory requirements for rules can be specified as `mem_mb` (total memory in MB, mapped to SLURM's `--mem`) or `mem_mb_per_cpu` (memory per CPU in MB, mapped to SLURM's `--mem-per-cpu`).
 
-#### SLURM-specific resources
+#### SLURM-specific Resources
 
 The resources described here are usually omitted from reusable Snakemake workflows, as they are platform-specific.
 Instead, it makes sense to set them for the system that a workflow is run on, which can be done in profiles at the system, user or workflow level.
@@ -143,7 +143,7 @@ If you do not deliberately set the snakemake resource `slurm_account`, the plugi
 By contrast, some clusters _do not_ allow users to set their account or partition; for example, because they have a pre-defined default per user.
 In such cases, where the plugin's default behavior would interfere with your setup or requirements, you can use the `--slurm-no-account` flag to turn it off.
 
-##### wait times and frequencies
+##### Wait Times and Frequencies
 
 There are a number of wait times and frequencies that users can tune to their local cluster setup.
 Snakemake and the plugin try to provide sensible defaults.
@@ -167,7 +167,7 @@ For example, the plugin waits 40 seconds before performing the first job status 
 You can reduce this with the `--slurm-init-seconds-before-status-checks=<time in seconds>` option, to minimize turn-around times for test runs.
 TODO: add wait times and frequencies arguments to SLURM-specific table
 
-##### Retry failed jobs
+##### Retry failed Jobs
 
 When running workflows, jobs will occasionally fail.
 Snakemake provides mechanisms to handle such failures gracefully, for example by resuming a workflow from the last succesfully created outputs.
@@ -197,7 +197,7 @@ TODO: What exactly might be the default on a cluster?
 TODO: Also, what exactly does the `--slurm-requeue` mode do? I assume it makes snakemake handle the requeueing instead of slurm doing this internally?
 
 
-#### MPI-specific resources
+#### MPI-specific Resources
 
 TODO: From what I can see, snakemake-executor-plugin-slurm does not do anything special to mpi jobs. So it might be sufficient to point to the main snakemake MPI support docs at https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html and maybe extend those (or clean them up). The only Slurm-specific info is probably to use `mpi="srun"` instead of `mpi="mpiexec"`, right? But maybe I am also overlooking any special things happening in the software package stack of the plugin (or the jobstep)?
 
