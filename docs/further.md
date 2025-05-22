@@ -22,7 +22,7 @@ Additionally, bugs related to the plugin can originate in the:
 * [`snakemake-interface-executor-plugins`](https://github.com/snakemake/snakemake-interface-executor-plugins), which connects it to the main snakemake application
 * [`snakemake`](https://github.com/snakemake/snakemake) itself
 
-If you can pinpoint the exact repository your issue pertains to, file you issue or pull request there.
+If you can pinpoint the exact repository your issue pertains to, file your issue or pull request there.
 If unsure, posting here should ensure that we can direct you to the right one.
 
 For issues that are specific to your local cluster-setup, please contact your cluster administrator.
