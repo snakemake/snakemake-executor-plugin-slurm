@@ -178,7 +178,8 @@ You can check whether your cluster has this enabled with:
 scontrol show config | grep Requeue
 ```
 
-This should show a numerical value for the `JobRequeue` parameter, indicating the number of requeues for individual jobs. Any number greater 1 will cause SLURM to reqeue jobs on your cluster upon failure or preemption this many times. (Your cluster may specify additional parameters.)
+This should show a numerical value for the `JobRequeue` parameter, indicating the number of requeues for individual jobs.  
+Any number greater than 1 will cause SLURM to requeue jobs on your cluster upon failure or preemption this many times. (Your cluster may specify additional parameters.)
 
 If enabled, this feature allows jobs to be automatically resubmitted if they fail or are preempted - you do not need to rely on this plugin in this case.
 
