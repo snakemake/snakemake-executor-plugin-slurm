@@ -180,21 +180,18 @@ You can check whether your cluster has this enabled with:
 ```console
 scontrol show config | grep Requeue
 ```
-TODO: provide expected output here
 
-If enabled, this feature allows jobs to be automatically resubmitted if they fail or are preempted.
-This effectively does not consider the SLURM job failed, preserving job IDs and priorities, and allowing priority to be accumulated while pending.
-If job requeuing is not enabled on your cluster, consider adding `--slurm-requeue` for your Snakemake jobs:
+This should show a numerical value for the `JobRequeue` parameter, indicating the number of requeues for individual jobs. Any number greater 1 will cause SLURM to reqeue jobs on your cluster upon failure or preemption this many times. (Your cluster may specify additional parameters.)
 
-TODO: Does the `--slurm-requeue` command line argument work when this feature is on, or when it is off. This is not clear from the previous docs version.
+If enabled, this feature allows jobs to be automatically resubmitted if they fail or are preempted - you do not need to rely on this plugin in this case.
+
+If your cluster does not support automated requeing, you can ask the plugin to requeu preemted jobs with the `--slurm-requeue` flag: 
 
 ```console
 snakemake --slurm-requeue ...
 ```
 
-This might be the default on your cluster, already.
-TODO: What exactly might be the default on a cluster?
-TODO: Also, what exactly does the `--slurm-requeue` mode do? I assume it makes snakemake handle the requeueing instead of slurm doing this internally?
+This flag effectively does not consider failed SLURM jobs or preserves job IDs and priorities or allows job priority to be accumulated while pending.
 
 
 #### MPI-specific Resources
