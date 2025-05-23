@@ -381,7 +381,8 @@ By defining these resource specifications in a profile, you maintain a clean and
 ### Running Jobs locally
 
 In Snakemake workflows executed within cluster environments, certain tasks -- such as brief data downloads or plotting -- are better suited for local execution on the head node rather than being submitted as cluster jobs.
-To designate specific rules for local execution, Snakemake offers the `localrules` directive. For more details, refer to the [Snakemake documentation on local rules](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#local-rules).
+To designate specific rules for local execution, Snakemake offers the `localrules` directive.
+For more details, refer to the [Snakemake documentation on local rules](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#local-rules).
 This directive allows you to specify a comma-separated list of rules that should run locally:
 
 ```Python
