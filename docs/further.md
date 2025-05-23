@@ -183,7 +183,7 @@ Any number greater than 1 will cause SLURM to requeue jobs on your cluster upon 
 
 If enabled, this feature allows jobs to be automatically resubmitted if they fail or are preempted - you do not need to rely on this plugin in this case.
 
-If your cluster does not support automated requeing, you can ask the plugin to requeu preemted jobs with the `--slurm-requeue` flag: 
+If your cluster does not support automated requeuing, you can ask the plugin to requeue preempted jobs with the `--slurm-requeue` flag: 
 
 ```console
 snakemake --slurm-requeue ...
