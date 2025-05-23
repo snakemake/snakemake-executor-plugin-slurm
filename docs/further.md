@@ -196,7 +196,9 @@ This flag effectively does not consider failed SLURM jobs or preserves job IDs a
 
 Snakemake's SLURM executor plugin supports the execution of MPI ([Message Passing Interface](https://en.wikipedia.org/wiki/Message_Passing_Interface)) jobs.
 
-Per default, jobs can only run on a single cluster node (or machine) and parallelization is thus limited by the maximum number of cores that is available on any machine in the cluster. MPI jobs enable parallel computations spanning across multiple nodes, thus potentially parallelizing to more cores than any machine in you cluster can offer. [See the main documentation section of Snakemake, too.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#mpi-support)
+Per default, jobs can only run on a single cluster node (or machine) and parallelization is thus limited by the maximum number of cores that is available on any machine in the cluster.
+MPI jobs enable parallel computations spanning across multiple nodes, thus potentially parallelizing to more cores than any machine in you cluster can offer.
+[See the main documentation section of Snakemake, too.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#mpi-support)
 
 | Snakemake     | Description                                 |
 |---------------|---------------------------------------------|
