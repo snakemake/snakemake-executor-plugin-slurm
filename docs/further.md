@@ -206,7 +206,8 @@ MPI jobs enable parallel computations spanning across multiple nodes, thus poten
 | `tasks`       | The number of SLURM tasks - equivalent to MPI-ranks |
 
 
-To effectively utilize MPI within a Snakemake workflow, it's recommended to use `srun` as the MPI launcher when operating in a SLURM environment. However, some programs do not work well with this MPI launcer or require a detailed topology layout - this can be added to the `srun` statement, if required.
+To effectively utilize MPI within a Snakemake workflow, it's recommended to use `srun` as the MPI launcher when operating in a SLURM environment.
+However, some programs do not work well with this MPI launcer or require a detailed topology layout - this can be added to the `srun` statement, if required.
 
 Here's an example of defining an MPI rule in a Snakefile:
 
