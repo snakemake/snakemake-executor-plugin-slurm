@@ -209,7 +209,7 @@ MPI jobs enable parallel computations spanning across multiple nodes, thus poten
 
 
 To effectively utilize MPI within a Snakemake workflow, it's recommended to use `srun` as the MPI launcher when operating in a SLURM environment.
-However, some programs do not work well with this MPI launcer or require a detailed topology layout - this can be added to the `srun` statement, if required.
+However, some programs do not work well with this MPI launcher or require a detailed topology layout - this can be added to the `srun` statement, if required.
 
 Here's an example of defining an MPI rule in a Snakefile:
 
