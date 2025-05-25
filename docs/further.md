@@ -108,7 +108,7 @@ These are the available options, and the SLURM `sbatch` command line arguments t
 | `nodes`              | number of nodes                     | `--nodes`           |
 | `slurm_account`      | account for resource usage tracking | `--account`         |
 | `slurm_partition`    | partition/queue to submit job(s) to | `--partition`       |
-| `slurm_requeue`      | handle `--retries` with SLURM       |                     |
+| `slurm_requeue`      | handle `--retries` with SLURM       | `--requeue`                    |
 |                      | functionality                       |                     |
 | `tasks`              | number of concurrent tasks / ranks  | `--ntasks`          |
 
