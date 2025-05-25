@@ -14,7 +14,7 @@ Additionally, we recommend installing the `snakemake-storage-plugin-fs`, which w
 
 ### Contributions
 
-We welcome bug reports, feature requests and pull requests!
+We welcome bug reports, feature requests, and pull requests!
 Please report issues specific to this plugin [in the plugin's GitHub repository](https://github.com/snakemake/snakemake-executor-plugin-slurm/issue).
 Additionally, bugs related to the plugin can originate in the:
 
