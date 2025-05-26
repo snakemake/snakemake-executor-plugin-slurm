@@ -18,6 +18,40 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
         return ExecutorSettings(init_seconds_before_status_checks=1)
+    
+class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+    __test__ = True
+
+    def get_executor(self) -> str:
+        return "slurm"
+
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        return ExecutorSettings(efficiency_report=True, 
+                                init_seconds_before_status_checks=1)
+
+    def test_efficiency_report_generation(self):
+        # 1. Define a simple workflow (e.g., in a temporary file)
+        workflow_content = """
+rule all:
+    input:
+        "output.txt"
+
+rule dummy_rule:
+    output:
+        "output.txt"
+    shell:
+        "touch output.txt"
+"""
+        with open("Snakefile", "w") as f:
+            f.write(workflow_content)
+
+        # 2. Run the workflow
+        self.run_snakemake()
+
+        # 3. Verify the report file exists
+        report_filename = f"efficiency_report_{self.run_uuid}.log"
+        report_path = os.path.join(self.slurm_logdir, report_filename)
+        self.assertTrue(os.path.exists(report_path), f"Report file {report_path} not found.")
 
 
 class TestWorkflowsRequeue(TestWorkflows):
@@ -250,7 +284,6 @@ class TestGresString:
                 match="GPU model format should not be a nested string",
             ):
                 set_gres_string(job)
-
 
 class TestSLURMResources(TestWorkflows):
     """
