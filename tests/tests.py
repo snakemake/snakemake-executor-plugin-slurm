@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
@@ -18,7 +19,8 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
         return ExecutorSettings(init_seconds_before_status_checks=1)
-    
+
+
 class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase):
     __test__ = True
 
@@ -26,8 +28,9 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
         return "slurm"
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
-        return ExecutorSettings(efficiency_report=True, 
-                                init_seconds_before_status_checks=1)
+        return ExecutorSettings(
+            efficiency_report=True, init_seconds_before_status_checks=1
+        )
 
     def test_efficiency_report_generation(self):
         # 1. Define a simple workflow (e.g., in a temporary file)
@@ -51,7 +54,9 @@ rule dummy_rule:
         # 3. Verify the report file exists
         report_filename = f"efficiency_report_{self.run_uuid}.log"
         report_path = os.path.join(self.slurm_logdir, report_filename)
-        self.assertTrue(os.path.exists(report_path), f"Report file {report_path} not found.")
+        self.assertTrue(
+            os.path.exists(report_path), f"Report file {report_path} not found."
+        )
 
 
 class TestWorkflowsRequeue(TestWorkflows):
@@ -284,6 +289,7 @@ class TestGresString:
                 match="GPU model format should not be a nested string",
             ):
                 set_gres_string(job)
+
 
 class TestSLURMResources(TestWorkflows):
     """
