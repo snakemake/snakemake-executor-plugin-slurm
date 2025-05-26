@@ -23,7 +23,7 @@ Additionally, bugs related to the plugin can originate in the following reposito
 * [`snakemake`](https://github.com/snakemake/snakemake) itself
 
 If you can pinpoint the exact repository your issue pertains to, please file it there.
-If you are unsure, create a new issue here, and we will direct you to the correct repo.
+If you are unsure, [create a new issue here](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues), and we will direct you to the correct repo.
 
 For issues that are specific to your local cluster-setup, please contact your cluster administrator.
 
