@@ -1,5 +1,176 @@
 # Changelog
 
+## [1.3.6](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.3.5...v1.3.6) (2025-05-18)
+
+
+### Bug Fixes
+
+* release notes to action script ([#310](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/310)) ([c5a3d6e](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/c5a3d6ebcc8493731b4e3a048a603eb110847de4))
+
+## [1.3.5](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.3.4...v1.3.5) (2025-05-17)
+
+
+### Bug Fixes
+
+* full release notes ([#308](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/308)) ([736b452](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/736b4528d95d5473534522eecbea64f71023885a))
+
+## [1.3.4](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.3.3...v1.3.4) (2025-05-17)
+
+
+### Bug Fixes
+
+* full release notes ([#306](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/306)) ([f4a8277](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/f4a827747b3e86590746907d16151605f705455a))
+
+## [1.3.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.3.2...v1.3.3) (2025-05-17)
+
+
+### Bug Fixes
+
+* full release notes ([#304](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/304)) ([0465f85](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/0465f85c5d0fd34fce6ef650220890533059a2dd))
+
+## [1.3.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.3.1...v1.3.2) (2025-05-17)
+
+
+### Bug Fixes
+
+* full release notes ([#302](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/302)) ([7fd32f0](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/7fd32f0f4a22b5f54fedaab0282242244fb35d9a))
+
+## [1.3.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.3.0...v1.3.1) (2025-05-17)
+
+
+### Bug Fixes
+
+* full release notes ([#300](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/300)) ([4faed8d](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/4faed8d3729934174281bc08baa33bd0c0b4537f))
+
+## [1.3.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.17...v1.3.0) (2025-05-17)
+
+
+### Features
+
+* attempt to gain full release notes posted on mastodon ([#298](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/298)) ([b207279](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/b2072798961723ded86ac002b5bc606bd114a780))
+
+## [1.2.17](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.16...v1.2.17) (2025-05-16)
+
+
+### Bug Fixes
+
+* tolerant argparsing for mastodon announcements ([#296](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/296)) ([3b4fbe0](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/3b4fbe0db352bd56af5df8bb669879dbd28b7264))
+
+## [1.2.16](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.15...v1.2.16) (2025-05-16)
+
+
+### Bug Fixes
+
+* announce action ([#294](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/294)) ([7906f0c](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/7906f0c07de6033f0d95e795efbfacaa131de793))
+
+## [1.2.15](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.14...v1.2.15) (2025-05-16)
+
+
+### Bug Fixes
+
+* announce action ([#291](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/291)) ([6dd4053](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6dd4053ce7e2cb1f12f289b5fbfe83a1b50832d9))
+
+## [1.2.14](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.13...v1.2.14) (2025-05-16)
+
+
+### Bug Fixes
+
+* new version announcement bot ([#289](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/289)) ([732e3d4](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/732e3d46e69b198a97785fb04add197c2afde1ec))
+
+## [1.2.13](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.12...v1.2.13) (2025-05-16)
+
+
+### Bug Fixes
+
+* pr title ([#287](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/287)) ([a3a548c](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/a3a548c85229f7b301c6f9597e25b78d1abd77e4))
+
+## [1.2.12](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.11...v1.2.12) (2025-05-16)
+
+
+### Bug Fixes
+
+* pr title ([#283](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/283)) ([848e21f](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/848e21f9a9fd8879925811f9079805c7afdac79b))
+
+## [1.2.11](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.10...v1.2.11) (2025-05-14)
+
+
+### Bug Fixes
+
+* pr title from tag ([#281](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/281)) ([eae7276](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/eae727630555a8f99f03f0904dd471035e726206))
+
+## [1.2.10](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.9...v1.2.10) (2025-05-13)
+
+
+### Bug Fixes
+
+* pr title ([#279](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/279)) ([8465733](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/8465733f9d52452ac5d229f147b60645b46f410f))
+
+## [1.2.9](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.8...v1.2.9) (2025-05-13)
+
+
+### Bug Fixes
+
+* added pr title ([#276](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/276)) ([efbd5a9](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/efbd5a9982434467d14c1501617de94316da17a0))
+* pr title ([#278](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/278)) ([3e8f325](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/3e8f325ea823e85aefcefe57dc3064218f7c400c))
+
+## [1.2.8](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.7...v1.2.8) (2025-05-13)
+
+
+### Bug Fixes
+
+* action version ([#274](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/274)) ([87cccbb](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/87cccbbce054b97781700d865b22c37f7619ecb4))
+
+## [1.2.7](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.6...v1.2.7) (2025-05-13)
+
+
+### Bug Fixes
+
+* using, hopefully fixed, action script ([#272](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/272)) ([81bcf0e](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/81bcf0ec57e00285b8514c634ea1994deea650b5))
+
+## [1.2.6](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.5...v1.2.6) (2025-05-13)
+
+
+### Bug Fixes
+
+* yet another attempt ([#270](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/270)) ([37e042e](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/37e042e7e55bacd3dc22c3a24d1608700d4e5771))
+
+## [1.2.5](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.4...v1.2.5) (2025-05-12)
+
+
+### Bug Fixes
+
+* mastodon secret used workflow, not action ([#267](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/267)) ([7e4f7c9](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/7e4f7c9d4966bc711e2a1cb66ae7a86ea82e1158))
+* secret in workflow ([#269](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/269)) ([d2bd734](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/d2bd734e858b2211ea08c3e6d149e6b2f25d0192))
+
+## [1.2.4](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.3...v1.2.4) (2025-05-11)
+
+
+### Bug Fixes
+
+* update mastodon action ([#265](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/265)) ([23ba7ce](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/23ba7ce9073e79966102878feac617ac503d42b1))
+
+## [1.2.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.2...v1.2.3) (2025-05-11)
+
+
+### Bug Fixes
+
+* using latest fix for the announcement action ([#263](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/263)) ([efd1f88](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/efd1f88e8426cfd6071819e19f18826ce215a81a))
+
+## [1.2.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.1...v1.2.2) (2025-05-08)
+
+
+### Bug Fixes
+
+* checking for double nested strings in gres and gpu settings ([#251](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/251)) ([a7eac3a](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/a7eac3a0aeff74a83ab06578c0528c7473c92afa))
+* Increase account charecter limit ([#260](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/260)) ([1264de3](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/1264de3123ac638132ba76ffbf5187ff500a9a9b))
+
+## [1.2.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.2.0...v1.2.1) (2025-04-11)
+
+
+### Bug Fixes
+
+* add lost code back in ([#254](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/254)) ([6523889](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6523889f4bec2b42a2be2b7de6381bd9e8477d76))
+
 ## [1.2.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.1.0...v1.2.0) (2025-04-04)
 
 
