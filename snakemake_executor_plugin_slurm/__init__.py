@@ -783,9 +783,11 @@ We leave it to SLURM to resume your job(s)"""
             " --format=JobID,JobName,Comment,Elapsed,TotalCPU,"
             "NNodes,NCPUS,MaxRSS,ReqMem"
         )
-        
+
         try:
-            result = subprocess.run(shlex.split(cmd), capture_output=True, text=True, check=True)
+            result = subprocess.run(
+                shlex.split(cmd), capture_output=True, text=True, check=True
+            )
             lines = result.stdout.strip().split("\n")
         except subprocess.CalledProcessError:
             print(
@@ -852,14 +854,16 @@ We leave it to SLURM to resume your job(s)"""
         df["MaxRSS_MB"] = df["MaxRSS"].apply(parse_maxrss)
 
         # Convert ReqMem and calculate memory efficiency
-        df["RequestedMem_MB"] = df.apply(lambda row: parse_reqmem(row["ReqMem"], 
-                                                    row["NNodes"]), axis=1)
+        df["RequestedMem_MB"] = df.apply(
+            lambda row: parse_reqmem(row["ReqMem"], row["NNodes"]), axis=1
+        )
         df["Memory Usage (%)"] = df.apply(
             lambda row: (row["MaxRSS_MB"] / row["RequestedMem_MB"] * 100)
-            if row["RequestedMem_MB"] > 0 else 0,
-            axis=1
+            if row["RequestedMem_MB"] > 0
+            else 0,
+            axis=1,
         )
-        
+
         (df["MaxRSS_MB"] / df["RequestedMem_MB"]) * 100
         df["Memory Usage (%)"] = df["Memory Usage (%)"].fillna(0).round(2)
 
