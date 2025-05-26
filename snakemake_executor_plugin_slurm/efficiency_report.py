@@ -9,8 +9,7 @@ def time_to_seconds(time_str):
     parts = time_str.split(":")
 
     if len(parts) == 3:  # H:M:S
-        parts = [int(p) for p in parts]
-        return parts[0] * 3600 + parts[1] * 60 + parts[2]
+        return int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
     elif len(parts) == 2:  # M:S
         return int(parts[0]) * 60 + float(parts[1])
     elif len(parts) == 1:  # S
