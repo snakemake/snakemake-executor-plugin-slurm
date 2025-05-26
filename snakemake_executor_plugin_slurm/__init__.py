@@ -171,7 +171,7 @@ class Executor(RemoteExecutor):
         atexit.register(self.clean_old_logs)
         if self.workflow.executor_settings.efficiency_report:
             # Register the function to be called at exit
-            atexit.register(self.fetch_sacct_data)
+            atexit.register(self.create_efficiency_report)
 
     def clean_old_logs(self) -> None:
         """Delete files older than specified age from the SLURM log directory."""
@@ -773,23 +773,19 @@ We leave it to SLURM to resume your job(s)"""
                 "query the status of your jobs."
             )
 
-    def fetch_sacct_data(self, efficiency_threshold=0.8):
+    def create_efficiency_report(self, efficiency_threshold=0.8):
         """
         Fetch sacct job data for a Snakemake workflow
         and compute efficiency metrics.
         """
-
-        cmd = [
-            "sacct ",
-            f" --name={self.run_uuid}",
+        cmd = f"sacct --name={self.run_uuid} --parsable2 --noheader"
+        cmd += (
             " --format=JobID,JobName,Comment,Elapsed,TotalCPU,"
-            "NNodes,NCPUS,MaxRSS,ReqMem",
-            " --parsable2",
-            " --noheader",
-        ]
-
+            "NNodes,NCPUS,MaxRSS,ReqMem"
+        )
+        
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            result = subprocess.run(shlex.split(cmd), capture_output=True, text=True, check=True)
             lines = result.stdout.strip().split("\n")
         except subprocess.CalledProcessError:
             print(
