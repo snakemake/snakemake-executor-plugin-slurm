@@ -23,7 +23,7 @@ Additionally, bugs related to the plugin can originate in the following reposito
 * [`snakemake`](https://github.com/snakemake/snakemake) itself
 
 If you can pinpoint the exact repository your issue pertains to, please file it there.
-If you are unsure, create a new issue here and we will direct you to the correct repo.
+If you are unsure, create a new issue here, and we will direct you to the correct repo.
 
 For issues that are specific to your local cluster-setup, please contact your cluster administrator.
 
@@ -56,21 +56,12 @@ Required resources and configuration options can be specified in three different
 3. On the command-line, via the [arguments `--default-resources <resource>=<value>`, `--set-resources <rule_name>:<resource>=<value>` and `--set-threads <rule_name>:<resource>=<value>`](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-execution).
 
 On each of these levels, you can set rule-specific limits via `set-resources` and [`set-threads` (for cpus)](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#threads).
-In profiles and on the command line, you can additionally [set default limits for `default-resources` across all rules](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#default-resources).
-Rule-specific limits will always take precedence over default limits, and workflow-specific profiles will take precedence over system- and user-wide profiles.
-
-Where exactly to set resources and configurations can depend on your role.
-For example, system administators might want to set useful defaults in a system-wide `.yaml` profile.
-In contrast, users might want to set defaults in their user or workflow profiles, or even adjust them for a particular workflow run .
+In profiles and on the command line, you can additionalladministrators
 See the [snakemake documentation on profiles](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles) for further details.
 
 #### Dynamic Resource Specification
 
-Where to set configurations can also depend on how generically we are able to set them.
-Using [dynamic resource specification](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources), we can generalize resource requirements.
-This can mean that the respective resources can be set in a rule in the workflow, and end-users will not have to worry about setting them for their analysis-specific workflow instance.
-
-Classical examples are determining the memory requirement based on the size of input files, or increasing the runtime with every `attempt` of running a job (if [`--retries` is greater than `0`](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-behavior)).
+Where to set configurations can also depend on how generically we are able to set them.administrators based on the size of input files, or increasing the runtime with every `attempt` of running a job (if [`--retries` is greater than `0`](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-behavior)).
 [There are detailed examples for these in the snakemake documentation.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources)
 
 
@@ -658,7 +649,7 @@ If you want to contribute similar statistics, please run `/usr/bin/time -v snake
 Running Snakemake within a SLURM job can lead to unpredictable behavior, as the execution environment may not be properly configured for job submission.
 The SLURM executor plugin detects when it's operating inside a SLURM job and issues a warning, pausing for 5 seconds before proceeding.
 
-If your administrators require running Snakemake within a job and you encounter issues, please report the specific problems as [issues on the plugin's GitHub repository](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues).
+If your administrators require that you run Snakemake within a job and you encounter issues, please report the specific problems as [issues on the plugin's GitHub repository](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues).
 While it may be possible to adapt the plugin for different cluster configurations, it's important to note that the plugin is primarily designed for use in production environments, and not all specialized cluster setups can be accounted for.
 
 #### How to run Snakemake in an interactive SLURM Job
