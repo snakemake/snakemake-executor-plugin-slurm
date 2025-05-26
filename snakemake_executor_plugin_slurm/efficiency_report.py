@@ -30,7 +30,7 @@ def parse_maxrss(maxrss):
     return 0
 
 
-def parse_reqmem(reqmem):
+def parse_reqmem(reqmem, number_of_nodes=1):
     """Convert requested memory to MB."""
     if pd.isna(reqmem) or reqmem.strip() == "":
         return 0
@@ -42,7 +42,9 @@ def parse_reqmem(reqmem):
         value = int(value)
         unit_multipliers = {"K": 1 / 1024, "M": 1, "G": 1024}
         mem_mb = value * unit_multipliers.get(unit, 1)
-        if per_unit == "/node":
-            return mem_mb  # Memory is per node
+        if per_unit and "/node" in per_unit:
+            # the memory values is per node, hence we need to
+            # multiply with the number of nodes
+            return mem_mb * number_of_nodes
         return mem_mb  # Default case (per CPU or total)
     return 0
