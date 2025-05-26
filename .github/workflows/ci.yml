@@ -85,6 +85,9 @@ jobs:
       - name: Install poetry
         run: pip install poetry
 
+      - name: Install pandas
+        run: pip install pandas
+
       - name: Determine dependencies
         run: poetry lock
 
