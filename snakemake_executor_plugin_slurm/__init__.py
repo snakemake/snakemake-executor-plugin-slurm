@@ -886,8 +886,6 @@ We leave it to SLURM to resume your job(s)"""
                         )
                     )
         logfile = f"efficiency_report_{self.run_uuid}.log"
-        # we will store the efficiency report in the logdir
-        logfile = self.slurm_logdir / logfile
         df.to_csv(logfile)
 
         # write out the efficiency report at normal verbosity in any case
