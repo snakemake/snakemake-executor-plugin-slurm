@@ -33,19 +33,6 @@ A command line invocation of the plugin could look like:
 
 ```console
 $ snakemake --executor slurm \
-<<<<<<< HEAD
-> -j unlimited \ # assuming an unlimited number of jobs
-> --workflow-profile <profile directory with a `config.yaml`> \
-> --configfile config/config.yaml \
-> --directory <path> # assuming a data path on a different file system than the workflow
-```
-
-### Configuration
-
-Snakemake offers great [capabilities to specify and thereby limit resources](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#resources) used by a workflow as a whole and by individual jobs.
-The SLURM executor plugin takes care of mapping all the [standard resources to SLURM specific configurations](#standard-resources) and also [provides control over SLURM-specific resources and configurations](#slurm-specific-resources).
-
-=======
 > -j unlimited \
 > --workflow-profile <profile directory with a `config.yaml`> \
 > --configfile config/config.yaml \
@@ -60,7 +47,6 @@ Furthermore, on many clusters we must assume separation of workflows and data. U
 Snakemake offers great [capabilities to specify and thereby limit resources](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#resources) used by a workflow as a whole and by individual jobs.
 The SLURM executor plugin takes care of mapping all the [standard resources to SLURM specific configurations](#standard-resources) and also [provides control over SLURM-specific resources and configurations](#slurm-specific-resources).
 
->>>>>>> 22f87153520e7657100a210706ee646954256e64
 #### Where to set Resources and Configurations
 
 Required resources and configuration options can be specified in three different places:
@@ -70,29 +56,12 @@ Required resources and configuration options can be specified in three different
 3. On the command-line, via the [arguments `--default-resources <resource>=<value>`, `--set-resources <rule_name>:<resource>=<value>` and `--set-threads <rule_name>:<resource>=<value>`](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-execution).
 
 On each of these levels, you can set rule-specific limits via `set-resources` and [`set-threads` (for cpus)](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#threads).
-<<<<<<< HEAD
-In profiles and on the command line, you can additionally [set default limits for `default-resources` across all rules](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#default-resources).
-Rule-specific limits will always take precedence over default limits, and workflow-specific profiles will take precedence over system- and user-wide profiles.
-
-Where exactly to set resources and configurations can depend on your role.
-For example, system administators might want to set useful defaults in a system-wide `.yaml` profile.
-In contrast, users might want to set defaults in their user or workflow profiles, or even adjust them for a particular workflow run .
-=======
 In profiles and on the command line, you can additionally set default resources and threads.
->>>>>>> 22f87153520e7657100a210706ee646954256e64
 See the [snakemake documentation on profiles](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles) for further details.
 
 #### Dynamic Resource Specification
 
-<<<<<<< HEAD
-Where to set configurations can also depend on how generically we are able to set them.
-Using [dynamic resource specification](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources), we can generalize resource requirements.
-This can mean that the respective resources can be set in a rule in the workflow, and end-users will not have to worry about setting them for their analysis-specific workflow instance.
-
-Classical examples are determining the memory requirement based on the size of input files, or increasing the runtime with every `attempt` of running a job (if [`--retries` is greater than `0`](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-behavior)).
-=======
 How and where you set configurations on factors like file size or increasing the runtime with every `attempt` of running a job (if [`--retries` is greater than `0`](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-behavior)).
->>>>>>> 22f87153520e7657100a210706ee646954256e64
 [There are detailed examples for these in the snakemake documentation.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources)
 
 
@@ -131,11 +100,7 @@ These are the available options, and the SLURM `sbatch` command line arguments t
 | `nodes`              | number of nodes                     | `--nodes`           |
 | `slurm_account`      | account for resource usage tracking | `--account`         |
 | `slurm_partition`    | partition/queue to submit job(s) to | `--partition`       |
-<<<<<<< HEAD
-| `slurm_requeue`      | handle `--retries` with SLURM       |                     |
-=======
 | `slurm_requeue`      | handle `--retries` with SLURM       | `--requeue`                    |
->>>>>>> 22f87153520e7657100a210706ee646954256e64
 |                      | functionality                       |                     |
 | `tasks`              | number of concurrent tasks / ranks  | `--ntasks`          |
 
@@ -207,20 +172,12 @@ You can check whether your cluster has this enabled with:
 scontrol show config | grep Requeue
 ```
 
-<<<<<<< HEAD
-This should show a numerical value for the `JobRequeue` parameter, indicating the number of requeues for individual jobs. Any number greater 1 will cause SLURM to reqeue jobs on your cluster upon failure or preemption this many times. (Your cluster may specify additional parameters.)
-
-If enabled, this feature allows jobs to be automatically resubmitted if they fail or are preempted - you do not need to rely on this plugin in this case.
-
-If your cluster does not support automated requeing, you can ask the plugin to requeu preemted jobs with the `--slurm-requeue` flag: 
-=======
 This should show a numerical value for the `JobRequeue` parameter, indicating the number of requeues for individual jobs.  
 Any number greater than 1 will cause SLURM to requeue jobs on your cluster upon failure or preemption this many times. (Your cluster may specify additional parameters.)
 
 If enabled, this feature allows jobs to be automatically resubmitted if they fail or are preempted - you do not need to rely on this plugin in this case.
 
 If your cluster does not support automated requeuing, you can ask the plugin to requeue preempted jobs with the `--slurm-requeue` flag: 
->>>>>>> 22f87153520e7657100a210706ee646954256e64
 
 ```console
 snakemake --slurm-requeue ...
@@ -233,13 +190,9 @@ This flag effectively does not consider failed SLURM jobs or preserves job IDs a
 
 Snakemake's SLURM executor plugin supports the execution of MPI ([Message Passing Interface](https://en.wikipedia.org/wiki/Message_Passing_Interface)) jobs.
 
-<<<<<<< HEAD
-Per default, jobs can only run on a single cluster node (or machine) and parallelization is thus limited by the maximum number of cores that is available on any machine in the cluster. MPI jobs enable parallel computations spanning across multiple nodes, thus potentially parallelizing to more cores than any machine in you cluster can offer. [See the main documentation section of Snakemake, too.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#mpi-support)
-=======
 By default, jobs can only run on a single cluster node (or machine) and parallelization is thus limited by the maximum number of cores that is available on any machine in the cluster.
 MPI jobs enable parallel computations spanning across multiple nodes, thus potentially parallelizing to more cores than any machine in you cluster can offer.
 [See the main documentation section of Snakemake, too.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#mpi-support)
->>>>>>> 22f87153520e7657100a210706ee646954256e64
 
 | Snakemake     | Description                                 |
 |---------------|---------------------------------------------|
@@ -247,12 +200,8 @@ MPI jobs enable parallel computations spanning across multiple nodes, thus poten
 | `tasks`       | The number of SLURM tasks - equivalent to MPI-ranks |
 
 
-<<<<<<< HEAD
-To effectively utilize MPI within a Snakemake workflow, it's recommended to use `srun` as the MPI launcher when operating in a SLURM environment. However, some programs do not work well with this MPI launcer or require a detailed topology layout - this can be added to the `srun` statement, if required.
-=======
 To effectively utilize MPI within a Snakemake workflow, it's recommended to use `srun` as the MPI launcher when operating in a SLURM environment.
 However, some programs do not work well with this MPI launcher or require a detailed topology layout - this can be added to the `srun` statement, if required.
->>>>>>> 22f87153520e7657100a210706ee646954256e64
 
 Here's an example of defining an MPI rule in a Snakefile:
 
@@ -426,12 +375,8 @@ By defining these resource specifications in a profile, you maintain a clean and
 ### Running Jobs locally
 
 In Snakemake workflows executed within cluster environments, certain tasks -- such as brief data downloads or plotting -- are better suited for local execution on the head node rather than being submitted as cluster jobs.
-<<<<<<< HEAD
-To designate specific rules for local execution, Snakemake offers the `localrules` directive. For more details, refer to the [Snakemake documentation on local rules](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#local-rules).
-=======
 To designate specific rules for local execution, Snakemake offers the `localrules` directive.
 For more details, refer to the [Snakemake documentation on local rules](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#local-rules).
->>>>>>> 22f87153520e7657100a210706ee646954256e64
 This directive allows you to specify a comma-separated list of rules that should run locally:
 
 ```Python
@@ -672,6 +617,10 @@ This configuration directs SLURM logs to a centralized location, making them eas
 
 Running Snakemake within an active SLURM job can lead to unpredictable behavior, as the execution environment may not be properly configured for job submission.
 To mitigate potential issues, the SLURM executor plugin detects when it's operating inside a SLURM job and issues a warning, pausing for 5 seconds before proceeding.
+
+### Getting Job Efficiency Information
+
+With `--slurm-efficiency-report` you can generate a table of all efficiency data. A logfile `efficiency_report_<workflow_id>.log` will be generated in your current directory. This is equivalent to the information with `seff <jobid>` for individual jobs. It works best if "comments" are stored as a job property on your cluster as this plugin uses the "comment" parameter to store the rule name.
 
 ### Frequently Asked Questions
 
