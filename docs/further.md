@@ -672,4 +672,4 @@ $ salloc -A <your SLURM account> -p <your partition> \
 
 You need to consider the extra waiting time for jobs to start on your cluster, when choosing a value for the `--time` flag.
 
-Consider that `salloc` will start a particular subshell. Before you start another interactive job in the _same_ terminal, you need to type `exit`. Even if your job has ended already.
+Note that `salloc` opens a subshell. Exit it before starting another interactive job in the same terminal -- even if the previous job has completed.
