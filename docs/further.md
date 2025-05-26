@@ -61,7 +61,7 @@ See the [snakemake documentation on profiles](https://snakemake.readthedocs.io/e
 
 #### Dynamic Resource Specification
 
-Where to set configurations can also depend on how generically we are able to set them.administrators based on the size of input files, or increasing the runtime with every `attempt` of running a job (if [`--retries` is greater than `0`](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-behavior)).
+How and where you set configurations on factors like file size or increasing the runtime with every `attempt` of running a job (if [`--retries` is greater than `0`](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-behavior)).
 [There are detailed examples for these in the snakemake documentation.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources)
 
 
