@@ -39,8 +39,8 @@ $ snakemake --executor slurm \
 > --directory <path>
 ```
 
-This examples assumes no limit for submitted jobs (`-j unlimited`). Any number, e.g. `-j 150`, will throttle a workflow to this number of concurrent jobs.
-Furtheremore we on many clusters we have to assume seperation from workflows and data, hence the flag `--directory <path>` which can point to a different file system, containing your data.
+This example assumes no limit for submitted jobs (`-j unlimited`). Any number, e.g. `-j 150`, will throttle a workflow to this number of concurrent jobs.
+Furthermore, on many clusters we must assume separation of workflows and data. Use the `--directory <path>` flag to point to a file system that contains your data.
 
 ### Configuration
 
