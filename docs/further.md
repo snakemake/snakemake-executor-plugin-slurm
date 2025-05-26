@@ -33,7 +33,7 @@ A command line invocation of the plugin could look like:
 
 ```console
 $ snakemake --executor slurm \
-> -j unlimited \ 
+> -j unlimited \
 > --workflow-profile <profile directory with a `config.yaml`> \
 > --configfile config/config.yaml \
 > --directory <path> # assuming a data path on a different file system than the workflow
