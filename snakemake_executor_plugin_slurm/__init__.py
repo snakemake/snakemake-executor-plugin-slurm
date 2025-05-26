@@ -171,7 +171,7 @@ class Executor(RemoteExecutor):
         atexit.register(self.clean_old_logs)
         if self.workflow.executor_settings.efficiency_report:
             # Register the function to be called at exit
-            atexit.register(self.fetch_sacct_data)
+            atexit.register(self.create_efficiency_report)
 
     def clean_old_logs(self) -> None:
         """Delete files older than specified age from the SLURM log directory."""
@@ -765,40 +765,43 @@ We leave it to SLURM to resume your job(s)"""
         jobname = re.compile(r"--job-name[=?|\s+]|-J\s?")
         if re.search(jobname, job.resources.slurm_extra):
             raise WorkflowError(
-                "The --job-name option is not allowed in the 'slurm_extra' "
-                "parameter. The job name is set by snakemake and must not be "
-                "overwritten. It is internally used to check the stati of the "
-                "all submitted jobs by this workflow."
+                "The --job-name option is not allowed in the 'slurm_extra' parameter. "
+                "The job name is set by snakemake and must not be overwritten. "
+                "It is internally used to check the stati of the all submitted jobs "
+                "by this workflow."
                 "Please consult the documentation if you are unsure how to "
                 "query the status of your jobs."
             )
 
-    def fetch_sacct_data(self, efficiency_threshold=0.8):
-        """Fetch sacct job data for a Snakemake workflow and compute efficiency metrics."""
-
-        cmd = [
-            "sacct",
-            f"--name={self.run_uuid}",
-            "--format=JobID,JobName,Comment,Elapsed,TotalCPU,NNodes,NCPUS,MaxRSS,ReqMem",
-            "--parsable2",
-            "--noheader",
-        ]
+    def create_efficiency_report(self, efficiency_threshold=0.8):
+        """
+        Fetch sacct job data for a Snakemake workflow
+        and compute efficiency metrics.
+        """
+        cmd = f"sacct --name={self.run_uuid} --parsable2 --noheader"
+        cmd += (
+            " --format=JobID,JobName,Comment,Elapsed,TotalCPU,"
+            "NNodes,NCPUS,MaxRSS,ReqMem"
+        )
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            result = subprocess.run(
+                shlex.split(cmd), capture_output=True, text=True, check=True
+            )
             lines = result.stdout.strip().split("\n")
         except subprocess.CalledProcessError:
             print(
                 colorize_message(
                     "error",
-                    f"Error: Failed to retrieve job data for workflow ({self.run_uuid}).",
+                    "Error: Failed to retrieve job data for workflow",
+                    f" ({self.run_uuid}).",
                 )
             )
             return None
 
         # Convert to DataFrame
         df = pd.DataFrame(
-            (l.split("|") for l in lines),
+            (line.split("|") for line in lines),
             columns=[
                 "JobID",
                 "JobName",
@@ -819,10 +822,10 @@ We leave it to SLURM to resume your job(s)"""
             print(
                 colorize_message(
                     "warning",
-                    f"Warning: No comments found for workflow {self.run_uuid}. "
-                    "This field is used to store the rule name. "
-                    "Please ensure that the 'comment' field is set "
-                    "for your cluster. Administrators can set this up in the "
+                    f"Warning: No comments found for workflow {self.run_uuid}.",
+                    "This field is used to store the rule name.",
+                    "Please ensure that the 'comment' field is set",
+                    "for your cluster. Administrators can set this up in the",
                     "SLURM configuration.",
                 )
             )
@@ -851,8 +854,17 @@ We leave it to SLURM to resume your job(s)"""
         df["MaxRSS_MB"] = df["MaxRSS"].apply(parse_maxrss)
 
         # Convert ReqMem and calculate memory efficiency
-        df["RequestedMem_MB"] = df["ReqMem"].apply(parse_reqmem)
-        df["Memory Usage (%)"] = (df["MaxRSS_MB"] / df["RequestedMem_MB"]) * 100
+        df["RequestedMem_MB"] = df.apply(
+            lambda row: parse_reqmem(row["ReqMem"], row["NNodes"]), axis=1
+        )
+        df["Memory Usage (%)"] = df.apply(
+            lambda row: (row["MaxRSS_MB"] / row["RequestedMem_MB"] * 100)
+            if row["RequestedMem_MB"] > 0
+            else 0,
+            axis=1,
+        )
+
+        (df["MaxRSS_MB"] / df["RequestedMem_MB"]) * 100
         df["Memory Usage (%)"] = df["Memory Usage (%)"].fillna(0).round(2)
 
         # Drop all rows containing "batch" or "extern" as job names
@@ -865,7 +877,8 @@ We leave it to SLURM to resume your job(s)"""
                     print(
                         colorize_message(
                             "warning",
-                            f"Job {row['JobID']} ({row['JobName']}) has low CPU efficiency: {row['CPU Efficiency (%)']}%.",
+                            f"Job {row['JobID']} ({row['JobName']})",
+                            f"has low CPU efficiency: {row['CPU Efficiency (%)']}%.",
                         )
                     )
                 else:
@@ -874,12 +887,12 @@ We leave it to SLURM to resume your job(s)"""
                     print(
                         colorize_message(
                             "warning",
-                            f"Job {row['JobID']} for rule '{row['RuleName']}' ({row['JobName']}) has low CPU efficiency: {row['CPU Efficiency (%)']}%.",
+                            f"Job {row['JobID']} for rule '{row['RuleName']}'",
+                            f"({row['JobName']}) has low CPU efficiency:"
+                            f"{row['CPU Efficiency (%)']}%.",
                         )
                     )
         logfile = f"efficiency_report_{self.run_uuid}.log"
-        # we will store the efficiency report in the logdir
-        logfile = self.slurm_logdir / logfile
         df.to_csv(logfile)
 
         # write out the efficiency report at normal verbosity in any case
