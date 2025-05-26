@@ -56,7 +56,7 @@ Required resources and configuration options can be specified in three different
 3. On the command-line, via the [arguments `--default-resources <resource>=<value>`, `--set-resources <rule_name>:<resource>=<value>` and `--set-threads <rule_name>:<resource>=<value>`](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-execution).
 
 On each of these levels, you can set rule-specific limits via `set-resources` and [`set-threads` (for cpus)](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#threads).
-In profiles and on the command line, you can additionalladministrators
+In profiles and on the command line, you can additionally set default resources and threads.
 See the [snakemake documentation on profiles](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles) for further details.
 
 #### Dynamic Resource Specification
