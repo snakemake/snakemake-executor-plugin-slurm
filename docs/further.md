@@ -36,10 +36,11 @@ $ snakemake --executor slurm \
 > -j unlimited \
 > --workflow-profile <profile directory with a `config.yaml`> \
 > --configfile config/config.yaml \
-> --directory <path> # assuming a data path on a different file system than the workflow
+> --directory <path>
 ```
 
 This examples assumes no limit for submitted jobs (`-j unlimited`). Any number, e.g. `-j 150`, will throttle a workflow to this number of concurrent jobs.
+Furtheremore we on many clusters we have to assume seperation from workflows and data, hence the flag `--directory <path>` which can point to a different file system, containing your data.
 
 ### Configuration
 
