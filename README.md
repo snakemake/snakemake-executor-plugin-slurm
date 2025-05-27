@@ -2,6 +2,8 @@
 
 This is a fork of the [SLURM executor plugin for Snakemake](https://github.com/snakemake/snakemake-executor-plugin-slurm) for the [Cannon cluster at Harvard University](https://docs.rc.fas.harvard.edu/kb/running-jobs/). It has all the same features as the SLURM plugin, but performs automatic partition selection for the Cannon cluster based on the resources specified in a given Snakemake rule. It also offers some error checking for partition selection.
 
+For full documentation, see the [Snakemake plugin catalog](https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/cannon.html).
+
 ## Installation
 
 The executor can be installed [from PyPI](https://pypi.org/project/snakemake-executor-plugin-cannon/) with pip:
@@ -40,4 +42,4 @@ An example profile can be found at [`tests/cannon-test-profile/config.yaml`](htt
 
 ## Features
 
-For documentation, see the [Snakemake plugin catalog](https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/cannon.html).
+For full documentation, see the [Snakemake plugin catalog](https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/cannon.html).
