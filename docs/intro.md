@@ -1,1 +1,3 @@
 Automatic partition selection for the [Cannon compute cluster at Harvard](https://docs.rc.fas.harvard.edu/kb/running-jobs/) when running SLURM jobs through Snakemake.
+
+What follows is information specific to the Cannon plugin. For full documentation relating to the SLURM plugin, which is still applicable here, see the [official SLURM plugin docs](https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html#further-details).
