@@ -7,7 +7,7 @@ To avoid redundancy, the plugin deletes the SLURM log file for successful jobs, 
 Remote executors submit Snakemake jobs to ensure unique functionalities — such as piped group jobs and rule wrappers — are available on cluster nodes.
 The memory footprint varies based on these functionalities; for instance, rules with a run directive that import modules and read data may require more memory.
 
-**The information provided below is specific to the Cannon plugin. For full documentation of the general SLURM plugin see the [official documentation](https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html#further-detail) for that plugin.**
+**The information provided below is specific to the Cannon plugin. For full documentation of the general SLURM plugin see the** [official documentation](https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html#further-detail) **for that plugin.**
 
 #### Usage Hints
 
@@ -187,7 +187,7 @@ Once you know the rules in your workflow, you can setup their resources in your 
 
 #### Example profile
 
-As a template, you can use the [`tests/cannon-test-profile/config.yaml`](https://github.com/harvardinformatics/snakemake-executor-plugin-cannon/blob/main/tests/cannon-test-profile/config.yaml), which will need to be modified with the necessary changes for the workflow that you want to run.
+As a template, you can use the [tests/cannon-test-profile/config.yaml](https://github.com/harvardinformatics/snakemake-executor-plugin-cannon/blob/main/tests/cannon-test-profile/config.yaml), which will need to be modified with the necessary changes for the workflow that you want to run.
 
 #### Specifying the executor in the profile
 
