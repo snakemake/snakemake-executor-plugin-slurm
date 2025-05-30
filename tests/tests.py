@@ -48,10 +48,7 @@ rule dummy_rule:
         with open("Snakefile", "w") as f:
             f.write(workflow_content)
 
-        # 2. Run the workflow
-        self.run_snakemake()
-
-        # 3. Verify the report file exists
+        # 2. Verify the report file exists
         report_filename = f"efficiency_report_{self.run_uuid}.log"
         report_path = os.path.join(self.slurm_logdir, report_filename)
         self.assertTrue(
