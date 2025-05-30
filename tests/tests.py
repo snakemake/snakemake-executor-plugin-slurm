@@ -1,3 +1,5 @@
+import re
+from pathlib import Path
 from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
@@ -34,16 +36,25 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
     def test_simple_workflow(self, tmp_path):
         self.run_workflow("simple", tmp_path)
 
+        # The efficiency report is created in the
+        # current working directory
+        pattern = re.compile(r"efficiency_report_[\w-]+\.log")
+        report_found = False
 
-#        pattern = re.compile(r"efficiency_report_[\w-]+.log")
-#        report_filename = None
-#        parentdir = tmp_path.parent
-#        for filepath in parentdir.rglob("*log"):
-#            if pattern.match(filepath.name):
-#                report_filename = filepath.name
-#                break
-
-#        assert report_filename
+        # Check both cwd and the tmp_path for the report file -
+        # the CI seems lost.
+        for path in [Path.cwd(), tmp_path]:
+            for filepath in search_dir.glob("efficiency_report_*.log"):
+                if pattern.match(filepath.name):
+                    report_found = True
+                    # Verify it's not empty
+                    assert (
+                        filepath.stat().st_size > 0
+                    ), f"Efficiency report {filepath} is empty"
+                    break
+            if report_found:
+                break
+        assert report_found, "Efficiency report file not found"
 
 
 class TestWorkflowsRequeue(TestWorkflows):
