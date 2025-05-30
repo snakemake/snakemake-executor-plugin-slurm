@@ -54,9 +54,7 @@ rule dummy_rule:
         pattern = re.compile(r"efficiency_report_[\w-]+.log")
 
         # Define the expected report filename based on the pattern
-        report_filename = next(
-            (f for f in os.listdir(".") if pattern.match(f)), None
-        )
+        report_filename = next((f for f in os.listdir(".") if pattern.match(f)), None)
 
         # Assert that the report filename is found
         self.assertIsNotNone(report_filename, "No efficiency report file found.")
