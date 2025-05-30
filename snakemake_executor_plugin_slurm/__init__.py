@@ -864,7 +864,6 @@ We leave it to SLURM to resume your job(s)"""
             axis=1,
         )
 
-        (df["MaxRSS_MB"] / df["RequestedMem_MB"]) * 100
         df["Memory Usage (%)"] = df["Memory Usage (%)"].fillna(0).round(2)
 
         # Drop all rows containing "batch" or "extern" as job names
