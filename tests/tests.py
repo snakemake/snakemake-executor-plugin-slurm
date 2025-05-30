@@ -58,9 +58,7 @@ rule dummy_rule:
             None,
         )
 
-        assert os.path.exists(
-            report_filename
-        ), "Efficiency report file not found."
+        assert os.path.exists(report_filename)
 
 
 class TestWorkflowsRequeue(TestWorkflows):
