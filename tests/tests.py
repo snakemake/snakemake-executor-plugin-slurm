@@ -53,10 +53,14 @@ rule dummy_rule:
         pattern = re.compile(r"efficiency_report_[\w-]+.log")
 
         # Define the expected report filename based on the pattern
-        report_filename = next((f for f in os.listdir(".") if pattern.match(f)), None)
+        report_filename = next(
+            (f for f in os.listdir(".") if pattern.match(f)),
+            None,
+        )
 
-        # Assert that the report filename is found
-        assert os.path.exists(report_filename), "Efficiency report file not found."
+        assert os.path.exists(
+            report_filename
+        ), "Efficiency report file not found."
 
 
 class TestWorkflowsRequeue(TestWorkflows):
