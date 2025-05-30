@@ -1,4 +1,3 @@
-import re
 from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
