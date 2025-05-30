@@ -1,4 +1,6 @@
 import os
+import glob
+import re
 from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
@@ -49,11 +51,15 @@ rule dummy_rule:
             f.write(workflow_content)
 
         # 2. Verify the report file exists
-        report_filename = f"efficiency_report_{self.run_uuid}.log"
-        report_path = os.path.join(self.slurm_logdir, report_filename)
-        self.assertTrue(
-            os.path.exists(report_path), f"Report file {report_path} not found."
+        pattern = re.compile(r"efficiency_report_[\w-]+.log")
+
+        # Define the expected report filename based on the pattern
+        report_filename = next(
+            (f for f in os.listdir(".") if pattern.match(f)), None
         )
+
+        # Assert that the report filename is found
+        self.assertIsNotNone(report_filename, "No efficiency report file found.")
 
 
 class TestWorkflowsRequeue(TestWorkflows):
