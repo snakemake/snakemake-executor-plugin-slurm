@@ -30,31 +30,18 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
         return ExecutorSettings(
-            efficiency_report=True, init_seconds_before_status_checks=1
+            efficiency_report=True, init_seconds_before_status_checks=10
         )
 
-    def test_efficiency_report_generation(self):
-        # 1. Define a simple workflow (e.g., in a temporary file)
-        workflow_content = """
-rule all:
-    input:
-        "output.txt"
-
-rule dummy_rule:
-    output:
-        "output.txt"
-    shell:
-        "touch output.txt"
-"""
-        with open("Snakefile", "w") as f:
-            f.write(workflow_content)
+    def test_simple_workflow(self, tmp_path):
+        self.run_workflow("simple", tmp_path)
 
         # 2. Verify the report file exists
         pattern = re.compile(r"efficiency_report_[\w-]+.log")
 
         # Define the expected report filename based on the pattern
         report_filename = next(
-            (f for f in os.listdir(".") if pattern.match(f)),
+            (f for f in os.listdir(tmp_path) if pattern.match(f)),
             None,
         )
 
