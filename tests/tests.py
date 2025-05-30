@@ -1,3 +1,4 @@
+import glob
 import os
 import re
 from typing import Optional
@@ -30,22 +31,21 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
         return ExecutorSettings(
-            efficiency_report=True, init_seconds_before_status_checks=10
+            efficiency_report=True, init_seconds_before_status_checks=5
         )
 
     def test_simple_workflow(self, tmp_path):
         self.run_workflow("simple", tmp_path)
 
-        # 2. Verify the report file exists
         pattern = re.compile(r"efficiency_report_[\w-]+.log")
+        report_filename = None
+        parentdir = tmp_path.parent
+        for filepath in parentdir.rglob("*log"):
+            if pattern.match(filepath.name):
+                report_filename = filepath.name
+                break
 
-        # Define the expected report filename based on the pattern
-        report_filename = next(
-            (f for f in os.listdir(tmp_path) if pattern.match(f)),
-            None,
-        )
-
-        assert os.path.exists(report_filename)
+        assert report_filename
 
 
 class TestWorkflowsRequeue(TestWorkflows):
