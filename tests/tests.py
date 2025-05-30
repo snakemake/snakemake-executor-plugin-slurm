@@ -1,5 +1,4 @@
 import os
-import glob
 import re
 from typing import Optional
 import snakemake.common.tests
