@@ -43,7 +43,7 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
 
         # Check both cwd and the tmp_path for the report file -
         # the CI seems lost.
-        for path in [Path.cwd(), tmp_path]:
+        for search_dir in [Path.cwd(), tmp_path]:
             for filepath in search_dir.glob("efficiency_report_*.log"):
                 if pattern.match(filepath.name):
                     report_found = True
