@@ -1,5 +1,5 @@
-import os
 import re
+from pathlib import Path
 from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
@@ -30,35 +30,31 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
         return ExecutorSettings(
-            efficiency_report=True, init_seconds_before_status_checks=1
+            efficiency_report=True, init_seconds_before_status_checks=5
         )
 
-    def test_efficiency_report_generation(self):
-        # 1. Define a simple workflow (e.g., in a temporary file)
-        workflow_content = """
-rule all:
-    input:
-        "output.txt"
+    def test_simple_workflow(self, tmp_path):
+        self.run_workflow("simple", tmp_path)
 
-rule dummy_rule:
-    output:
-        "output.txt"
-    shell:
-        "touch output.txt"
-"""
-        with open("Snakefile", "w") as f:
-            f.write(workflow_content)
+        # The efficiency report is created in the
+        # current working directory
+        pattern = re.compile(r"efficiency_report_[\w-]+\.log")
+        report_found = False
 
-        # 2. Verify the report file exists
-        pattern = re.compile(r"efficiency_report_[\w-]+.log")
-
-        # Define the expected report filename based on the pattern
-        report_filename = next(
-            (f for f in os.listdir(".") if pattern.match(f)),
-            None,
-        )
-
-        assert os.path.exists(report_filename)
+        # Check both cwd and the tmp_path for the report file -
+        # the CI seems lost.
+        for search_dir in [Path.cwd(), tmp_path]:
+            for filepath in search_dir.glob("efficiency_report_*.log"):
+                if pattern.match(filepath.name):
+                    report_found = True
+                    # Verify it's not empty
+                    assert (
+                        filepath.stat().st_size > 0
+                    ), f"Efficiency report {filepath} is empty"
+                    break
+            if report_found:
+                break
+        assert report_found, "Efficiency report file not found"
 
 
 class TestWorkflowsRequeue(TestWorkflows):
