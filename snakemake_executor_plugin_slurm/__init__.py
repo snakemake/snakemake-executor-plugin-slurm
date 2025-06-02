@@ -3,7 +3,6 @@ __copyright__ = "Copyright 2023, David Lähnemann, Johannes Köster, Christian M
 __email__ = "johannes.koester@uni-due.de"
 __license__ = "MIT"
 
-import atexit
 import csv
 from io import StringIO
 import os
@@ -34,12 +33,9 @@ from .utils import (
     delete_slurm_environment,
     delete_empty_dirs,
     set_gres_string,
-    colorize_message,
 )
 from .efficiency_report import time_to_seconds, parse_maxrss, parse_reqmem
 from .submit_string import get_submit_command
-import sys
-
 
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
@@ -168,10 +164,21 @@ class Executor(RemoteExecutor):
             if self.workflow.executor_settings.logdir
             else Path(".snakemake/slurm_logs").resolve()
         )
-        atexit.register(self.clean_old_logs)
+
+    def shutdown(self) -> None:
+        """
+        Shutdown the executor.
+        This method is overloaded, to include the cleaning of old log files
+        and to optionally create an efficiency report.
+        """
+        # First, we invoke the original shutdown method
+        super().shutdown()
+
+        # Next, clean up old log files, unconditionally.
+        self.clean_old_logs()
+        # If the efficiency report is enabled, create it.
         if self.workflow.executor_settings.efficiency_report:
-            # Register the function to be called at exit
-            atexit.register(self.create_efficiency_report)
+            self.create_efficiency_report()
 
     def clean_old_logs(self) -> None:
         """Delete files older than specified age from the SLURM log directory."""
@@ -182,11 +189,9 @@ class Executor(RemoteExecutor):
             return
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
-        print(
-            colorize_message(
-                "info", f"Cleaning up log files older than {age_cutoff} day(s)."
+        self.logger.info(f"Cleaning up log files older than {age_cutoff} day(s)."
             )
-        )
+        
         for path in self.slurm_logdir.rglob("*.log"):
             if path.is_file():
                 try:
@@ -194,20 +199,15 @@ class Executor(RemoteExecutor):
                     if file_age > cutoff_secs:
                         path.unlink()
                 except (OSError, FileNotFoundError) as e:
-                    print(
-                        colorize_message(
-                            "error", f"Could not delete logfile {path}: {e}"
-                        ),
-                        file=sys.stderr,
+                    self.logger.error(
+                        f"Could not delete logfile {path}: {e}"
                     )
         # we need a 2nd iteration to remove putatively empty directories
         try:
             delete_empty_dirs(self.slurm_logdir)
         except (OSError, FileNotFoundError) as e:
-            print(
-                colorize_message(
-                    "warning", f"Could not delete empty directory {path}: {e}"
-                )
+            self.logger.error(
+                f"Could not delete empty directories in {self.slurm_logdir}: {e}"
             )
 
     def warn_on_jobcontext(self, done=None):
@@ -790,12 +790,8 @@ We leave it to SLURM to resume your job(s)"""
             )
             lines = result.stdout.strip().split("\n")
         except subprocess.CalledProcessError:
-            print(
-                colorize_message(
-                    "error",
-                    "Error: Failed to retrieve job data for workflow",
-                    f" ({self.run_uuid}).",
-                )
+            self.logger.error(
+                f"Failed to retrieve job data for workflow {self.run_uuid}."
             )
             return None
 
@@ -819,15 +815,11 @@ We leave it to SLURM to resume your job(s)"""
         # a) delete the column
         # b) issue a warning
         if df["Comment"].isnull().all():
-            print(
-                colorize_message(
-                    "warning",
-                    f"Warning: No comments found for workflow {self.run_uuid}.",
-                    "This field is used to store the rule name.",
-                    "Please ensure that the 'comment' field is set",
-                    "for your cluster. Administrators can set this up in the",
-                    "SLURM configuration.",
-                )
+            self.logger.warning(
+                f"No comments found for workflow {self.run_uuid}. "
+                "This field is used to store the rule name. "
+                "Please ensure that the 'comment' field is set for your cluster. "
+                "Administrators can set this up in the SLURM configuration."
             )
             df.drop(columns=["Comment"], inplace=True)
             # remember, that the comment column is not available
@@ -874,24 +866,19 @@ We leave it to SLURM to resume your job(s)"""
         for _, row in df.iterrows():
             if row["CPU Efficiency (%)"] < efficiency_threshold:
                 if nocomment:
-                    print(
-                        colorize_message(
-                            "warning",
-                            f"Job {row['JobID']} ({row['JobName']})",
-                            f"has low CPU efficiency: {row['CPU Efficiency (%)']}%.",
-                        )
+                    self.logger.warning(
+                        f"Job {row['JobID']} ({row['JobName']}) "
+                        f"has low CPU efficiency: {row['CPU Efficiency (%)']}%."
                     )
                 else:
                     # if the comment column is available, we can use it to
                     # identify the rule name
-                    print(
-                        colorize_message(
-                            "warning",
-                            f"Job {row['JobID']} for rule '{row['RuleName']}'",
-                            f"({row['JobName']}) has low CPU efficiency:"
-                            f"{row['CPU Efficiency (%)']}%.",
-                        )
+                    self.logger.warning(
+                        f"Job {row['JobID']} for rule '{row['RuleName']}' "
+                        f"({row['JobName']}) has low CPU efficiency: "
+                        f"{row['CPU Efficiency (%)']}%."
                     )
+                    
         # print the current working directory for debugging purposes
         print(os.getcwd())
         # Save the report to a CSV file
@@ -899,9 +886,6 @@ We leave it to SLURM to resume your job(s)"""
         df.to_csv(logfile)
 
         # write out the efficiency report at normal verbosity in any case
-        print(
-            colorize_message(
-                "info",
-                f"Efficiency report for workflow {self.run_uuid} saved to {logfile}",
-            )
+        self.logger.info(
+            f"Efficiency report for workflow {self.run_uuid} saved to {logfile}."
         )
