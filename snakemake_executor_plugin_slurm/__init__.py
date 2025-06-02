@@ -892,7 +892,10 @@ We leave it to SLURM to resume your job(s)"""
                             f"{row['CPU Efficiency (%)']}%.",
                         )
                     )
-        logfile = f"efficiency_report_{self.run_uuid}.log"
+        # print the current working directory for debugging purposes
+        print(os.getcwd())
+        # Save the report to a CSV file
+        logfile = f"efficiency_report_{self.run_uuid}.csv"
         df.to_csv(logfile)
 
         # write out the efficiency report at normal verbosity in any case
