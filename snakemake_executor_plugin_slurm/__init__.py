@@ -877,7 +877,10 @@ We leave it to SLURM to resume your job(s)"""
                     )
 
         # print the current working directory for debugging purposes
-        print(os.getcwd())
+        cwd = os.getcwd()
+        content = os.listdir()
+        self.logger.info(f"Current dir: {cwd}")
+        self.logger.info(f"content of current dir: {content}")
         # Save the report to a CSV file
         logfile = f"efficiency_report_{self.run_uuid}.csv"
         df.to_csv(logfile)
