@@ -37,6 +37,7 @@ from .utils import (
 from .efficiency_report import time_to_seconds, parse_maxrss, parse_reqmem
 from .submit_string import get_submit_command
 
+
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
     logdir: Optional[Path] = field(
@@ -189,9 +190,8 @@ class Executor(RemoteExecutor):
             return
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
-        self.logger.info(f"Cleaning up log files older than {age_cutoff} day(s)."
-            )
-        
+        self.logger.info(f"Cleaning up log files older than {age_cutoff} day(s).")
+
         for path in self.slurm_logdir.rglob("*.log"):
             if path.is_file():
                 try:
@@ -199,9 +199,7 @@ class Executor(RemoteExecutor):
                     if file_age > cutoff_secs:
                         path.unlink()
                 except (OSError, FileNotFoundError) as e:
-                    self.logger.error(
-                        f"Could not delete logfile {path}: {e}"
-                    )
+                    self.logger.error(f"Could not delete logfile {path}: {e}")
         # we need a 2nd iteration to remove putatively empty directories
         try:
             delete_empty_dirs(self.slurm_logdir)
@@ -878,7 +876,7 @@ We leave it to SLURM to resume your job(s)"""
                         f"({row['JobName']}) has low CPU efficiency: "
                         f"{row['CPU Efficiency (%)']}%."
                     )
-                    
+
         # print the current working directory for debugging purposes
         print(os.getcwd())
         # Save the report to a CSV file
