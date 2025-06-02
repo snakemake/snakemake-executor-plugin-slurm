@@ -121,28 +121,3 @@ def set_gres_string(job: JobExecutorInterface) -> str:
         # we assume here, that the validator ensures that the 'gpu_string'
         # is an integer
         return f" --gpus={gpu_string}"
-
-
-# We need this colorize function as a fall back for methods registering
-# with atexit(): There the logger is not correctly available and we need
-# to print colorized messages according to the intended logger level.
-BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
-RESET_SEQ = "\033[0m"
-COLOR_SEQ = "\033[%dm"
-BOLD_SEQ = "\033[1m"
-
-colors = {
-    "DEBUG": BLUE,
-    "INFO": GREEN,
-    "WARNING": YELLOW,
-    "ERROR": RED,
-    "CRITICAL": MAGENTA,
-}
-
-
-def colorize_message(level, *message):
-    """Colorize a message based on the log level."""
-    color = colors.get(level.upper(), WHITE)
-    # concatenate multi string messages
-    message = " ".join(_ for _ in message)
-    return f"{COLOR_SEQ % (30 + color)}{message}{RESET_SEQ}"
