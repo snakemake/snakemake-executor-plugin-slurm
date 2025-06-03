@@ -33,7 +33,8 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
         return ExecutorSettings(
-            efficiency_report=True, init_seconds_before_status_checks=5,
+            efficiency_report=True,
+            init_seconds_before_status_checks=5,
             seconds_between_status_checks=5,
         )
 
