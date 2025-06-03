@@ -1,6 +1,6 @@
 import os
 import re
-from pathlib import Path
+#from pathlib import Path
 from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
@@ -57,6 +57,8 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
         # current working directory
         pattern = re.compile(r"efficiency_report_[\w-]+\.csv")
         report_found = False
+        # report the tmp_path directory for debugging
+        print(f"'tmp_path' is: {tmp_path}")
 
         # as the directory is unclear, we need a path walk:
         for root, _, files in os.walk("/tmp/pytest-of-runner/"):
