@@ -35,10 +35,16 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
         return ExecutorSettings(
             efficiency_report=True,
             init_seconds_before_status_checks=5,
+            efficiency_report_path=Path("/tmp/efficiency_report_test"),
             # seconds_between_status_checks=5,
         )
 
     def test_simple_workflow(self, tmp_path):
+        # for an unkown reason, the efficiency report is not created
+        # reliably in `tmp_path`, so we use a fixed path
+        # to ensure the test is reproducible
+        runpath = Path("/tmp/efficiency_report_test")
+        runpath.mkdir(parents=True, exist_ok=True)
         self.run_workflow("simple", tmp_path)
 
         # The efficiency report is created in the
