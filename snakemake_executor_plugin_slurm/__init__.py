@@ -848,9 +848,11 @@ We leave it to SLURM to resume your job(s)"""
             lambda row: parse_reqmem(row["ReqMem"], row["NNodes"]), axis=1
         )
         df["Memory Usage (%)"] = df.apply(
-            lambda row: (row["MaxRSS_MB"] / row["RequestedMem_MB"] * 100)
-            if row["RequestedMem_MB"] > 0
-            else 0,
+            lambda row: (
+                (row["MaxRSS_MB"] / row["RequestedMem_MB"] * 100)
+                if row["RequestedMem_MB"] > 0
+                else 0
+            ),
             axis=1,
         )
 
@@ -879,7 +881,7 @@ We leave it to SLURM to resume your job(s)"""
         # we construct a path object to allow for a customi
         # logdir, if specified
         p = Path()
-        
+
         # Save the report to a CSV file
         logfile = f"efficiency_report_{self.run_uuid}.csv"
         if self.workflow.executor_settings.logdir:
