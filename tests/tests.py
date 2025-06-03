@@ -19,7 +19,9 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
         return "slurm"
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
-        return ExecutorSettings(init_seconds_before_status_checks=1)
+        return ExecutorSettings(init_seconds_before_status_checks=2,
+                                seconds_between_status_checks=5,
+                                max_status_checks_per_second=1)
 
 
 class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase):
@@ -38,13 +40,13 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
 
         # The efficiency report is created in the
         # current working directory
-        pattern = re.compile(r"efficiency_report_[\w-]+\.log")
+        pattern = re.compile(r"efficiency_report_[\w-]+\.csv")
         report_found = False
 
         # Check both cwd and the tmp_path for the report file -
         # the CI seems lost.
         for search_dir in [Path.cwd(), tmp_path]:
-            for filepath in search_dir.glob("efficiency_report_*.log"):
+            for filepath in search_dir.glob("efficiency_report_*.csv"):
                 if pattern.match(filepath.name):
                     report_found = True
                     # Verify it's not empty
