@@ -47,7 +47,7 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
         report_found = False
 
         # as the directory is unclear, we need a path walk:
-        for root, dirs, files in os.walk("/tmp/pytest-of-runner/"):
+        for root, _, files in os.walk("/tmp/pytest-of-runner/"):
             for fname in files:
                 if pattern.match(fname):
                     report_found = True
