@@ -890,7 +890,7 @@ We leave it to SLURM to resume your job(s)"""
             logfile = p.cwd() / logfile
         df.to_csv(logfile)
         content = os.listdir()
-        self.logger.info(f"Current dir: {cwd}")
+        self.logger.info(f"Current dir: {p.cwd()}")
         self.logger.info(f"content of current dir: {content}")
 
         # write out the efficiency report at normal verbosity in any case
