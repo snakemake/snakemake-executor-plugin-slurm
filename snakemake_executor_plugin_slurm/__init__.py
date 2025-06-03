@@ -876,14 +876,20 @@ We leave it to SLURM to resume your job(s)"""
                         f"{row['CPU Efficiency (%)']}%."
                     )
 
-        # print the current working directory for debugging purposes
-        cwd = os.getcwd()
+        # we construct a path object to allow for a customi
+        # logdir, if specified
+        p = Path()
+        
+        # Save the report to a CSV file
+        logfile = f"efficiency_report_{self.run_uuid}.csv"
+        if self.workflow.executor_settings.logdir:
+            logfile = Path(self.workflow.executor_settings.logdir) / logfile
+        else:
+            logfile = p.cwd() / logfile
+        df.to_csv(logfile)
         content = os.listdir()
         self.logger.info(f"Current dir: {cwd}")
         self.logger.info(f"content of current dir: {content}")
-        # Save the report to a CSV file
-        logfile = f"efficiency_report_{self.run_uuid}.csv"
-        df.to_csv(logfile)
 
         # write out the efficiency report at normal verbosity in any case
         self.logger.info(
