@@ -46,19 +46,14 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
         pattern = re.compile(r"efficiency_report_[\w-]+\.csv")
         report_found = False
 
-        # Check both cwd and the tmp_path for the report file -
-        # the CI seems lost.
-        p = Path()
-        for search_dir in [p.cwd(), tmp_path]:
-            for filepath in search_dir.glob("efficiency_report_*.csv"):
-                if pattern.match(filepath.name):
-                    report_found = True
-                    # Verify it's not empty
-                    assert (
-                        filepath.stat().st_size > 0
-                    ), f"Efficiency report {filepath} is empty"
-                    break
-            if report_found:
+        for fname in os.listdir():
+            if pattern.match(fname):
+                report_found = True
+                report_path = tmp_path / fname
+                # Verify it's not empty
+                assert (
+                    report_path.stat().st_size > 0
+                ), f"Efficiency report {report_path} is empty"
                 break
         assert report_found, "Efficiency report file not found"
 
