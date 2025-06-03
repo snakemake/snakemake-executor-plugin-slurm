@@ -122,6 +122,28 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
+    efficiency_report_path: Optional[Path] = field(
+        default=None,
+        metadata={
+            "help": "Path to the efficiency report file. "
+            "If not set, the report will be written to "
+            "the current working directory with the name "
+            "'efficiency_report_<run_uuid>.csv'. "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    efficiency_threshold: Optional[float] = field(
+        default=0.8,
+        metadata={
+            "help": "The efficiency threshold for the efficiency report. "
+            "Jobs with an efficiency below this threshold will be reported. "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
 
 
 # Required:
@@ -771,7 +793,7 @@ We leave it to SLURM to resume your job(s)"""
                 "query the status of your jobs."
             )
 
-    def create_efficiency_report(self, efficiency_threshold=0.8):
+    def create_efficiency_report(self):
         """
         Fetch sacct job data for a Snakemake workflow
         and compute efficiency metrics.
@@ -781,6 +803,7 @@ We leave it to SLURM to resume your job(s)"""
             " --format=JobID,JobName,Comment,Elapsed,TotalCPU,"
             "NNodes,NCPUS,MaxRSS,ReqMem"
         )
+        e_threshold = self.workflow.executor_settings.efficiency_threshold
 
         try:
             result = subprocess.run(
@@ -863,7 +886,7 @@ We leave it to SLURM to resume your job(s)"""
 
         # Log warnings for low efficiency
         for _, row in df.iterrows():
-            if row["CPU Efficiency (%)"] < efficiency_threshold:
+            if row["CPU Efficiency (%)"] < e_threshold:
                 if nocomment:
                     self.logger.warning(
                         f"Job {row['JobID']} ({row['JobName']}) "
@@ -884,8 +907,10 @@ We leave it to SLURM to resume your job(s)"""
 
         # Save the report to a CSV file
         logfile = f"efficiency_report_{self.run_uuid}.csv"
-        if self.workflow.executor_settings.logdir:
-            logfile = Path(self.workflow.executor_settings.logdir) / logfile
+        if self.workflow.executor_settings.efficiency_report_path:
+            logfile = (
+                Path(self.workflow.executor_settings.efficiency_report_path) / logfile
+            )
         else:
             logfile = p.cwd() / logfile
         df.to_csv(logfile)
