@@ -46,15 +46,17 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
         pattern = re.compile(r"efficiency_report_[\w-]+\.csv")
         report_found = False
 
-        for fname in os.listdir():
-            if pattern.match(fname):
-                report_found = True
-                report_path = tmp_path / fname
-                # Verify it's not empty
-                assert (
-                    report_path.stat().st_size > 0
-                ), f"Efficiency report {report_path} is empty"
-                break
+        # as the directory is unclear, we need a path walk:
+        for root, dirs, files in os.walk("/tmp/pytest-of-runner/"):
+            for fname in files:
+                if pattern.match(fname):
+                    report_found = True
+                    report_path = os.path.join(root, fname)
+                    # Verify it's not empty
+                    assert (
+                        os.stat(report_path).st_size > 0
+                    ), f"Efficiency report {report_path} is empty"
+                    break
         assert report_found, "Efficiency report file not found"
 
 
