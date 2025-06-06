@@ -24,9 +24,6 @@ def get_submit_command(job, params):
     # here, only the string is used, as it already contains
     # '-A {account_name}'
     call += f" {params.account}"
-    # here, only the string is used, as it already contains
-    # '- p {partition_name}'
-    call += f" {params.partition}"
 
     if job.resources.get("clusters"):
         call += f" --clusters {job.resources.clusters}"
