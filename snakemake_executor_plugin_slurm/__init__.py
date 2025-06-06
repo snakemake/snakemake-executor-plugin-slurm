@@ -107,10 +107,21 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
-    partitions: Optional[Path] = field(
+    partition_config: Optional[Path] = field(
         default=None,
         metadata={
-            "help": "Path to YAML file that specifies partitions. See docs for details.",
+            "help": "Path to YAML file defining partition limits for automatic partition selection. "
+            "When provided, jobs will be automatically assigned to the best-fitting partition based on "
+            "their resource requirements. Expected format:\n"
+            "partitions:\n"
+            "  short:\n"
+            "    max_runtime: 30  # minutes\n"
+            "    max_memory_mb: 4000\n"
+            "  gpu:\n"
+            "    max_runtime: 120\n"
+            "    max_gpu: 2\n"
+            "    available_gpu_models: ['v100', 'a100']\n"
+            "See documentation for complete list of available limits.",
             "env_var": False,
             "required": False,
         },
@@ -159,8 +170,8 @@ class Executor(RemoteExecutor):
             else Path(".snakemake/slurm_logs").resolve()
         )
         self._partitions = (
-            read_partition_file(self.workflow.executor_settings.partitions)
-            if self.workflow.executor_settings.partitions
+            read_partition_file(self.workflow.executor_settings.partition_config)
+            if self.workflow.executor_settings.partition_config
             else None
         )
         atexit.register(self.clean_old_logs)
