@@ -112,15 +112,6 @@ class ExecutorSettings(ExecutorSettingsBase):
         metadata={
             "help": "Path to YAML file defining partition limits for automatic partition selection. "
             "When provided, jobs will be automatically assigned to the best-fitting partition based on "
-            "their resource requirements. Expected format:\n"
-            "partitions:\n"
-            "  short:\n"
-            "    max_runtime: 30  # minutes\n"
-            "    max_memory_mb: 4000\n"
-            "  gpu:\n"
-            "    max_runtime: 120\n"
-            "    max_gpu: 2\n"
-            "    available_gpu_models: ['v100', 'a100']\n"
             "See documentation for complete list of available limits.",
             "env_var": False,
             "required": False,
