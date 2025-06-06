@@ -487,92 +487,69 @@ class TestPartitionSelection:
     def basic_partition_config(self):
         """Basic partition configuration with two partitions."""
         return {
-            "partitions": [
-                {
-                    "name": "default",
-                    "description": "General purpose compute nodes",
-                    "limits": {
-                        "max_runtime": 1440,
-                        "max_mem_mb": 128000,
-                        "max_cpus_per_task": 32,
-                        "supports_mpi": True,
-                    },
+            "partitions": {
+                "default": {
+                    "max_runtime": 1440,
+                    "max_mem_mb": 128000,
+                    "max_cpus_per_task": 32,
+                    "supports_mpi": True,
                 },
-                {
-                    "name": "gpu",
-                    "description": "GPU-enabled nodes",
-                    "limits": {
-                        "max_runtime": 720,
-                        "max_mem_mb": 256000,
-                        "max_gpu": 4,
-                        "available_gpu_models": ["a100", "v100"],
-                        "supports_mpi": False,
-                    },
+                "gpu": {
+                    "max_runtime": 720,
+                    "max_mem_mb": 256000,
+                    "max_gpu": 4,
+                    "available_gpu_models": ["a100", "v100"],
+                    "supports_mpi": False,
                 },
-            ]
+            }
         }
 
     @pytest.fixture
     def minimal_partition_config(self):
         """Minimal partition configuration."""
-        return {
-            "partitions": [
-                {
-                    "name": "minimal",
-                    "description": "Minimal partition",
-                    "limits": {},
-                }
-            ]
-        }
+        return {"partitions": {"minimal": {}}}
 
     @pytest.fixture
     def comprehensive_partition_config(self):
         """Comprehensive partition configuration with all limit types."""
         return {
-            "partitions": [
-                {
-                    "name": "comprehensive",
-                    "description": "Partition with all limits",
-                    "limits": {
-                        # Standard resources
-                        "max_runtime": 2880,
-                        "max_mem_mb": 500000,
-                        "max_mem_mb_per_cpu": 8000,
-                        "max_cpus_per_task": 64,
-                        # SLURM-specific resources
-                        "max_nodes": 4,
-                        "max_tasks": 256,
-                        "max_tasks_per_node": 64,
-                        # GPU resources
-                        "max_gpu": 8,
-                        "available_gpu_models": ["a100", "v100", "rtx3090"],
-                        "max_cpus_per_gpu": 16,
-                        # MPI resources
-                        "supports_mpi": True,
-                        "max_mpi_tasks": 512,
-                        # Node features/constraints
-                        "available_constraints": ["intel", "avx2", "highmem"],
-                    },
+            "partitions": {
+                "comprehensive": {
+                    # Standard resources
+                    "max_runtime": 2880,
+                    "max_mem_mb": 500000,
+                    "max_mem_mb_per_cpu": 8000,
+                    "max_cpus_per_task": 64,
+                    # SLURM-specific resources
+                    "max_nodes": 4,
+                    "max_tasks": 256,
+                    "max_tasks_per_node": 64,
+                    # GPU resources
+                    "max_gpu": 8,
+                    "available_gpu_models": ["a100", "v100", "rtx3090"],
+                    "max_cpus_per_gpu": 16,
+                    # MPI resources
+                    "supports_mpi": True,
+                    "max_mpi_tasks": 512,
+                    # Node features/constraints
+                    "available_constraints": ["intel", "avx2", "highmem"],
                 }
-            ]
+            }
         }
 
     @pytest.fixture
     def empty_partitions_config(self):
         """Empty partitions configuration."""
-        return {"partitions": []}
+        return {"partitions": {}}
 
     @pytest.fixture
     def missing_name_config(self):
         """Configuration with missing name field."""
         return {
-            "partitions": [
-                {
-                    # Missing 'name' field
-                    "description": "Missing name",
-                    "limits": {},
+            "partitions": {
+                "": {  # Empty partition name
                 }
-            ]
+            }
         }
 
     @pytest.fixture
@@ -604,7 +581,6 @@ class TestPartitionSelection:
 
             # Check first partition
             assert partitions[0].name == "default"
-            assert partitions[0].description == "General purpose compute nodes"
             assert partitions[0].limits.max_runtime == 1440
             assert partitions[0].limits.max_mem_mb == 128000
             assert partitions[0].limits.max_cpus_per_task == 32
@@ -612,7 +588,6 @@ class TestPartitionSelection:
 
             # Check second partition
             assert partitions[1].name == "gpu"
-            assert partitions[1].description == "GPU-enabled nodes"
             assert partitions[1].limits.max_runtime == 720
             assert partitions[1].limits.max_gpu == 4
             assert partitions[1].limits.available_gpu_models == ["a100", "v100"]
@@ -634,7 +609,6 @@ class TestPartitionSelection:
 
             assert len(partitions) == 1
             assert partitions[0].name == "minimal"
-            assert partitions[0].description == "Minimal partition"
 
             # Check that all limits are inf
             limits = partitions[0].limits

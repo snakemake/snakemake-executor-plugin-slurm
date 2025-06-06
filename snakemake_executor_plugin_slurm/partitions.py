@@ -13,13 +13,15 @@ from snakemake_interface_executor_plugins.logging import LoggerExecutorInterface
 def read_partition_file(partition_file: Path) -> List["Partition"]:
     with open(partition_file, "r") as f:
         out = []
-        partitions = yaml.safe_load(f)["partitions"]
-        for p in partitions:
+        partitions_dict = yaml.safe_load(f)["partitions"]
+        for partition_name, partition_config in partitions_dict.items():
+            if not partition_name or not partition_name.strip():
+                raise KeyError("Partition name cannot be empty")
+
             out.append(
                 Partition(
-                    name=p["name"],
-                    limits=PartitionLimits(**p["limits"]),
-                    description=p["description"],
+                    name=partition_name,
+                    limits=PartitionLimits(**partition_config),
                 )
             )
         return out
@@ -178,7 +180,6 @@ class Partition:
 
     name: str
     limits: PartitionLimits
-    description: Optional[str] = None
 
     def score_job_fit(self, job: JobExecutorInterface) -> Optional[float]:
         """
