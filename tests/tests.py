@@ -546,12 +546,7 @@ class TestPartitionSelection:
     @pytest.fixture
     def missing_name_config(self):
         """Configuration with missing name field."""
-        return {
-            "partitions": {
-                "": {  # Empty partition name
-                }
-            }
-        }
+        return {"partitions": {"": {}}}  # Empty partition name
 
     @pytest.fixture
     def invalid_key_config(self):
