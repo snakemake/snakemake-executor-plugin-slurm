@@ -72,7 +72,7 @@ def parse_gpu_requirements(job: JobExecutorInterface) -> tuple[int, Optional[str
 
     if "gpu" in gres and gpu_required:
         raise WorkflowError(
-            "GPU resource specified in both 'gpu' and 'gres'. These are mutually exclusive."
+            "GPU resource specified in both 'gpu' and 'gres'. These are mutually exclusive."  # noqa: E501
         )
 
     if gpu_required:
@@ -92,7 +92,7 @@ def parse_gpu_requirements(job: JobExecutorInterface) -> tuple[int, Optional[str
 
 def get_job_cpu_requirement(job: JobExecutorInterface) -> tuple[int, str]:
     """
-    This uses the same logic as snakemake_executor_plugin_slurm_jobstep.get_cpu_setting, but returns a tuple instead of a arg string.
+    This uses the same logic as snakemake_executor_plugin_slurm_jobstep.get_cpu_setting, but returns a tuple instead of a arg string. # noqa: E501
     """
 
     gpu_required = job.resources.get("gpu", 0)
@@ -187,10 +187,10 @@ class Partition:
         Calculate a score for how well a partition fits the job requirements
         """
 
-        # try to score how closely a job matches a partition's limits, in order to handle case where multiple partitions can run a given job
-        # naive approach here is to just sum the ratio of requested resource to limit, of course this limits us to only consider numerical resources
+        # try to score how closely a job matches a partition's limits, in order to handle case where multiple partitions can run a given job # noqa: E501
+        # naive approach here is to just sum the ratio of requested resource to limit, of course this limits us to only consider numerical resources # noqa: E501
         # here a higher score indicates a better fit
-        # TODO decide how to handle unspecified limits, for now we assume inf for numerical limits, none for others.
+        # TODO decide how to handle unspecified limits, for now we assume inf for numerical limits, none for others. # noqa: E501
 
         score = 0.0
 

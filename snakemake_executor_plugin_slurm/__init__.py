@@ -110,8 +110,9 @@ class ExecutorSettings(ExecutorSettingsBase):
     partition_config: Optional[Path] = field(
         default=None,
         metadata={
-            "help": "Path to YAML file defining partition limits for automatic partition selection. "
-            "When provided, jobs will be automatically assigned to the best-fitting partition based on "
+            "help": "Path to YAML file defining partition limits for dynamic "
+            "partition selection. When provided, jobs will be dynamically "
+            "assigned to the best-fitting partition based on "
             "See documentation for complete list of available limits.",
             "env_var": False,
             "required": False,
@@ -247,7 +248,8 @@ class Executor(RemoteExecutor):
         if job.resources.get("slurm_extra"):
             self.check_slurm_extra(job)
 
-        # NOTE removed partition from below, such that partition selection can benefit from resource checking as the call is built up.
+        # NOTE removed partition from below, such that partition
+        # selection can benefit from resource checking as the call is built up.
         job_params = {
             "run_uuid": self.run_uuid,
             "slurm_logfile": slurm_logfile,
@@ -396,7 +398,7 @@ class Executor(RemoteExecutor):
 
         # We use this sacct syntax for argument 'starttime' to keep it compatible
         # with slurm < 20.11
-        sacct_starttime = f"{datetime.now() - timedelta(days = 2):%Y-%m-%dT%H:00}"
+        sacct_starttime = f"{datetime.now() - timedelta(days=2):%Y-%m-%dT%H:00}"
         # previously we had
         # f"--starttime now-2days --endtime now --name {self.run_uuid}"
         # in line 218 - once v20.11 is definitively not in use any more,

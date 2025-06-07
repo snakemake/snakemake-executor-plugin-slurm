@@ -482,6 +482,7 @@ class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageB
     # Verify no slashes remain in the wildcard string
     assert "/" not in wildcard_str
 
+
 class TestPartitionSelection:
     @pytest.fixture
     def basic_partition_config(self):
