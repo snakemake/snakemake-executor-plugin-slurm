@@ -29,6 +29,7 @@ from snakemake_interface_common.exceptions import WorkflowError
 
 from .utils import delete_slurm_environment, delete_empty_dirs, set_gres_string
 from .submit_string import get_submit_command
+from .partitions import read_partition_file, get_best_partition
 
 
 @dataclass
@@ -106,6 +107,17 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
+    partition_config: Optional[Path] = field(
+        default=None,
+        metadata={
+            "help": "Path to YAML file defining partition limits for dynamic "
+            "partition selection. When provided, jobs will be dynamically "
+            "assigned to the best-fitting partition based on "
+            "See documentation for complete list of available limits.",
+            "env_var": False,
+            "required": False,
+        },
+    )
 
 
 # Required:
@@ -148,6 +160,11 @@ class Executor(RemoteExecutor):
             Path(self.workflow.executor_settings.logdir)
             if self.workflow.executor_settings.logdir
             else Path(".snakemake/slurm_logs").resolve()
+        )
+        self._partitions = (
+            read_partition_file(self.workflow.executor_settings.partition_config)
+            if self.workflow.executor_settings.partition_config
+            else None
         )
         atexit.register(self.clean_old_logs)
 
@@ -231,12 +248,13 @@ class Executor(RemoteExecutor):
         if job.resources.get("slurm_extra"):
             self.check_slurm_extra(job)
 
+        # NOTE removed partition from below, such that partition
+        # selection can benefit from resource checking as the call is built up.
         job_params = {
             "run_uuid": self.run_uuid,
             "slurm_logfile": slurm_logfile,
             "comment_str": comment_str,
             "account": self.get_account_arg(job),
-            "partition": self.get_partition_arg(job),
             "workdir": self.workflow.workdir_init,
         }
 
@@ -278,6 +296,8 @@ class Executor(RemoteExecutor):
                     "specified. Assuming 'tasks_per_node=1'."
                     "Probably not what you want."
                 )
+
+        call += self.get_partition_arg(job)
 
         exec_job = self.format_job_exec(job)
 
@@ -378,7 +398,7 @@ class Executor(RemoteExecutor):
 
         # We use this sacct syntax for argument 'starttime' to keep it compatible
         # with slurm < 20.11
-        sacct_starttime = f"{datetime.now() - timedelta(days = 2):%Y-%m-%dT%H:00}"
+        sacct_starttime = f"{datetime.now() - timedelta(days=2):%Y-%m-%dT%H:00}"
         # previously we had
         # f"--starttime now-2days --endtime now --name {self.run_uuid}"
         # in line 218 - once v20.11 is definitively not in use any more,
@@ -618,9 +638,13 @@ We leave it to SLURM to resume your job(s)"""
         returns a default partition, if applicable
         else raises an error - implicetly.
         """
+        partition = None
         if job.resources.get("slurm_partition"):
             partition = job.resources.slurm_partition
-        else:
+        elif self._partitions:
+            partition = get_best_partition(self._partitions, job, self.logger)
+        # we didnt get a partition yet so try fallback.
+        if not partition:
             if self._fallback_partition is None:
                 self._fallback_partition = self.get_default_partition(job)
             partition = self._fallback_partition
