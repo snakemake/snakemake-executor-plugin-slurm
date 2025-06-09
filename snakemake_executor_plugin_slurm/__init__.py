@@ -301,7 +301,7 @@ class Executor(RemoteExecutor):
         except subprocess.CalledProcessError as e:
             self.report_job_error(
                 SubmittedJobInfo(job),
-                msg=f'SLURM sbatch failed. The error message was "{e.output}". sbatch call: "{call}"',
+                msg=f'SLURM sbatch failed. The error message was "{e.output}".\nsbatch call:\n{call}\n',
             )
             return
         # any other error message indicating failure?
