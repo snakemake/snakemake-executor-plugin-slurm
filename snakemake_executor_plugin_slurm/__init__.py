@@ -299,7 +299,10 @@ class Executor(RemoteExecutor):
                     process.returncode, call, output=err
                 )
         except subprocess.CalledProcessError as e:
-            self.report_job_error(SubmittedJobInfo(job))
+            self.report_job_error(
+                SubmittedJobInfo(job),
+                msg=f'SLURM sbatch failed. The error message was "{e.output}". sbatch call: "{call}"',
+            )
             return
         # any other error message indicating failure?
         if "submission failed" in err:
