@@ -299,7 +299,7 @@ class Executor(RemoteExecutor):
                     process.returncode, call, output=err
                 )
         except subprocess.CalledProcessError as e:
-            self.report_job_error(job)
+            self.report_job_error(SubmittedJobInfo(job))
             return
         # any other error message indicating failure?
         if "submission failed" in err:
