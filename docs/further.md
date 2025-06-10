@@ -618,6 +618,14 @@ This configuration directs SLURM logs to a centralized location, making them eas
 Running Snakemake within an active SLURM job can lead to unpredictable behavior, as the execution environment may not be properly configured for job submission.
 To mitigate potential issues, the SLURM executor plugin detects when it's operating inside a SLURM job and issues a warning, pausing for 5 seconds before proceeding.
 
+### Running in SLURM reservations
+
+This scenario is mostly done when testing or teaching.
+The plugin allows specifying a flag `--reservation=<name>` to use a particular reservation.
+It does not validate the spelling nor eligibility to this reservation
+For teaching, it is recommended that you ask your administrators to set up a reservation with the SLURM `magnetic` flag.
+This will ensure that the `--reservation` flag is not necessary, e.g. if the reservation is associated with a particular course account. 
+
 ### Frequently Asked Questions
 
 #### Should I run Snakemake on the Login Node of my Cluster?
