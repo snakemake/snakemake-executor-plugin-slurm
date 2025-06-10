@@ -622,8 +622,8 @@ To mitigate potential issues, the SLURM executor plugin detects when it's operat
 
 This scenario is mostly done when testing or teaching.
 The plugin allows specifying a flag `--slurm-reservation=<name>` to use a particular reservation.
-It does not validate the spelling nor eligibility to this reservation
-For teaching, it is recommended that you ask your administrators to set up a reservation with the SLURM `magnetic` flag.
+It does not validate the spelling nor eligibility to this reservation.
+When teaching, it is recommended that you ask your administrators to set up a reservation with the SLURM `magnetic` flag.
 This will ensure that the `--slurm-reservation` flag is not necessary, e.g. if the reservation is associated with a particular course account. 
 
 ### Frequently Asked Questions
