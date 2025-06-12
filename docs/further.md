@@ -618,7 +618,7 @@ This configuration directs SLURM logs to a centralized location, making them eas
 Running Snakemake within an active SLURM job can lead to unpredictable behavior, as the execution environment may not be properly configured for job submission.
 To mitigate potential issues, the SLURM executor plugin detects when it's operating inside a SLURM job and issues a warning, pausing for 5 seconds before proceeding.
 
-### Running in SLURM reservations
+### Submittings Jobs into SLURM reservations
 
 The plugin allows specifying a flag `--slurm-reservation=<name>` to use a particular reservation.
 It does not validate the spelling nor eligibility to this reservation.
