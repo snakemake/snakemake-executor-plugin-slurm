@@ -4,6 +4,8 @@ from pathlib import Path
 import subprocess
 import shlex
 
+import os # only temporarily needed for printf debugging
+
 
 def time_to_seconds(time_str):
     """Convert SLURM time format to seconds."""
@@ -171,3 +173,6 @@ def create_efficiency_report(e_threshold, run_uuid, e_report_path, logger):
 
     # write out the efficiency report at normal verbosity in any case
     logger.info(f"Efficiency report for workflow {run_uuid} saved to {logfile}.")
+    # state directory contents for debugging purposes
+    logger.debug(f"Current directory contents in '{p.cwd()}': {os.listdir(p.cwd())}")
+
