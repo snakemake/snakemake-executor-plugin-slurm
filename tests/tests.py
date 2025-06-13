@@ -1,3 +1,7 @@
+import os
+import re
+
+# from pathlib import Path
 from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
@@ -17,7 +21,73 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
         return "slurm"
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
-        return ExecutorSettings(init_seconds_before_status_checks=1)
+        return ExecutorSettings(
+            init_seconds_before_status_checks=2,
+            # seconds_between_status_checks=5,
+        )
+
+
+class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+    __test__ = True
+
+    def get_executor(self) -> str:
+        return "slurm"
+
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        return ExecutorSettings(
+            efficiency_report=True,
+            init_seconds_before_status_checks=5,
+            # efficiency_report_path=Path("/tmp/efficiency_report_test"),
+            # seconds_between_status_checks=5,
+        )
+
+    def test_simple_workflow(self, tmp_path):
+        # for an unkown reason, the efficiency report is not created
+        # reliably in `tmp_path`, so we use a fixed path
+        # to ensure the test is reproducible
+
+        # a worklfow aborted:
+        # error message:
+        # OSError: Cannot save file into a non-existent directory:
+        # '/tmp/efficiency_report_test'
+        # runpath = Path("/tmp/efficiency_report_test")
+        # runpath.mkdir(parents=True, exist_ok=True)
+        self.run_workflow("simple", tmp_path)
+
+        # The efficiency report is created in the
+        # current working directory
+        pattern = re.compile(r"efficiency_report_[\w-]+\.csv")
+        report_found = False
+        # report the tmp_path directory for debugging
+        print(f"'tmp_path' is: {tmp_path}")
+
+        # print the current working directory
+        print(f"Current working directory: {os.getcwd()}")
+        # print the listdir report to visualize the folder content
+        print(f"Listdir report: {os.listdir(tmp_path)}")
+        # Check if the efficiency report file exists - based on the regex pattern
+        for fname in os.listdir(tmp_path):
+            if pattern.match(fname):
+                report_found = True
+                report_path = os.path.join(tmp_path, fname)
+                # Verify it's not empty
+                assert (
+                    os.stat(report_path).st_size > 0
+                ), f"Efficiency report {report_path} is empty"
+                break
+        assert report_found, "Efficiency report file not found"
+        # as the directory is unclear, we need a path walk:
+        # for root, _, files in os.walk("/tmp/pytest-of-runner/"):
+        #    for fname in files:
+        #        if pattern.match(fname):
+        #            report_found = True
+        #            report_path = os.path.join(root, fname)
+        #            # Verify it's not empty
+        #            assert (
+        #                os.stat(report_path).st_size > 0
+        #            ), f"Efficiency report {report_path} is empty"
+        #            break
+        # assert report_found, "Efficiency report file not found"
 
 
 class TestWorkflowsRequeue(TestWorkflows):
