@@ -138,6 +138,12 @@ class ExecutorSettings(ExecutorSettingsBase):
             "help": "The efficiency threshold for the efficiency report. "
             "Jobs with an efficiency below this threshold will be reported. "
             "This flag has no effect, if not set.",
+        },
+    )
+    reservation: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": "If set, the given reservation will be used for job submission.",
             "env_var": False,
             "required": False,
         },
@@ -302,6 +308,9 @@ class Executor(RemoteExecutor):
 
         if self.workflow.executor_settings.requeue:
             call += " --requeue"
+
+        if self.workflow.executor_settings.reservation:
+            call += f" --reservation={self.workflow.executor_settings.reservation}"
 
         call += set_gres_string(job)
 
