@@ -310,9 +310,11 @@ class Executor(RemoteExecutor):
                     process.returncode, call, output=err
                 )
         except subprocess.CalledProcessError as e:
-            raise WorkflowError(
-                f"SLURM sbatch failed. The error message was {e.output}"
+            self.report_job_error(
+                SubmittedJobInfo(job),
+                msg=f'SLURM sbatch failed. The error message was "{e.output}".\nsbatch call:\n{call}\n',
             )
+            return
         # any other error message indicating failure?
         if "submission failed" in err:
             raise WorkflowError(
