@@ -108,6 +108,14 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
+    reservation: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": "If set, the given reservation will be used for job submission.",
+            "env_var": False,
+            "required": False,
+        },
+    )
     resources: bool = field(
         default=False,
         metadata={
@@ -259,6 +267,9 @@ class Executor(RemoteExecutor):
 
         if self.workflow.executor_settings.requeue:
             call += " --requeue"
+
+        if self.workflow.executor_settings.reservation:
+            call += f" --reservation={self.workflow.executor_settings.reservation}"
 
         call += set_gres_string(job)
 

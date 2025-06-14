@@ -9,13 +9,11 @@ The memory footprint varies based on these functionalities; for instance, rules 
 
 **The information provided below is specific to the Cannon plugin. For full documentation of the general SLURM plugin see the** [official documentation](https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html#further-detail) **for that plugin.**
 
-#### Usage Hints
 
-Install this plugin into your Snakemake base environment using conda.
-This process also installs the 'jobstep' plugin, utilized on cluster nodes.
-Additionally, we recommend installing the `snakemake-storage-plugin-fs` for automated stage-in and stage-out procedures.
+Installing this plugin into your Snakemake base environment using conda will also install the 'jobstep' plugin, utilized on cluster nodes.
+Additionally, we recommend installing the `snakemake-storage-plugin-fs`, which will automate transferring data from the main file system to slurm execution nodes and back (stage-in and stage-out).
 
-#### Reporting Bugs and Feature Requests
+### Contributions
 
 We welcome bug reports and feature requests!
 Please report issues specific to this plugin [in the plugin's GitHub repository](https://github.com/harvardinformatics/snakemake-executor-plugin-cannon/issues).
@@ -40,6 +38,12 @@ This resource is typically omitted from Snakemake workflows to maintain platform
 
 To specify it at the command line, define it as default resources:
 
+```console
+$ snakemake --executor slurm \
+> -j unlimited \
+> --workflow-profile <profile directory with a `config.yaml`> \
+> --configfile config/config.yaml \
+> --directory <path>
 ``` console
 $ snakemake --executor cannon --default-resources slurm_account=<your SLURM account>
 ```
