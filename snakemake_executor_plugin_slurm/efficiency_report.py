@@ -26,10 +26,10 @@ def parse_maxrss(maxrss):
     """Convert MaxRSS to MB."""
     if pd.isna(maxrss) or maxrss.strip() == "" or maxrss == "0":
         return 0
-    match = re.match(r"(\d+)([KMG]?)", maxrss)
+    match = re.match(r"(\d+(?:\.\d+)?)([KMG]?)", maxrss)
     if match:
         value, unit = match.groups()
-        value = int(value)
+        value = float(value)
         unit_multipliers = {"K": 1 / 1024, "M": 1, "G": 1024}
         return value * unit_multipliers.get(unit, 1)
     return 0
