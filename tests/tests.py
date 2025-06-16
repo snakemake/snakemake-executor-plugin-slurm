@@ -37,7 +37,7 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
         return ExecutorSettings(
             efficiency_report=True,
             init_seconds_before_status_checks=5,
-            # efficiency_report_path=Path("/tmp/efficiency_report_test"),
+            efficiency_report_path=Path.pwd() / "efficiency_report_test",
             # seconds_between_status_checks=5,
         )
 
@@ -58,18 +58,15 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
         # current working directory
         pattern = re.compile(r"efficiency_report_[\w-]+\.csv")
         report_found = False
-        # report the tmp_path directory for debugging
-        print(f"'tmp_path' is: {tmp_path}")
 
-        # print the current working directory
-        print(f"Current working directory: {os.getcwd()}")
-        # print the listdir report to visualize the folder content
-        print(f"Listdir report: {os.listdir(tmp_path)}")
+        report_path = None
+        expected_path = Path.pwd() / "efficiency_report_test"
+
         # Check if the efficiency report file exists - based on the regex pattern
-        for fname in os.listdir(tmp_path):
+        for fname in os.listdir(expected_path):
             if pattern.match(fname):
                 report_found = True
-                report_path = os.path.join(tmp_path, fname)
+                report_path = os.path.join(expected_path, fname)
                 # Verify it's not empty
                 assert (
                     os.stat(report_path).st_size > 0
