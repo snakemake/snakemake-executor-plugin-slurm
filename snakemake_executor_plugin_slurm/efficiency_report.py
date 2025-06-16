@@ -140,7 +140,7 @@ def create_efficiency_report(e_threshold, run_uuid, e_report_path, logger):
     df["Memory Usage (%)"] = df["Memory Usage (%)"].fillna(0).round(2)
 
     # Drop all rows containing "batch" or "extern" as job names
-    df = df[~df["JobName"].str.contains("batch|extern")]
+    df = df[~df["JobName"].str.contains("batch|extern", na=False)]
 
     # Log warnings for low efficiency
     for _, row in df.iterrows():
