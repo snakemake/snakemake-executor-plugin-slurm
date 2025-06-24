@@ -173,6 +173,8 @@ def create_efficiency_report(e_threshold, run_uuid, e_report_path, logger):
         logfile = Path(e_report_path) / logfile
     else:
         logfile = p.cwd() / logfile
+    # ensure the directory exists
+    logfile.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(logfile)
 
     # write out the efficiency report at normal verbosity in any case
