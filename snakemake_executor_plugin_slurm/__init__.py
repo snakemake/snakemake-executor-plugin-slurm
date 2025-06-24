@@ -909,7 +909,8 @@ We leave it to SLURM to resume your job(s)"""
         logfile = f"efficiency_report_{self.run_uuid}.csv"
         if self.workflow.executor_settings.efficiency_report_path:
             logfile = (
-                Path(self.workflow.executor_settings.efficiency_report_path) / logfile
+                Path(self.workflow.executor_settings.efficiency_report_path)
+                / logfile
             )
         else:
             logfile = p.cwd() / logfile
