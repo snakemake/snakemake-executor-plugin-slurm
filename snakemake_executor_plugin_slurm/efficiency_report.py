@@ -4,7 +4,7 @@ from pathlib import Path
 import subprocess
 import shlex
 
-import os # only temporarily needed for printf debugging
+import os  # only temporarily needed for printf debugging
 
 
 def time_to_seconds(time_str):
@@ -46,7 +46,7 @@ def parse_reqmem(reqmem, number_of_nodes=1):
         value = float(value)
         unit_multipliers = {"K": 1 / 1024, "M": 1, "G": 1024}
         mem_mb = value * unit_multipliers.get(unit, 1)
-        if per_unit in ("n", "/node"):        # per-node
+        if per_unit in ("n", "/node"):  # per-node
             nodes = 1 if pd.isna(number_of_nodes) else number_of_nodes
             return mem_mb * nodes
         # `/c` or `c` → per-CPU; caller may multiply later
@@ -73,7 +73,7 @@ def create_efficiency_report(e_threshold, run_uuid, e_report_path, logger):
             logger.warning(f"No job data found for workflow {run_uuid}.")
             return None
         lines = raw.split("\n")
-        
+
     except subprocess.CalledProcessError:
         logger.error(f"Failed to retrieve job data for workflow {run_uuid}.")
         return None
@@ -179,4 +179,3 @@ def create_efficiency_report(e_threshold, run_uuid, e_report_path, logger):
     logger.info(f"Efficiency report for workflow {run_uuid} saved to {logfile}.")
     # state directory contents for debugging purposes
     logger.debug(f"Current directory contents in '{p.cwd()}': {os.listdir(p.cwd())}")
-
