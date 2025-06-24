@@ -68,7 +68,12 @@ def create_efficiency_report(e_threshold, run_uuid, e_report_path, logger):
         result = subprocess.run(
             shlex.split(cmd), capture_output=True, text=True, check=True
         )
-        lines = result.stdout.strip().split("\n")
+        raw = result.stdout.strip()
+        if not raw:
+            logger.warning(f"No job data found for workflow {run_uuid}.")
+            return None
+        lines = raw.split("\n")
+        
     except subprocess.CalledProcessError:
         logger.error(f"Failed to retrieve job data for workflow {run_uuid}.")
         return None
