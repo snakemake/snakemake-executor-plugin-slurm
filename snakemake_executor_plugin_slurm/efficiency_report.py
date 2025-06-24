@@ -5,6 +5,7 @@ import subprocess
 import shlex
 
 import os  # only temporarily needed for printf debugging
+import numpy as np
 
 
 def time_to_seconds(time_str):
