@@ -622,6 +622,11 @@ To mitigate potential issues, the SLURM executor plugin detects when it's operat
 
 With `--slurm-efficiency-report` you can generate a table of all efficiency data. A logfile `efficiency_report_<workflow_id>.log` will be generated in your current directory. This is equivalent to the information with `seff <jobid>` for individual jobs. It works best if "comments" are stored as a job property on your cluster as this plugin uses the "comment" parameter to store the rule name.
 
+### Submittings Jobs into SLURM reservations
+
+The plugin allows specifying a flag `--slurm-reservation=<name>` to use a particular reservation.
+It does not validate the spelling nor eligibility to this reservation.
+
 ### Frequently Asked Questions
 
 #### Should I run Snakemake on the Login Node of my Cluster?
