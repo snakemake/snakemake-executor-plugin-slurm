@@ -34,12 +34,14 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
         return "slurm"
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        self.REPORT_PATH = Path.cwd() / "efficiency_report_test"
+
         return ExecutorSettings(
-            efficiency_report=True,
-            init_seconds_before_status_checks=5,
-            efficiency_report_path=Path.cwd() / "efficiency_report_test",
-            # seconds_between_status_checks=5,
-        )
+                efficiency_report=True,
+                init_seconds_before_status_checks=5,
+                efficiency_report_path=self.REPORT_PATH,
+                # seconds_between_status_checks=5,
+            )
 
     def test_simple_workflow(self, tmp_path):
         # for an unkown reason, the efficiency report is not created
@@ -60,12 +62,9 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
         report_found = False
 
         report_path = None
-        # we do not need to ensure the path exists, as it is created by the
-        # executor
-        expected_path = Path.cwd() / "efficiency_report_test"
 
         # Check if the efficiency report file exists - based on the regex pattern
-        for fname in os.listdir(expected_path):
+        for fname in os.listdir(self.REPORT_PATH):
             if pattern.match(fname):
                 report_found = True
                 report_path = os.path.join(expected_path, fname)
