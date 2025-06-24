@@ -37,7 +37,7 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
         return ExecutorSettings(
             efficiency_report=True,
             init_seconds_before_status_checks=5,
-            efficiency_report_path=Path.pwd() / "efficiency_report_test",
+            efficiency_report_path=Path.cwd() / "efficiency_report_test",
             # seconds_between_status_checks=5,
         )
 
@@ -60,7 +60,9 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
         report_found = False
 
         report_path = None
-        expected_path = Path.pwd() / "efficiency_report_test"
+        # we do not need to ensure the path exists, as it is created by the
+        # executor
+        expected_path = Path.cwd() / "efficiency_report_test"
 
         # Check if the efficiency report file exists - based on the regex pattern
         for fname in os.listdir(expected_path):
