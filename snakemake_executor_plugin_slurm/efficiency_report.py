@@ -97,7 +97,7 @@ def create_efficiency_report(e_threshold, run_uuid, e_report_path, logger):
     # If the "Comment" column is empty,
     # a) delete the column
     # b) issue a warning
-    if df["Comment"].isnull().all():
+    if df["Comment"].replace("", pd.NA).isna().all():
         logger.warning(
             f"No comments found for workflow {run_uuid}. "
             "This field is used to store the rule name. "
