@@ -39,18 +39,17 @@ def parse_reqmem(reqmem, number_of_nodes=1):
     """Convert requested memory to MB."""
     if pd.isna(reqmem) or reqmem.strip() == "":
         return 0
-    match = re.match(
-        r"(\d+)([KMG])?(\S+)?", reqmem
-    )  # Handles "4000M" or "4G" or "2G/node"
+    # 4Gc (per-CPU) / 16Gn (per-node) / 2.5G
+    match = re.match(r"(\d+(?:\.\d+)?)([KMG])?([cn]|/node)?", reqmem)
     if match:
         value, unit, per_unit = match.groups()
-        value = int(value)
+        value = float(value)
         unit_multipliers = {"K": 1 / 1024, "M": 1, "G": 1024}
         mem_mb = value * unit_multipliers.get(unit, 1)
-        if per_unit and "/node" in per_unit:
-            # the memory values is per node, hence we need to
-            # multiply with the number of nodes
-            return mem_mb * number_of_nodes
+        if per_unit in ("n", "/node"):        # per-node
+            nodes = 1 if pd.isna(number_of_nodes) else number_of_nodes
+            return mem_mb * nodes
+        # `/c` or `c` → per-CPU; caller may multiply later
         return mem_mb  # Default case (per CPU or total)
     return 0
 
