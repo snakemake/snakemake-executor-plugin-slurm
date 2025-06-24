@@ -121,9 +121,10 @@ def create_efficiency_report(e_threshold, run_uuid, e_report_path, logger):
 
     # Compute CPU efficiency
     df["CPU Efficiency (%)"] = (
-        df["TotalCPU_sec"] / (df["Elapsed_sec"] * df["NCPUS"])
+        df["TotalCPU_sec"]
+        / (df["Elapsed_sec"].clip(lower=1) * df["NCPUS"].clip(lower=1))
     ) * 100
-    df["CPU Efficiency (%)"] = df["CPU Efficiency (%)"].fillna(0).round(2)
+    df.replace([np.inf, -np.inf], 0, inplace=True)
 
     # Convert MaxRSS
     df["MaxRSS_MB"] = df["MaxRSS"].apply(parse_maxrss)
