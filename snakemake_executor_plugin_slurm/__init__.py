@@ -497,11 +497,21 @@ We leave it to SLURM to resume your job(s)"""
                     any_finished = True
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
                 elif status in fail_stati:
+                    reason_command = f"sacct -j {j.external_jobid}.0 --format=Reason --noheader"
+                    try:
+                        reason_output = subprocess.check_output(
+                            reason_command, shell=True, text=True, stderr=subprocess.PIPE
+                        ).strip()
+                        reason = reason_output if reason_output else "Unknown"
+                    except subprocess.CalledProcessError as e:
+                        reason = "Unable to retrieve reason"
+                        self.logger.warning(
+                            f"Failed to retrieve jobstep reason for SLURM job '{j.external_jobid}': {e.stderr.strip()}"
+                        )
+
                     msg = (
                         f"SLURM-job '{j.external_jobid}' failed, SLURM status is: "
-                        # message ends with '. ', because it is proceeded
-                        # with a new sentence
-                        f"'{status}'. "
+                        f"'{status}'. Reason: '{reason}'. "
                     )
                     self.report_job_error(
                         j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
