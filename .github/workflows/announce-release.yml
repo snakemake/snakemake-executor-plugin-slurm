@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Post to Mastodon
-        uses: snakemake/mastodon-release-post-action@v1.4.0
+        uses: snakemake/mastodon-release-post-action@v1.5.0
         with:
           access-token: ${{ secrets.MASTODONBOT }}
           pr-title: ${{ github.event.head_commit.message }}

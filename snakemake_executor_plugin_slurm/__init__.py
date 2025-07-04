@@ -3,7 +3,6 @@ __copyright__ = "Copyright 2023, David Lähnemann, Johannes Köster, Christian M
 __email__ = "johannes.koester@uni-due.de"
 __license__ = "MIT"
 
-import atexit
 import csv
 from io import StringIO
 import os
@@ -16,6 +15,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import List, Generator, Optional
 import uuid
+
 from snakemake_interface_executor_plugins.executors.base import SubmittedJobInfo
 from snakemake_interface_executor_plugins.executors.remote import RemoteExecutor
 from snakemake_interface_executor_plugins.settings import (
@@ -27,7 +27,12 @@ from snakemake_interface_executor_plugins.jobs import (
 )
 from snakemake_interface_common.exceptions import WorkflowError
 
-from .utils import delete_slurm_environment, delete_empty_dirs, set_gres_string
+from .utils import (
+    delete_slurm_environment,
+    delete_empty_dirs,
+    set_gres_string,
+)
+from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
 
 
@@ -106,6 +111,43 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
+    efficiency_report: bool = field(
+        default=False,
+        metadata={
+            "help": "Generate an efficiency report at the end of the workflow. "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    efficiency_report_path: Optional[Path] = field(
+        default=None,
+        metadata={
+            "help": "Path to the efficiency report file. "
+            "If not set, the report will be written to "
+            "the current working directory with the name "
+            "'efficiency_report_<run_uuid>.csv'. "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    efficiency_threshold: Optional[float] = field(
+        default=0.8,
+        metadata={
+            "help": "The efficiency threshold for the efficiency report. "
+            "Jobs with an efficiency below this threshold will be reported. "
+            "This flag has no effect, if not set.",
+        },
+    )
+    reservation: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": "If set, the given reservation will be used for job submission.",
+            "env_var": False,
+            "required": False,
+        },
+    )
 
 
 # Required:
@@ -149,7 +191,26 @@ class Executor(RemoteExecutor):
             if self.workflow.executor_settings.logdir
             else Path(".snakemake/slurm_logs").resolve()
         )
-        atexit.register(self.clean_old_logs)
+
+    def shutdown(self) -> None:
+        """
+        Shutdown the executor.
+        This method is overloaded, to include the cleaning of old log files
+        and to optionally create an efficiency report.
+        """
+        # First, we invoke the original shutdown method
+        super().shutdown()
+
+        # Next, clean up old log files, unconditionally.
+        self.clean_old_logs()
+        # If the efficiency report is enabled, create it.
+        if self.workflow.executor_settings.efficiency_report:
+            create_efficiency_report(
+                e_threshold=self.workflow.executor_settings.efficiency_threshold,
+                run_uuid=self.run_uuid,
+                e_report_path=self.workflow.executor_settings.efficiency_report_path,
+                logger=self.logger,
+            )
 
     def clean_old_logs(self) -> None:
         """Delete files older than specified age from the SLURM log directory."""
@@ -160,7 +221,8 @@ class Executor(RemoteExecutor):
             return
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
-        self.logger.info(f"Cleaning up log files older than {age_cutoff} day(s)")
+        self.logger.info(f"Cleaning up log files older than {age_cutoff} day(s).")
+
         for path in self.slurm_logdir.rglob("*.log"):
             if path.is_file():
                 try:
@@ -168,12 +230,14 @@ class Executor(RemoteExecutor):
                     if file_age > cutoff_secs:
                         path.unlink()
                 except (OSError, FileNotFoundError) as e:
-                    self.logger.warning(f"Could not delete logfile {path}: {e}")
+                    self.logger.error(f"Could not delete logfile {path}: {e}")
         # we need a 2nd iteration to remove putatively empty directories
         try:
             delete_empty_dirs(self.slurm_logdir)
         except (OSError, FileNotFoundError) as e:
-            self.logger.warning(f"Could not delete empty directory {path}: {e}")
+            self.logger.error(
+                f"Could not delete empty directories in {self.slurm_logdir}: {e}"
+            )
 
     def warn_on_jobcontext(self, done=None):
         if not done:
@@ -244,6 +308,9 @@ class Executor(RemoteExecutor):
 
         if self.workflow.executor_settings.requeue:
             call += " --requeue"
+
+        if self.workflow.executor_settings.reservation:
+            call += f" --reservation={self.workflow.executor_settings.reservation}"
 
         call += set_gres_string(job)
 
@@ -736,10 +803,10 @@ We leave it to SLURM to resume your job(s)"""
         jobname = re.compile(r"--job-name[=?|\s+]|-J\s?")
         if re.search(jobname, job.resources.slurm_extra):
             raise WorkflowError(
-                "The --job-name option is not allowed in the 'slurm_extra' "
-                "parameter. The job name is set by snakemake and must not be "
-                "overwritten. It is internally used to check the stati of the "
-                "all submitted jobs by this workflow."
+                "The --job-name option is not allowed in the 'slurm_extra' parameter. "
+                "The job name is set by snakemake and must not be overwritten. "
+                "It is internally used to check the stati of the all submitted jobs "
+                "by this workflow."
                 "Please consult the documentation if you are unsure how to "
                 "query the status of your jobs."
             )
