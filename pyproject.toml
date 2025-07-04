@@ -18,6 +18,8 @@ python = "^3.11"
 snakemake-interface-common = "^1.13.0"
 snakemake-interface-executor-plugins = "^9.1.1"
 snakemake-executor-plugin-slurm-jobstep = "^0.3.0"
+pandas = "^2.2.3"
+numpy = "^1.26.4"
 throttler = "^1.2.2"
 
 [tool.poetry.group.dev.dependencies]
@@ -25,7 +27,7 @@ black = "^23.7.0"
 flake8 = "^6.1.0"
 coverage = "^7.3.1"
 pytest = "^8.3.5"
-snakemake = "^9.4.0"
+snakemake = "^9.6.0"
 pandas = "^2.2.3"
 
 [tool.coverage.run]
