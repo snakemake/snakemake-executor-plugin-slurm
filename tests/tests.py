@@ -76,18 +76,6 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
                 ), f"Efficiency report {report_path} is empty"
                 break
         assert report_found, "Efficiency report file not found"
-        # as the directory is unclear, we need a path walk:
-        # for root, _, files in os.walk("/tmp/pytest-of-runner/"):
-        #    for fname in files:
-        #        if pattern.match(fname):
-        #            report_found = True
-        #            report_path = os.path.join(root, fname)
-        #            # Verify it's not empty
-        #            assert (
-        #                os.stat(report_path).st_size > 0
-        #            ), f"Efficiency report {report_path} is empty"
-        #            break
-        # assert report_found, "Efficiency report file not found"
 
 
 class TestWorkflowsRequeue(TestWorkflows):
