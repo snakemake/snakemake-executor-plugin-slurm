@@ -44,16 +44,6 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
         )
 
     def test_simple_workflow(self, tmp_path):
-        # for an unkown reason, the efficiency report is not created
-        # reliably in `tmp_path`, so we use a fixed path
-        # to ensure the test is reproducible
-
-        # a worklfow aborted:
-        # error message:
-        # OSError: Cannot save file into a non-existent directory:
-        # '/tmp/efficiency_report_test'
-        # runpath = Path("/tmp/efficiency_report_test")
-        # runpath.mkdir(parents=True, exist_ok=True)
         self.run_workflow("simple", tmp_path)
 
         # The efficiency report is created in the
