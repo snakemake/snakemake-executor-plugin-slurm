@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.4.0...v1.5.0) (2025-07-04)
+
+
+### Features
+
+* measuring compute efficiency per job ([#221](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/221)) ([3cef6b7](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/3cef6b7889c8ba09280f345bade3497b144bedc7))
+
 ## [1.4.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.3.6...v1.4.0) (2025-06-12)
 
 
