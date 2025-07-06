@@ -372,7 +372,7 @@ class Executor(RemoteExecutor):
                     "SLURM sbatch failed. "
                     f"The error message was '{e.output.strip()}'.\n"
                     f"    sbatch call:\n        {call}\n"
-                )
+                ),
             )
             return
         # any other error message indicating failure?
