@@ -148,7 +148,7 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
-    uuid_prefix: str = field(
+    prefix: str = field(
         default="",
         metadata={
             "help": "Prefix that is added to the job names",
@@ -189,7 +189,7 @@ class Executor(RemoteExecutor):
         # run check whether we are running in a SLURM job context
         self.warn_on_jobcontext()
         self.test_mode = test_mode
-        self.run_uuid = self.workflow.executor_settings.uuid_prefix + str(uuid.uuid4())
+        self.run_uuid = self.workflow.executor_settings.prefix + str(uuid.uuid4())
         self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
         self._fallback_partition = None
