@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.5.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.4.0...v1.5.0) (2025-07-04)
+
+
+### Features
+
+* measuring compute efficiency per job ([#221](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/221)) ([3cef6b7](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/3cef6b7889c8ba09280f345bade3497b144bedc7))
+
+## [1.4.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.3.6...v1.4.0) (2025-06-12)
+
+
+### Features
+
+* adding reservation flag ([#323](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/323)) ([d4e0a0f](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/d4e0a0f4160f5336c5bf36be8f097b8a01f77718))
+
+
+### Documentation
+
+* review and edit new docs ([#237](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/237)) ([ec82a70](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/ec82a70b95652afcbc21d44a4dbca14d78dc8936))
+
 ## [1.3.6](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.3.5...v1.3.6) (2025-05-18)
 
 
