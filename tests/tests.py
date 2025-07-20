@@ -1,3 +1,7 @@
+import os
+import re
+
+from pathlib import Path
 from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
@@ -17,7 +21,51 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
         return "slurm"
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
-        return ExecutorSettings(init_seconds_before_status_checks=1)
+        return ExecutorSettings(
+            init_seconds_before_status_checks=2,
+            # seconds_between_status_checks=5,
+        )
+
+
+class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+    __test__ = True
+
+    def get_executor(self) -> str:
+        return "slurm"
+
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        self.REPORT_PATH = Path.cwd() / "efficiency_report_test"
+
+        return ExecutorSettings(
+            efficiency_report=True,
+            init_seconds_before_status_checks=5,
+            efficiency_report_path=self.REPORT_PATH,
+            # seconds_between_status_checks=5,
+        )
+
+    def test_simple_workflow(self, tmp_path):
+        self.run_workflow("simple", tmp_path)
+
+        # The efficiency report is created in the
+        # current working directory
+        pattern = re.compile(r"efficiency_report_[\w-]+\.csv")
+        report_found = False
+
+        report_path = None
+        # using a short handle for the expected path
+        expected_path = self.REPORT_PATH
+
+        # Check if the efficiency report file exists - based on the regex pattern
+        for fname in os.listdir(expected_path):
+            if pattern.match(fname):
+                report_found = True
+                report_path = os.path.join(expected_path, fname)
+                # Verify it's not empty
+                assert (
+                    os.stat(report_path).st_size > 0
+                ), f"Efficiency report {report_path} is empty"
+                break
+        assert report_found, "Efficiency report file not found"
 
 
 class TestWorkflowsRequeue(TestWorkflows):
