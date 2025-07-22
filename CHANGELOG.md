@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.6.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.5.0...v1.6.0) (2025-07-22)
+
+
+### Features
+
+* added github action to label long pending issues as 'stale' ([#239](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/239)) ([6d7c50a](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6d7c50ae492c9557b6cc39119c572c5b5ef1b341))
+* treat sbatch errors as job errors instead of workflow errors ([#322](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/322)) ([5e38507](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/5e3850762c73abf1fff8ba9e1e8c18379251041f))
+* using the current version of the announcement bot for Mastodon  ([#333](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/333)) ([03e0e24](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/03e0e2426edbe2957be93f02f3ae3834f710faff))
+
+
+### Bug Fixes
+
+* allow unsetting of tasks for gpu jobs ([#318](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/318)) ([53ac8b0](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/53ac8b09a78213dd552216a05eb43dcc3444706c))
+
 ## [1.5.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.4.0...v1.5.0) (2025-07-04)
 
 
