@@ -26,6 +26,8 @@ jobs:
 
       - name: Run check script
         id: detect
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           result=0
           output_file="$GITHUB_OUTPUT"

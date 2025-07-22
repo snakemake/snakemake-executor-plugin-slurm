@@ -1,6 +1,7 @@
 import requests
 import toml
 import sys
+import os
 from packaging.version import Version, InvalidVersion
 
 UPSTREAM_REPO = "snakemake/snakemake-executor-plugin-slurm"
@@ -18,9 +19,13 @@ def get_latest_upstream_version():
     url = f"https://api.github.com/repos/{UPSTREAM_REPO}/releases/latest"
     headers = {"Accept": "application/vnd.github+json"}
 
+    token = os.environ.get("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
     r = requests.get(url, headers=headers)
     if r.status_code != 200:
-        error(f"Failed to fetch upstream release info: {r.status_code}")
+        error(f"Failed to fetch upstream release info: {r.status_code}, response: {r.text}")
 
     try:
         version_str = r.json()["tag_name"].lstrip("v")
