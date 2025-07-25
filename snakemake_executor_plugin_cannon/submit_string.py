@@ -50,12 +50,19 @@ def get_submit_command(job, params):
     if job.resources.get("nodes", False):
         call += f" --nodes={job.resources.get('nodes', 1)}"
 
-    # fixes #40 - set ntasks regardless of mpi, because
-    # SLURM v22.05 will require it for all jobs
     gpu_job = job.resources.get("gpu") or "gpu" in job.resources.get("gres", "")
     if gpu_job:
-        call += f" --ntasks-per-gpu={job.resources.get('tasks', 1)}"
+        # fixes #316 - allow unsetting of tasks per gpu
+        # apparently, python's internal process manangement interfers with SLURM
+        # e.g. for pytorch
+        ntasks_per_gpu = job.resources.get(
+            "tasks_per_gpu", job.resources.get("tasks", 1)
+        )
+        if ntasks_per_gpu >= 1:
+            call += f" --ntasks-per-gpu={ntasks_per_gpu}"
     else:
+        # fixes #40 - set ntasks regardless of mpi, because
+        # SLURM v22.05 will require it for all jobs
         call += f" --ntasks={job.resources.get('tasks', 1)}"
 
     # we need to set cpus-per-task OR cpus-per-gpu, the function
