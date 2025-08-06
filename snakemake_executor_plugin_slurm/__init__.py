@@ -165,7 +165,7 @@ class ExecutorSettings(ExecutorSettingsBase):
         },
     )
     cancel_commmand: Optional[str] = field(
-        default="scancel {jobids}",
+        default="scancel {jobids} --clusters=all",
         metadata={
             "help": "The command to cancel SLURM jobs. "
             "This command should include the job IDs to cancel."
