@@ -157,7 +157,19 @@ class ExecutorSettings(ExecutorSettingsBase):
         metadata={
             "help": "The command to query the status of SLURM jobs. "
             "This command should return one line for each job with "
-            "<raw/main_job_id>|<long_status_string>.",
+            "<raw/main_job_id>|<long_status_string>."
+            "If no accounting is enabled, an alternative is:"
+            "squeue --states=all --format=%i\|%T --noheader --name {run_uuid}",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    cancel_commmand: Optional[str] = field(
+        default="scancel {jobids}",
+        metadata={
+            "help": "The command to cancel SLURM jobs. "
+            "This command should include the job IDs to cancel."
+            "In a federation the addiational argument --clusters=all might be used.",
             "env_var": False,
             "required": False,
         },
@@ -602,7 +614,7 @@ We leave it to SLURM to resume your job(s)"""
                 # about 30 sec, but can be longer in extreme cases.
                 # Under 'normal' circumstances, 'scancel' is executed in
                 # virtually no time.
-                scancel_command = f"scancel {jobids} --clusters=all"
+                scancel_command = self.workflow.executor_settings.cancel_commmand.format(jobids=jobids)
 
                 subprocess.check_output(
                     scancel_command,
