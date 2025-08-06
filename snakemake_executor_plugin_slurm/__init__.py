@@ -148,6 +148,20 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
+    status_commmand: Optional[str] = field(
+        default="sacct -X --parsable2 \
+                        --clusters all \
+                        --noheader --format=JobIdRaw,State \
+                        --starttime {sacct_starttime} \
+                        --endtime now --name {run_uuid}",
+        metadata={
+            "help": "The command to query the status of SLURM jobs. "
+            "This command should return one line for each job with "
+            "<raw/main_job_id>|<long_status_string>.",
+            "env_var": False,
+            "required": False,
+        },
+    )
 
 
 # Required:
@@ -458,12 +472,10 @@ class Executor(RemoteExecutor):
         # the more readable version ought to be re-adapted
 
         # -X: only show main job, no substeps
-        sacct_command = f"""sacct -X --parsable2 \
-                        --clusters all \
-                        --noheader --format=JobIdRaw,State \
-                        --starttime {sacct_starttime} \
-                        --endtime now --name {self.run_uuid}"""
-
+        sacct_command = self.workflow.executor_settings.status_commmand.format(
+            sacct_starttime=sacct_starttime, run_uuid=self.run_uuid
+        )
+        
         # for better redability in verbose output
         sacct_command = " ".join(shlex.split(sacct_command))
 
