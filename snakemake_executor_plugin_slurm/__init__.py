@@ -148,7 +148,7 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
-    status_commmand: Optional[str] = field(
+    status_command: Optional[str] = field(
         default="sacct -X --parsable2 \
                         --clusters all \
                         --noheader --format=JobIdRaw,State \
@@ -164,7 +164,7 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
-    cancel_commmand: Optional[str] = field(
+    cancel_command: Optional[str] = field(
         default="scancel {jobids} --clusters=all",
         metadata={
             "help": "The command to cancel SLURM jobs. "
@@ -484,7 +484,7 @@ class Executor(RemoteExecutor):
         # the more readable version ought to be re-adapted
 
         # -X: only show main job, no substeps
-        sacct_command = self.workflow.executor_settings.status_commmand.format(
+        sacct_command = self.workflow.executor_settings.status_command.format(
             sacct_starttime=sacct_starttime, run_uuid=self.run_uuid
         )
         
@@ -614,7 +614,7 @@ We leave it to SLURM to resume your job(s)"""
                 # about 30 sec, but can be longer in extreme cases.
                 # Under 'normal' circumstances, 'scancel' is executed in
                 # virtually no time.
-                scancel_command = self.workflow.executor_settings.cancel_commmand.format(jobids=jobids)
+                scancel_command = self.workflow.executor_settings.canceland.format(jobids=jobids)
 
                 subprocess.check_output(
                     scancel_command,
