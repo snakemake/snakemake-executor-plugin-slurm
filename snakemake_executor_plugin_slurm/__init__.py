@@ -158,8 +158,8 @@ class ExecutorSettings(ExecutorSettingsBase):
             "help": "The command to query the status of SLURM jobs. "
             "This command should return one line for each job with "
             "<raw/main_job_id>|<long_status_string>."
-            "If no accounting is enabled, an alternative is:"
-            "squeue --states=all --format=%i\|%T --noheader --name {run_uuid}",
+            "If no accounting is enabled, an alternative is:",
+            # "squeue --states=all --format=%i|%T --noheader --name {run_uuid}",
             "env_var": False,
             "required": False,
         },
@@ -614,7 +614,7 @@ We leave it to SLURM to resume your job(s)"""
                 # about 30 sec, but can be longer in extreme cases.
                 # Under 'normal' circumstances, 'scancel' is executed in
                 # virtually no time.
-                scancel_command = self.workflow.executor_settings.canceland.format(jobids=jobids)
+                scancel_command = self.workflow.executor_settings.cancel_command.format(jobids=jobids)
 
                 subprocess.check_output(
                     scancel_command,
