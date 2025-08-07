@@ -54,16 +54,10 @@ def parse_reqmem(reqmem, number_of_nodes=1):
         return mem_mb  # Default case (per CPU or total)
     return 0
 
-
-def create_efficiency_report(e_threshold, run_uuid, e_report_path, logger):
-    """
-    Fetch sacct job data for a Snakemake workflow
-    and compute efficiency metrics.
-    """
+def get_sacct_data(run_uuid, logger):
+    """Fetch raw sacct data for a workflow."""
     cmd = f"sacct --name={run_uuid} --parsable2 --noheader"
-    cmd += (
-        " --format=JobID,JobName,Comment,Elapsed,TotalCPU," "NNodes,NCPUS,MaxRSS,ReqMem"
-    )
+    cmd += " --format=JobID,JobName,Comment,Elapsed,TotalCPU,NNodes,NCPUS,MaxRSS,ReqMem"
 
     try:
         result = subprocess.run(
@@ -74,12 +68,14 @@ def create_efficiency_report(e_threshold, run_uuid, e_report_path, logger):
             logger.warning(f"No job data found for workflow {run_uuid}.")
             return None
         lines = raw.split("\n")
+        return lines
 
     except subprocess.CalledProcessError:
         logger.error(f"Failed to retrieve job data for workflow {run_uuid}.")
         return None
 
-    # Convert to DataFrame
+
+def parse_sacct_data(lines, e_threshold, run_uuid, logger):
     df = pd.DataFrame(
         (line.split("|") for line in lines),
         columns=[
@@ -120,13 +116,6 @@ def create_efficiency_report(e_threshold, run_uuid, e_report_path, logger):
     df["Elapsed_sec"] = df["Elapsed"].apply(time_to_seconds)
     df["TotalCPU_sec"] = df["TotalCPU"].apply(time_to_seconds)
 
-    # Compute CPU efficiency
-    df["CPU Efficiency (%)"] = (
-        df["TotalCPU_sec"]
-        / (df["Elapsed_sec"].clip(lower=1) * df["NCPUS"].clip(lower=1))
-    ) * 100
-    df.replace([np.inf, -np.inf], 0, inplace=True)
-
     # Convert MaxRSS
     df["MaxRSS_MB"] = df["MaxRSS"].apply(parse_maxrss)
 
@@ -134,6 +123,37 @@ def create_efficiency_report(e_threshold, run_uuid, e_report_path, logger):
     df["RequestedMem_MB"] = df.apply(
         lambda row: parse_reqmem(row["ReqMem"], row["NNodes"]), axis=1
     )
+
+    # Drop all rows containing "batch" or "extern" as job names
+    df = df[~df["JobName"].str.contains("batch|extern", na=False)]
+
+    # Extract main job ID for grouping
+    df["MainJobID"] = df["JobID"].str.extract(r"^(\d+)", expand=False)
+
+    # Separate main jobs and job steps
+    main_jobs = df[~df["JobID"].str.contains(r"\.\d+", regex=True)].copy()
+    job_steps = df[df["JobID"].str.contains(r"\.\d+", regex=True)].copy()
+
+    # Create maps from main jobs for inheritance
+    if not nocomment:
+        rule_name_map = main_jobs.set_index("MainJobID")["RuleName"].to_dict()
+    mem_map = main_jobs.set_index("MainJobID")["RequestedMem_MB"].to_dict()
+
+    # Inherit data from main jobs to job steps
+    if not nocomment:
+        job_steps["RuleName"] = job_steps["MainJobID"].map(rule_name_map).fillna("")
+    job_steps["RequestedMem_MB"] = job_steps["MainJobID"].map(mem_map).fillna(0)
+
+    # Use job steps as the final dataset (they have the actual resource usage)
+    df = job_steps.copy()
+
+    # Compute CPU efficiency
+    df["CPU Efficiency (%)"] = (
+        df["TotalCPU_sec"]
+        / (df["Elapsed_sec"].clip(lower=1) * df["NCPUS"].clip(lower=1))
+    ) * 100
+    df.replace([np.inf, -np.inf], 0, inplace=True)
+
     df["Memory Usage (%)"] = df.apply(
         lambda row: (
             (row["MaxRSS_MB"] / row["RequestedMem_MB"] * 100)
@@ -144,9 +164,6 @@ def create_efficiency_report(e_threshold, run_uuid, e_report_path, logger):
     )
 
     df["Memory Usage (%)"] = df["Memory Usage (%)"].fillna(0).round(2)
-
-    # Drop all rows containing "batch" or "extern" as job names
-    df = df[~df["JobName"].str.contains("batch|extern", na=False)]
 
     # Log warnings for low efficiency
     for _, row in df.iterrows():
@@ -164,6 +181,20 @@ def create_efficiency_report(e_threshold, run_uuid, e_report_path, logger):
                     f"({row['JobName']}) has low CPU efficiency: "
                     f"{row['CPU Efficiency (%)']}%."
                 )
+    return df
+
+
+def create_efficiency_report(e_threshold, run_uuid, e_report_path, logger):
+    """
+    Fetch sacct job data for a Snakemake workflow
+    and compute efficiency metrics.
+    """
+    lines = get_sacct_data(run_uuid, logger)
+
+    if lines is None or not lines:
+        return None
+
+    df = parse_sacct_data(lines, e_threshold, run_uuid, logger)
 
     # we construct a path object to allow for a customi
     # logdir, if specified

@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from snakemake_executor_plugin_slurm import ExecutorSettings
+from snakemake_executor_plugin_slurm.efficiency_report import parse_sacct_data
 from snakemake_executor_plugin_slurm.utils import set_gres_string
 from snakemake_executor_plugin_slurm.submit_string import get_submit_command
 from snakemake_interface_common.exceptions import WorkflowError
@@ -25,6 +26,31 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
             init_seconds_before_status_checks=2,
             # seconds_between_status_checks=5,
         )
+
+
+def test_parse_sacct_data():
+    from io import StringIO
+
+    test_data = """10294159|b10191d0-6985-4c3a-8ccb-aa7d23ebffc7|rule_bam_bwa_mem_mosdepth_simulate_reads|00:01:31|00:24.041|1|1||32000M
+10294159.batch|batch||00:01:31|00:03.292|1|1|71180K|
+10294159.0|python3.12||00:01:10|00:20.749|1|1|183612K|
+10294160|b10191d0-6985-4c3a-8ccb-aa7d23ebffc7|rule_bam_bwa_mem_mosdepth_simulate_reads|00:01:30|00:24.055|1|1||32000M
+10294160.batch|batch||00:01:30|00:03.186|1|1|71192K|
+10294160.0|python3.12||00:01:10|00:20.868|1|1|184352K|""".splitlines()
+    df = parse_sacct_data(
+        lines=test_data, e_threshold=0.0, run_uuid="test", logger=None
+    )
+    output = StringIO()
+    df.to_csv(output, index=False)
+    print(output.getvalue())
+    # this should only be two rows once collapsed
+    assert len(df) == 2
+    # check that RuleName is properly inherited from main jobs
+    assert all(df["RuleName"] == "rule_bam_bwa_mem_mosdepth_simulate_reads")
+    # check that RequestedMem_MB is properly inherited
+    assert all(df["RequestedMem_MB"] == 32000.0)
+    # check that MaxRSS_MB is properly calculated from job steps
+    assert df.iloc[0]["MaxRSS_MB"] > 0  # Should have actual memory usage from job step
 
 
 class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase):
