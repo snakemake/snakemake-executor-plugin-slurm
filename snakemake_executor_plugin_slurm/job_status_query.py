@@ -1,22 +1,108 @@
 import shlex
+import subprocess
+import re
 from datetime import datetime, timedelta
 
 
+def get_min_job_age():
+    """
+    Runs 'scontrol show config', parses the output, and extracts the MinJobAge value.
+    Returns the value as an integer (seconds), or None if not found or parse error.
+    Handles various time units: s/sec/secs/seconds, h/hours, or no unit (assumes seconds).
+    """
+    try:
+        cmd = "scontrol show config"
+        cmd = shlex.split(cmd)
+        output = subprocess.check_output(cmd, text=True, stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError:
+        return None
 
-def query_job_status_sacct(jobuid, timeout: int = 30) -> Dict[str, JobStatus]:
+    for line in output.splitlines():
+        if line.strip().startswith("MinJobAge"):
+            # Example: MinJobAge               = 300 sec
+            #          MinJobAge               = 1h
+            #          MinJobAge               = 3600
+            parts = line.split("=")
+            if len(parts) < 2:
+                continue
+            value_part = parts[1].strip()
+
+            # Use regex to parse value and optional unit
+            # Pattern matches: number + optional whitespace + optional unit
+            match = re.match(r"^(\d+)\s*([a-zA-Z]*)", value_part)
+            if not match:
+                continue
+
+            value_str = match.group(1)
+            unit = match.group(2).lower() if match.group(2) else ""
+
+            try:
+                value = int(value_str)
+
+                # Convert to seconds based on unit
+                if unit in ("h", "hour", "hours"):
+                    return value * 3600
+                elif unit in ("s", "sec", "secs", "second", "seconds", ""):
+                    return value
+                else:
+                    # Unknown unit, assume seconds
+                    return value
+
+            except ValueError:
+                return None
+    return None
+
+
+def is_query_tool_available(tool_name):
+    """
+    Check if the sacct command is available on the system.
+    Returns True if sacct is available, False otherwise.
+    """
+    cmd = f"which {tool_name}"
+    cmd = shlex.split(cmd)
+    try:
+        subprocess.check_output(cmd, stderr=subprocess.PIPE)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
+def should_enable_status_command_option():
+    """
+    Determine if the status_command option should be available based on:
+    1. MinJobAge configuration (if very low, squeue might not work well)
+    2. Availability of sacct command
+
+    Returns True if the option should be available, False otherwise.
+    """
+    min_job_age = get_min_job_age()
+    sacct_available = is_sacct_available()
+
+    # If MinJobAge is very low (e.g., > 43200 seconds), squeue might work for job status queries
+    # Howver, `sacct` is the preferred command for job status queries:
+    # The SLURM accounting database will answer queries for a huge number of jobs
+    # more reliably than `squeue`, which might not be configured to show past jobs
+    # on every cluster.
+    if (
+        min_job_age is not None and min_job_age > 43200 and sacct_available
+    ):  # 43200 seconds = 12 hours
+        return True
+
+    # In other cases, sacct should work fine and the option might not be needed
+    return False
+
+
+def query_job_status_sacct(jobuid) -> list:
     """
     Query job status using sacct command
-    
+
     Args:
         job_ids: List of SLURM job IDs
         timeout: Timeout in seconds for subprocess call
-        
+
     Returns:
         Dictionary mapping job ID to JobStatus object
     """
-    if not jobuid:
-        return {}
-    
     # We use this sacct syntax for argument 'starttime' to keep it compatible
     # with slurm < 20.11
     sacct_starttime = f"{datetime.now() - timedelta(days=2):%Y-%m-%dT%H:00}"
@@ -25,42 +111,38 @@ def query_job_status_sacct(jobuid, timeout: int = 30) -> Dict[str, JobStatus]:
     # in line 218 - once v20.11 is definitively not in use any more,
     # the more readable version ought to be re-adapted
 
-    try:
-        # -X: only show main job, no substeps
-        query_command = f"""sacct -X --parsable2 \
+    # -X: only show main job, no substeps
+    query_command = f"""sacct -X --parsable2 \
                         --clusters all \
                         --noheader --format=JobIdRaw,State \
                         --starttime {sacct_starttime} \
-                        --endtime now --name {self.run_uuid}"""
-        
-        # for better redability in verbose output
-        query_command = " ".join(shlex.split(query_command))
+                        --endtime now --name {jobuid}"""
 
-        return query_command 
+    # for better redability in verbose output
+    query_command = " ".join(shlex.split(query_command))
 
-def query_job_status_squeue(job_ids: List[str], timeout: int = 30) -> Dict[str, JobStatus]:
+    return query_command
+
+
+def query_job_status_squeue(jobuid) -> list:
     """
     Query job status using squeue command (newer SLURM functionality)
-    
+
     Args:
         job_ids: List of SLURM job IDs
         timeout: Timeout in seconds for subprocess call
-        
+
     Returns:
         Dictionary mapping job ID to JobStatus object
     """
-    if not job_ids:
-        return {}
-    
-    try:
-        # Build squeue command
-        query_command = """
-            squeue \
+    # Build squeue command
+    query_command = """
+        squeue \
             --format=%i|%T \  
             --states=all \
             --noheader \
-            --name {self.run_uuid}
+            --name {jobuid}
             """
-        query_command = shlex.split(query_command)
+    query_command = shlex.split(query_command)
 
-        return query_command
+    return query_command
