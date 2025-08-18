@@ -73,19 +73,23 @@ def should_enable_status_command_option():
     1. MinJobAge configuration (if very low, squeue might not work well)
     2. Availability of sacct command
 
+    Args:
+        min_threshold_seconds: The minimum threshold in seconds for MinJobAge to be considered sufficient.
+                              Default is 120 seconds (3 * 40s, where 40s is the default initial status check interval).
+
     Returns True if the option should be available, False otherwise.
     """
     min_job_age = get_min_job_age()
     sacct_available = is_sacct_available()
 
-    # If MinJobAge is very low (e.g., > 43200 seconds), squeue might work for job status queries
-    # Howver, `sacct` is the preferred command for job status queries:
+    # If MinJobAge is sufficient (>= threshold), squeue might work for job status queries
+    # However, `sacct` is the preferred command for job status queries:
     # The SLURM accounting database will answer queries for a huge number of jobs
     # more reliably than `squeue`, which might not be configured to show past jobs
     # on every cluster.
     if (
-        min_job_age is not None and min_job_age > 43200 and sacct_available
-    ):  # 43200 seconds = 12 hours
+        min_job_age is not None and min_job_age >= min_threshold_seconds and sacct_available
+    ):
         return True
 
     # In other cases, sacct should work fine and the option might not be needed
