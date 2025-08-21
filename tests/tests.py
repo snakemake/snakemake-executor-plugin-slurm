@@ -638,6 +638,7 @@ class TestSLURMResources(TestWorkflows):
 
         assert "--ntasks-per-gpu=1" in get_submit_command(job, params)
 
+
 class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageBase):
     """
     Test handling of wildcards with slashes to ensure log directories are
