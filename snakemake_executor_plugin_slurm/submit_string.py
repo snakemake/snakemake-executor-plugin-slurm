@@ -57,7 +57,7 @@ def get_submit_command(job, params):
         # e.g. for pytorch
         ntasks_per_gpu = job.resources.get("tasks_per_gpu")
         if ntasks_per_gpu is None:
-            job.resources.get("tasks")
+            ntasks_per_gpu = job.resources.get("tasks")
         if ntasks_per_gpu is None:
             ntasks_per_gpu = 1
 
