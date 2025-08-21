@@ -55,9 +55,11 @@ def get_submit_command(job, params):
         # fixes #316 - allow unsetting of tasks per gpu
         # apparently, python's internal process manangement interfers with SLURM
         # e.g. for pytorch
-        ntasks_per_gpu = (
-            job.resources.get("tasks_per_gpu") or job.resources.get("tasks") or 1
-        )
+        ntasks_per_gpu = job.resources.get("tasks_per_gpu")
+        if ntasks_per_gpu is None:
+            job.resources.get("tasks")
+        if ntasks_per_gpu is None:
+            ntasks_per_gpu = 1
 
         if ntasks_per_gpu >= 1:
             call += f" --ntasks-per-gpu={ntasks_per_gpu}"
