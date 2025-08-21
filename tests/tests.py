@@ -547,7 +547,7 @@ class TestSLURMResources(TestWorkflows):
     def test_gpu_tasks(self, mock_job):
         """Test that GPU tasks are correctly included in the sbatch command."""
         # Create a job with GPU tasks
-        job = mock_job(gpu_tasks=2)
+        job = mock_job(gpu=1, gpu_tasks=2)
         params = {
             "run_uuid": "test_run",
             "slurm_logfile": "test_logfile",
@@ -571,7 +571,7 @@ class TestSLURMResources(TestWorkflows):
     def test_no_gpu_task(self, mock_job):
         """Test that no GPU tasks are included when not specified."""
         # Create a job without GPU tasks
-        job = mock_job()
+        job = mock_job(gpu=1, gpu_tasks=-1)
         params = {
             "run_uuid": "test_run",
             "slurm_logfile": "test_logfile",
