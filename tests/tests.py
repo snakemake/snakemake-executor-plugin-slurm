@@ -31,12 +31,18 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
 def test_parse_sacct_data():
     from io import StringIO
 
-    test_data = """10294159|b10191d0-6985-4c3a-8ccb-aa7d23ebffc7|rule_bam_bwa_mem_mosdepth_simulate_reads|00:01:31|00:24.041|1|1||32000M
-10294159.batch|batch||00:01:31|00:03.292|1|1|71180K|
-10294159.0|python3.12||00:01:10|00:20.749|1|1|183612K|
-10294160|b10191d0-6985-4c3a-8ccb-aa7d23ebffc7|rule_bam_bwa_mem_mosdepth_simulate_reads|00:01:30|00:24.055|1|1||32000M
-10294160.batch|batch||00:01:30|00:03.186|1|1|71192K|
-10294160.0|python3.12||00:01:10|00:20.868|1|1|184352K|""".splitlines()
+    test_data = [
+        "10294159|b10191d0-6985-4c3a-8ccb-"
+        "aa7d23ebffc7|rule_bam_bwa_mem_mosdepth_"
+        "simulate_reads|00:01:31|00:24.041|1|1||32000M",
+        "10294159.batch|batch||00:01:31|00:03.292|1|1|71180K|",
+        "10294159.0|python3.12||00:01:10|00:20.749|1|1|183612K|",
+        "10294160|b10191d0-6985-4c3a-8ccb-"
+        "aa7d23ebffc7|rule_bam_bwa_mem_mosdepth_"
+        "simulate_reads|00:01:30|00:24.055|1|1||32000M",
+        "10294160.batch|batch||00:01:30|00:03.186|1|1|71192K|",
+        "10294160.0|python3.12||00:01:10|00:20.868|1|1|184352K|",
+    ]
     df = parse_sacct_data(
         lines=test_data, e_threshold=0.0, run_uuid="test", logger=None
     )
