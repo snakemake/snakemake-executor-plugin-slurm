@@ -22,7 +22,8 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
         return ExecutorSettings(
-            init_seconds_before_status_checks=2,
+            init_seconds_before_status_checks=5,
+            status_attempts=2,
             # seconds_between_status_checks=5,
         )
 

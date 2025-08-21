@@ -29,6 +29,7 @@ coverage = "^7.3.1"
 pytest = "^8.3.5"
 snakemake = "^9.6.0"
 pandas = "^2.2.3"
+pytest-xdist = "^3.0.0"
 
 [tool.coverage.run]
 omit = [".*", "*/site-packages/*", "Snakefile"]
