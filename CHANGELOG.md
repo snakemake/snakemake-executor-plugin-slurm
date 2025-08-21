@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.6.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.6.0...v1.6.1) (2025-08-21)
+
+
+### Bug Fixes
+
+* efficiency report jobsteps ([#338](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/338)) ([a4cbe36](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/a4cbe368bd4d2bfc6461b59be3b00f3c1c7e327b))
+* gpu tasks are unset if &lt;= 0 ([#347](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/347)) ([564e0f7](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/564e0f775a373fb1c44fa06f0f974af54615f892))
+* updated poetry ([#343](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/343)) ([58d471d](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/58d471db0d15b264a0167df7ebc6e5e8216063b1))
+
+
+### Documentation
+
+* added notes about ntasks per gpu ([#346](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/346)) ([adcd86e](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/adcd86e5ce1c9eaf1ad75d2004eafbd21a2670fd))
+
 ## [1.6.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.5.0...v1.6.0) (2025-07-22)
 
 
