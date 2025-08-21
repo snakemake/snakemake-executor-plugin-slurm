@@ -547,7 +547,7 @@ class TestSLURMResources(TestWorkflows):
     def test_gpu_tasks(self, mock_job):
         """Test that GPU tasks are correctly included in the sbatch command."""
         # Create a job with GPU tasks
-        job = mock_job(gpu=1, gpu_tasks=2)
+        job = mock_job(gpu=1, tasks_per_gpu=2)
         params = {
             "run_uuid": "test_run",
             "slurm_logfile": "test_logfile",
@@ -571,7 +571,7 @@ class TestSLURMResources(TestWorkflows):
     def test_no_gpu_task(self, mock_job):
         """Test that no GPU tasks are included when not specified."""
         # Create a job without GPU tasks
-        job = mock_job(gpu=1, gpu_tasks=-1)
+        job = mock_job(gpu=1, tasks_per_gpu=-1)
         params = {
             "run_uuid": "test_run",
             "slurm_logfile": "test_logfile",
@@ -592,6 +592,51 @@ class TestSLURMResources(TestWorkflows):
 
         assert "--ntasks-per-gpu" not in get_submit_command(job, params)
 
+    def test_task_set_for_unset_tasks(self, mock_job):
+        """Test that tasks are set to 1 when unset."""
+        # Create a job without tasks
+        job = mock_job(tasks=None)
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+        assert "--ntasks=1" in get_submit_command(job, params)
+
+    def test_gpu_tasks_set_for_unset_tasks(self, mock_job):
+        """Test that GPU tasks are set to 1 when unset."""
+        # Create a job without GPU tasks
+        job = mock_job(gpu=1)
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+        assert "--ntasks-per-gpu=1" in get_submit_command(job, params)
 
 class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageBase):
     """
