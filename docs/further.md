@@ -342,7 +342,7 @@ rule gpu_task:
 
 In this example, `cpus_per_gpu=4` allocates four CPU cores for each GPU requested.
 
-.. note:: If `cpus_per_gpu` is set to a value less than or equal to zero, Snakemake will not include a CPU request in the SLURM submission, and the cluster's default CPU allocation policy will apply.
+.. note:: If `cpus_per_gpu` is set to a value less than or equal to zero, Snakemake will not include a CPU request in the SLURM submission, and the cluster's default CPU allocation policy will apply. The same applies to `tasks_per_gpu`. If set to zero or lower, the SLURM parameter `--ntasks-per-gpu` will not be set.
 
 ##### Sample Workflow Profile for GPU Jobs
 
