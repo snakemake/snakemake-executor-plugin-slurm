@@ -54,6 +54,7 @@ def parse_reqmem(reqmem, number_of_nodes=1):
         return mem_mb  # Default case (per CPU or total)
     return 0
 
+
 def get_sacct_data(run_uuid, logger):
     """Fetch raw sacct data for a workflow."""
     cmd = f"sacct --name={run_uuid} --parsable2 --noheader"
