@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "snakemake-executor-plugin-cannon"
-version = "1.6.0.post1"
+version = "1.6.1.post1"
 description = "A Snakemake executor plugin for submitting jobs to the Cannon cluster at Harvard University."
 authors = [
     "Gregg Thomas <gthomas@fas.harvard.edu>",
@@ -17,8 +17,8 @@ keywords = ["snakemake", "plugin", "executor", "cluster", "slurm", "cannon", "ha
 
 [tool.poetry.dependencies]
 python = "^3.11"
-snakemake-interface-common = "^1.13.0"
-snakemake-interface-executor-plugins = "^9.1.1"
+snakemake-interface-common = "^1.21.0"
+snakemake-interface-executor-plugins = "^9.3.9"
 snakemake-executor-plugin-slurm-jobstep = "^0.3.0"
 pandas = "^2.2.3"
 numpy = ">=1.26.4, <3"
