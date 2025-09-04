@@ -657,9 +657,13 @@ We leave it to SLURM to resume your job(s)"""
         else raises an error - implicetly.
         """
         if job.resources.get("slurm_account"):
-            # here, we check whether the given or guessed account is valid
-            # if not, a WorkflowError is raised
-            self.test_account(job.resources.slurm_account)
+            # split the account upon ',' and whitespace, to allow
+            # multiple accounts being given
+            accounts = re.split(r"[,\s]+", job.resources.slurm_account)
+            for account in accounts:
+                # here, we check whether the given or guessed account is valid
+                # if not, a WorkflowError is raised
+                self.test_account(account)
             return f" -A '{job.resources.slurm_account}'"
         else:
             if self._fallback_account_arg is None:
@@ -719,32 +723,34 @@ We leave it to SLURM to resume your job(s)"""
         """
         tests whether the given account is registered, raises an error, if not
         """
-        cmd = "sshare -U --format Account%256 --noheader"
+        # first we need to test with sacctmgr because sshare might not
+        # work in a multicluster environment
+        cmd = f'sacctmgr -n -s list user "{os.environ["USER"]}" format=account%256'
         try:
             accounts = subprocess.check_output(
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
         except subprocess.CalledProcessError as e:
-            sshare_report = (
+            sacctmgr_report = (
                 "Unable to test the validity of the given or guessed"
-                f" SLURM account '{account}' with sshare: {e.stderr}."
+                f" SLURM account '{account}' with sacctmgr: {e.stderr}."
             )
             accounts = ""
 
         if not accounts.strip():
-            cmd = f'sacctmgr -n -s list user "{os.environ["USER"]}" format=account%256'
+            cmd = "sshare -U --format Account%256 --noheader"
             try:
                 accounts = subprocess.check_output(
                     cmd, shell=True, text=True, stderr=subprocess.PIPE
                 )
             except subprocess.CalledProcessError as e:
-                sacctmgr_report = (
+                sshare_report = (
                     "Unable to test the validity of the given or guessed "
-                    f"SLURM account '{account}' with sacctmgr: {e.stderr}."
+                    f"SLURM account '{account}' with sshare: {e.stderr}."
                 )
                 raise WorkflowError(
-                    f"The 'sshare' reported: '{sshare_report}' "
-                    f"and likewise 'sacctmgr' reported: '{sacctmgr_report}'."
+                    f"The 'sacctmgr' reported: '{sacctmgr_report}' "
+                    f"and likewise 'sshare' reported: '{sshare_report}'."
                 )
 
         # The set() has been introduced during review to eliminate
@@ -753,7 +759,7 @@ We leave it to SLURM to resume your job(s)"""
 
         if not accounts:
             self.logger.warning(
-                f"Both 'sshare' and 'sacctmgr' returned empty results for account "
+                f"Both 'sacctmgr' and 'sshare' returned empty results for account "
                 f"'{account}'. Proceeding without account validation."
             )
             return ""
