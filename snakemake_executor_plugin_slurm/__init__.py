@@ -726,6 +726,7 @@ We leave it to SLURM to resume your job(s)"""
         # first we need to test with sacctmgr because sshare might not
         # work in a multicluster environment
         cmd = f'sacctmgr -n -s list user "{os.environ["USER"]}" format=account%256'
+        sacctmgr_report = sshare_report = ""
         try:
             accounts = subprocess.check_output(
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
