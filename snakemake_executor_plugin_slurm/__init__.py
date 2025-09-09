@@ -140,6 +140,14 @@ class ExecutorSettings(ExecutorSettingsBase):
             "This flag has no effect, if not set.",
         },
     )
+    qos: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": "If set, the given QoS will be used for job submission.",
+            "env_var": False,
+            "required": False,
+        },
+    )
     reservation: Optional[str] = field(
         default=None,
         metadata={
@@ -309,6 +317,9 @@ class Executor(RemoteExecutor):
         if self.workflow.executor_settings.requeue:
             call += " --requeue"
 
+        if self.job.workflow.executor_settings.qos:
+            call += f" --qos={self.job.workflow.executor_settings.qos}"
+            
         if self.workflow.executor_settings.reservation:
             call += f" --reservation={self.workflow.executor_settings.reservation}"
 
