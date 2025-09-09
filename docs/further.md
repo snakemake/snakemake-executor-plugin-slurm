@@ -627,6 +627,10 @@ With `--slurm-efficiency-report` you can generate a table of all efficiency data
 The plugin allows specifying a flag `--slurm-reservation=<name>` to use a particular reservation.
 It does not validate the spelling nor eligibility to this reservation.
 
+### Using SLURM QoS
+
+To use SLURM's quality of service flags (`--qos` to `sbatch`) the plugin allows specifying `--slurm-qos=<qos-string>`, too. Both, the reservation and the qos may be particularly useful in a course setting.
+
 ### Frequently Asked Questions
 
 #### Should I run Snakemake on the Login Node of my Cluster?
