@@ -319,7 +319,7 @@ class Executor(RemoteExecutor):
 
         if self.job.workflow.executor_settings.qos:
             call += f" --qos={self.job.workflow.executor_settings.qos}"
-            
+
         if self.workflow.executor_settings.reservation:
             call += f" --reservation={self.workflow.executor_settings.reservation}"
 
