@@ -8,8 +8,6 @@ def safe_quote(value):
     Safely quote a parameter value using shlex.quote.
     Handles None values and converts to string if needed.
     """
-    if value is None:
-        return ""
     return shlex.quote(str(value))
 
 
