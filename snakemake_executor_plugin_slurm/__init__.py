@@ -659,12 +659,18 @@ We leave it to SLURM to resume your job(s)"""
         if job.resources.get("slurm_account"):
             # split the account upon ',' and whitespace, to allow
             # multiple accounts being given
-            accounts = re.split(r"[,\s]+", job.resources.slurm_account)
+            accounts = [a for a in re.split(r"[,\s]+", job.resources.slurm_account) if a]
             for account in accounts:
                 # here, we check whether the given or guessed account is valid
                 # if not, a WorkflowError is raised
                 self.test_account(account)
-            return f" -A '{job.resources.slurm_account}'"
+            # sbatch accepts a single --account; use the first valid token
+            selected = accounts[0]
+            if len(accounts) > 1:
+                self.logger.info(
+                    f"Multiple accounts provided ({accounts}); submitting with '{selected}'."
+                )
+            return f" -A {shlex.quote(selected)}"
         else:
             if self._fallback_account_arg is None:
                 self.logger.warning("No SLURM account given, trying to guess.")
