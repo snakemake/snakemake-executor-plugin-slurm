@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.6.1...v1.7.0) (2025-09-09)
+
+
+### Features
+
+* new flag for SLURM qos ([#351](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/351)) ([55068ae](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/55068ae6a47c61b38487110f59eaa6da13e4c051))
+
 ## [1.6.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.6.0...v1.6.1) (2025-08-21)
 
 
