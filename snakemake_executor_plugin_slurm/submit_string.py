@@ -86,6 +86,7 @@ def get_submit_command(job, params):
     # ensure that workdir is set correctly
     # use short argument as this is the same in all slurm versions
     # (see https://github.com/snakemake/snakemake/issues/2014)
-    call += f" -D {safe_quote(params.workdir)}"
+    if params.workdir:
+        call += f" -D {safe_quote(params.workdir)}"
 
     return call
