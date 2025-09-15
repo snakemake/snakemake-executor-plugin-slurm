@@ -677,13 +677,10 @@ We leave it to SLURM to resume your job(s)"""
                 # here, we check whether the given or guessed account is valid
                 # if not, a WorkflowError is raised
                 self.test_account(account)
-            # sbatch accepts a single --account; use the first valid token
-            selected = accounts[0]
-            if len(accounts) > 1:
-                self.logger.info(
-                    f"Multiple accounts provided ({accounts}); submitting with '{selected}'."
-                )
-            return f" -A {shlex.quote(selected)}"
+            # sbatch only allows one account per submission
+            # yield one after the other, if multiple were given
+            for account in accounts:
+                yield f" -A {shlex.quote(account)}"
         else:
             if self._fallback_account_arg is None:
                 self.logger.warning("No SLURM account given, trying to guess.")
