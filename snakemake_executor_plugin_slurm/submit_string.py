@@ -21,11 +21,11 @@ def get_submit_command(job, params):
     params = SimpleNamespace(**params)
 
     call = (
-        f"sbatch "
-        f"--parsable "
+        "sbatch "
+        "--parsable "
         f"--job-name {safe_quote(params.run_uuid)} "
         f"--output {safe_quote(params.slurm_logfile)} "
-        f"--export=ALL "
+        "--export=ALL "
         f"--comment {safe_quote(params.comment_str)}"
     )
 
