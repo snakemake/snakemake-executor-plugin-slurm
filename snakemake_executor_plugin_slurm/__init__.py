@@ -670,7 +670,9 @@ We leave it to SLURM to resume your job(s)"""
         if job.resources.get("slurm_account"):
             # split the account upon ',' and whitespace, to allow
             # multiple accounts being given
-            accounts = [a for a in re.split(r"[,\s]+", job.resources.slurm_account) if a]
+            accounts = [
+                a for a in re.split(r"[,\s]+", job.resources.slurm_account) if a
+            ]
             for account in accounts:
                 # here, we check whether the given or guessed account is valid
                 # if not, a WorkflowError is raised
