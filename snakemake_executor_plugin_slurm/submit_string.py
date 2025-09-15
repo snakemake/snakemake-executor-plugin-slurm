@@ -48,7 +48,7 @@ def get_submit_command(job, params):
     ):
         call += f" -C {safe_quote(job.resources.get('constraint'))}"
 
-    if job.resources.get("qos") or isinstance(job.resources.get("qos"), str):
+    if job.resources.get("qos"):
         call += f" --qos={safe_quote(job.resources.qos)}"
 
     if job.resources.get("mem_mb_per_cpu"):
