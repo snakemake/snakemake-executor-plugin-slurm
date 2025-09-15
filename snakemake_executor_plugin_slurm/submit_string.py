@@ -1,5 +1,16 @@
 from snakemake_executor_plugin_slurm_jobstep import get_cpu_setting
 from types import SimpleNamespace
+import shlex
+
+
+def safe_quote(value):
+    """
+    Safely quote a parameter value using shlex.quote.
+    Handles None values and converts to string if needed.
+    """
+    if value is None:
+        return ""
+    return shlex.quote(str(value))
 
 
 def get_submit_command(job, params):
@@ -12,10 +23,10 @@ def get_submit_command(job, params):
     call = (
         f"sbatch "
         f"--parsable "
-        f"--job-name {params.run_uuid} "
-        f'--output "{params.slurm_logfile}" '
+        f"--job-name {safe_quote(params.run_uuid)} "
+        f"--output {safe_quote(params.slurm_logfile)} "
         f"--export=ALL "
-        f'--comment "{params.comment_str}"'
+        f"--comment {safe_quote(params.comment_str)}"
     )
 
     # No accout or partition checking is required, here.
@@ -29,18 +40,18 @@ def get_submit_command(job, params):
     call += f" {params.partition}"
 
     if job.resources.get("clusters"):
-        call += f" --clusters {job.resources.clusters}"
+        call += f" --clusters {safe_quote(job.resources.clusters)}"
 
     if job.resources.get("runtime"):
-        call += f" -t {job.resources.runtime}"
+        call += f" -t {safe_quote(job.resources.runtime)}"
 
     if job.resources.get("constraint") or isinstance(
         job.resources.get("constraint"), str
     ):
-        call += f" -C '{job.resources.get('constraint')}'"
+        call += f" -C {safe_quote(job.resources.get('constraint'))}"
 
     if job.resources.get("qos") or isinstance(job.resources.get("qos"), str):
-        call += f" --qos='{job.resources.qos}'"
+        call += f" --qos={safe_quote(job.resources.qos)}"
 
     if job.resources.get("mem_mb_per_cpu"):
         call += f" --mem-per-cpu {job.resources.mem_mb_per_cpu}"
@@ -77,6 +88,6 @@ def get_submit_command(job, params):
     # ensure that workdir is set correctly
     # use short argument as this is the same in all slurm versions
     # (see https://github.com/snakemake/snakemake/issues/2014)
-    call += f" -D '{params.workdir}'"
+    call += f" -D {safe_quote(params.workdir)}"
 
     return call
