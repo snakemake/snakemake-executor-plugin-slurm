@@ -679,6 +679,8 @@ We leave it to SLURM to resume your job(s)"""
                 self.test_account(account)
             # sbatch only allows one account per submission
             # yield one after the other, if multiple were given
+            # we have to quote the account, because it might
+            # contain build-in shell commands - see issue #354
             for account in accounts:
                 yield f" -A {shlex.quote(account)}"
         else:
@@ -688,7 +690,7 @@ We leave it to SLURM to resume your job(s)"""
                 if account:
                     self.logger.warning(f"Guessed SLURM account: {account}")
                     self.test_account(f"{account}")
-                    self._fallback_account_arg = f" -A {account}"
+                    self._fallback_account_arg = f" -A {shlex.quote(account)}"
                 else:
                     self.logger.warning(
                         "Unable to guess SLURM account. Trying to proceed without."
@@ -711,7 +713,9 @@ We leave it to SLURM to resume your job(s)"""
                 self._fallback_partition = self.get_default_partition(job)
             partition = self._fallback_partition
         if partition:
-            return f" -p {partition}"
+            # we have to quote the partition, because it might
+            # contain build-in shell commands
+            return f" -p {shlex.quote(partition)}"
         else:
             return ""
 
