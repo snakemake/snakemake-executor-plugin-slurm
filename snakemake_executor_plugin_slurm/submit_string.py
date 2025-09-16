@@ -49,7 +49,7 @@ def get_submit_command(job, params):
 
     # Both, constraint and qos are optional.
     # If not set, they will not be added to the sbatch call.
-    # If explicitly set to an empty string, 
+    # If explicitly set to an empty string,
     # `--constraint ''` or `--qos ''` will be added.
     constraint = job.resources.get("constraint")
     if constraint is not None:
