@@ -47,13 +47,17 @@ def get_submit_command(job, params):
     if job.resources.get("runtime"):
         call += f" -t {safe_quote(job.resources.runtime)}"
 
-    if job.resources.get("constraint") or isinstance(
-        job.resources.get("constraint"), str
-    ):
-        call += f" -C {safe_quote(job.resources.get('constraint'))}"
+    # Both, constraint and qos are optional.
+    # If not set, they will not be added to the sbatch call.
+    # If explicitly set to an empty string, 
+    # `--constraint ''` or `--qos ''` will be added.
+    constraint = job.resources.get("constraint")
+    if constraint is not None:
+        call += f" -C {safe_quote(constraint)}"
 
-    if job.resources.get("qos"):
-        call += f" --qos={safe_quote(job.resources.qos)}"
+    qos = job.resources.get("qos")
+    if qos is not None:
+        call += f" --qos={safe_quote(qos)}"
 
     if job.resources.get("mem_mb_per_cpu"):
         call += f" --mem-per-cpu {job.resources.mem_mb_per_cpu}"
