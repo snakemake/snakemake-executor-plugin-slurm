@@ -307,7 +307,7 @@ class Executor(RemoteExecutor):
             "run_uuid": self.run_uuid,
             "slurm_logfile": slurm_logfile,
             "comment_str": comment_str,
-            "account": self.get_account_arg(job),
+            "account": next(self.get_account_arg(job)),
             "partition": self.get_partition_arg(job),
             "workdir": self.workflow.workdir_init,
         }
