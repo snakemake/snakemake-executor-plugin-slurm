@@ -698,7 +698,7 @@ We leave it to SLURM to resume your job(s)"""
                     self._fallback_account_arg = (
                         ""  # no account specific args for sbatch
                     )
-            return self._fallback_account_arg
+            yield self._fallback_account_arg
 
     def get_partition_arg(self, job: JobExecutorInterface):
         """
