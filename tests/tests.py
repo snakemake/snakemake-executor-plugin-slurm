@@ -388,7 +388,7 @@ class TestSLURMResources(TestWorkflows):
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-        assert " -C 'haswell'" in get_submit_command(job, params)
+        assert " -C haswell" in get_submit_command(job, params)
 
     def test_qos_resource(self, mock_job):
         """Test that the qos resource is correctly added to the sbatch command."""
@@ -412,7 +412,7 @@ class TestSLURMResources(TestWorkflows):
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-        assert " --qos='normal'" in get_submit_command(job, params)
+        assert " --qos=normal" in get_submit_command(job, params)
 
     def test_both_constraint_and_qos(self, mock_job):
         """Test that both constraint and qos resources can be used together."""
@@ -439,8 +439,8 @@ class TestSLURMResources(TestWorkflows):
 
             # Assert both resources are correctly included
             sbatch_command = get_submit_command(job, params)
-            assert " --qos='high'" in sbatch_command
-            assert " -C 'haswell'" in sbatch_command
+            assert " --qos=high" in sbatch_command
+            assert " -C haswell" in sbatch_command
 
     def test_no_resources(self, mock_job):
         """
@@ -517,7 +517,7 @@ class TestSLURMResources(TestWorkflows):
             process_mock.communicate.return_value = ("123", "")
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
-            # Assert the qoes is included (even if empty)
+            # Assert the qos is included (even if empty)
             assert "--qos=''" in get_submit_command(job, params)
 
     def test_taks(self, mock_job):

@@ -1,5 +1,18 @@
 from snakemake_executor_plugin_slurm_jobstep import get_cpu_setting
 from types import SimpleNamespace
+import shlex
+
+
+def safe_quote(value):
+    """
+    Safely quote a parameter value using shlex.quote.
+    Handles None values and converts to string if needed.
+    Returns empty quotes for empty strings.
+    """
+    str_value = str(value)
+    if str_value == "":
+        return "''"
+    return shlex.quote(str_value)
 
 
 def get_submit_command(job, params):
@@ -10,37 +23,41 @@ def get_submit_command(job, params):
     params = SimpleNamespace(**params)
 
     call = (
-        f"sbatch "
-        f"--parsable "
-        f"--job-name {params.run_uuid} "
-        f'--output "{params.slurm_logfile}" '
-        f"--export=ALL "
-        f'--comment "{params.comment_str}"'
+        "sbatch "
+        "--parsable "
+        f"--job-name {safe_quote(params.run_uuid)} "
+        f"--output {safe_quote(params.slurm_logfile)} "
+        "--export=ALL "
+        f"--comment {safe_quote(params.comment_str)}"
     )
 
     # No accout or partition checking is required, here.
     # Checking is done in the submit function.
 
     # here, only the string is used, as it already contains
-    # '-A {account_name}'
+    # "-A '{account_name}'"
     call += f" {params.account}"
     # here, only the string is used, as it already contains
-    # '- p {partition_name}'
+    # "- p '{partition_name}'"
     call += f" {params.partition}"
 
     if job.resources.get("clusters"):
-        call += f" --clusters {job.resources.clusters}"
+        call += f" --clusters {safe_quote(job.resources.clusters)}"
 
     if job.resources.get("runtime"):
-        call += f" -t {job.resources.runtime}"
+        call += f" -t {safe_quote(job.resources.runtime)}"
 
-    if job.resources.get("constraint") or isinstance(
-        job.resources.get("constraint"), str
-    ):
-        call += f" -C '{job.resources.get('constraint')}'"
+    # Both, constraint and qos are optional.
+    # If not set, they will not be added to the sbatch call.
+    # If explicitly set to an empty string,
+    # `--constraint ''` or `--qos ''` will be added.
+    constraint = job.resources.get("constraint")
+    if constraint is not None:
+        call += f" -C {safe_quote(constraint)}"
 
-    if job.resources.get("qos") or isinstance(job.resources.get("qos"), str):
-        call += f" --qos='{job.resources.qos}'"
+    qos = job.resources.get("qos")
+    if qos is not None:
+        call += f" --qos={safe_quote(qos)}"
 
     if job.resources.get("mem_mb_per_cpu"):
         call += f" --mem-per-cpu {job.resources.mem_mb_per_cpu}"
@@ -77,6 +94,7 @@ def get_submit_command(job, params):
     # ensure that workdir is set correctly
     # use short argument as this is the same in all slurm versions
     # (see https://github.com/snakemake/snakemake/issues/2014)
-    call += f" -D '{params.workdir}'"
+    if params.workdir:
+        call += f" -D {safe_quote(params.workdir)}"
 
     return call
