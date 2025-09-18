@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.8.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.7.0...v1.8.0) (2025-09-18)
+
+
+### Features
+
+* adding image for mastodon posts ([#349](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/349)) ([b27168c](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/b27168ccadc5c259dd09dd13cce3a06cd7b78238))
+
+
+### Bug Fixes
+
+* account lookup / test in multicluster environment ([#350](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/350)) ([d6759d0](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/d6759d09ad3608c261556f49ef5c7372ef20e1a1))
+* quoting parameters ([#355](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/355)) ([660c800](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/660c8000fa3db9a4b90e2d36d17c66f3c56b79ed))
+
 ## [1.7.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.6.1...v1.7.0) (2025-09-09)
 
 
