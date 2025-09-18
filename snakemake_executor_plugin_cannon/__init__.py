@@ -141,6 +141,14 @@ class ExecutorSettings(ExecutorSettingsBase):
             "This flag has no effect, if not set.",
         },
     )
+    qos: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": "If set, the given QoS will be used for job submission.",
+            "env_var": False,
+            "required": False,
+        },
+    )
     reservation: Optional[str] = field(
         default=None,
         metadata={
@@ -313,7 +321,7 @@ class Executor(RemoteExecutor):
             "run_uuid": self.run_uuid,
             "slurm_logfile": slurm_logfile,
             "comment_str": comment_str,
-            "account": self.get_account_arg(job),
+            "account": next(self.get_account_arg(job)),
             "partition": self.get_partition_arg(job),
             "workdir": self.workflow.workdir_init,
         }
@@ -322,6 +330,9 @@ class Executor(RemoteExecutor):
 
         if self.workflow.executor_settings.requeue:
             call += " --requeue"
+
+        if self.workflow.executor_settings.qos:
+            call += f" --qos={self.workflow.executor_settings.qos}"
 
         if self.workflow.executor_settings.reservation:
             call += f" --reservation={self.workflow.executor_settings.reservation}"
@@ -671,10 +682,21 @@ We leave it to SLURM to resume your job(s)"""
         else raises an error - implicetly.
         """
         if job.resources.get("slurm_account"):
-            # here, we check whether the given or guessed account is valid
-            # if not, a WorkflowError is raised
-            self.test_account(job.resources.slurm_account)
-            return f" -A '{job.resources.slurm_account}'"
+            # split the account upon ',' and whitespace, to allow
+            # multiple accounts being given
+            accounts = [
+                a for a in re.split(r"[,\s]+", job.resources.slurm_account) if a
+            ]
+            for account in accounts:
+                # here, we check whether the given or guessed account is valid
+                # if not, a WorkflowError is raised
+                self.test_account(account)
+            # sbatch only allows one account per submission
+            # yield one after the other, if multiple were given
+            # we have to quote the account, because it might
+            # contain build-in shell commands - see issue #354
+            for account in accounts:
+                yield f" -A {shlex.quote(account)}"
         else:
             if self._fallback_account_arg is None:
                 self.logger.warning("No SLURM account given, trying to guess.")
@@ -682,7 +704,7 @@ We leave it to SLURM to resume your job(s)"""
                 if account:
                     self.logger.warning(f"Guessed SLURM account: {account}")
                     self.test_account(f"{account}")
-                    self._fallback_account_arg = f" -A {account}"
+                    self._fallback_account_arg = f" -A {shlex.quote(account)}"
                 else:
                     self.logger.warning(
                         "Unable to guess SLURM account. Trying to proceed without."
@@ -690,7 +712,7 @@ We leave it to SLURM to resume your job(s)"""
                     self._fallback_account_arg = (
                         ""  # no account specific args for sbatch
                     )
-            return self._fallback_account_arg
+            yield self._fallback_account_arg
 
     def get_partition_arg(self, job: JobExecutorInterface):
         """
@@ -769,7 +791,9 @@ We leave it to SLURM to resume your job(s)"""
         ##########
 
         if partition:
-            return f" -p {partition}"
+            # we have to quote the partition, because it might
+            # contain build-in shell commands
+            return f" -p {shlex.quote(partition)}"
         else:
             return ""
 
@@ -797,32 +821,35 @@ We leave it to SLURM to resume your job(s)"""
         """
         tests whether the given account is registered, raises an error, if not
         """
-        cmd = "sshare -U --format Account%256 --noheader"
+        # first we need to test with sacctmgr because sshare might not
+        # work in a multicluster environment
+        cmd = f'sacctmgr -n -s list user "{os.environ["USER"]}" format=account%256'
+        sacctmgr_report = sshare_report = ""
         try:
             accounts = subprocess.check_output(
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
         except subprocess.CalledProcessError as e:
-            sshare_report = (
+            sacctmgr_report = (
                 "Unable to test the validity of the given or guessed"
-                f" SLURM account '{account}' with sshare: {e.stderr}."
+                f" SLURM account '{account}' with sacctmgr: {e.stderr}."
             )
             accounts = ""
 
         if not accounts.strip():
-            cmd = f'sacctmgr -n -s list user "{os.environ["USER"]}" format=account%256'
+            cmd = "sshare -U --format Account%256 --noheader"
             try:
                 accounts = subprocess.check_output(
                     cmd, shell=True, text=True, stderr=subprocess.PIPE
                 )
             except subprocess.CalledProcessError as e:
-                sacctmgr_report = (
+                sshare_report = (
                     "Unable to test the validity of the given or guessed "
-                    f"SLURM account '{account}' with sacctmgr: {e.stderr}."
+                    f"SLURM account '{account}' with sshare: {e.stderr}."
                 )
                 raise WorkflowError(
-                    f"The 'sshare' reported: '{sshare_report}' "
-                    f"and likewise 'sacctmgr' reported: '{sacctmgr_report}'."
+                    f"The 'sacctmgr' reported: '{sacctmgr_report}' "
+                    f"and likewise 'sshare' reported: '{sshare_report}'."
                 )
 
         # The set() has been introduced during review to eliminate
@@ -831,7 +858,7 @@ We leave it to SLURM to resume your job(s)"""
 
         if not accounts:
             self.logger.warning(
-                f"Both 'sshare' and 'sacctmgr' returned empty results for account "
+                f"Both 'sacctmgr' and 'sshare' returned empty results for account "
                 f"'{account}'. Proceeding without account validation."
             )
             return ""
