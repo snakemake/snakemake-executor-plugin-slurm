@@ -12,6 +12,7 @@ from snakemake_executor_plugin_slurm import ExecutorSettings
 from snakemake_executor_plugin_slurm.efficiency_report import parse_sacct_data
 from snakemake_executor_plugin_slurm.utils import set_gres_string
 from snakemake_executor_plugin_slurm.submit_string import get_submit_command
+from snakemake_executor_plugin_slurm.validation import validate_slurm_extra
 from snakemake_interface_common.exceptions import WorkflowError
 
 
@@ -388,7 +389,7 @@ class TestSLURMResources(TestWorkflows):
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-        assert " -C haswell" in get_submit_command(job, params)
+        assert " -C 'haswell'" in get_submit_command(job, params)
 
     def test_qos_resource(self, mock_job):
         """Test that the qos resource is correctly added to the sbatch command."""
@@ -412,7 +413,7 @@ class TestSLURMResources(TestWorkflows):
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-        assert " --qos=normal" in get_submit_command(job, params)
+        assert " --qos='normal'" in get_submit_command(job, params)
 
     def test_both_constraint_and_qos(self, mock_job):
         """Test that both constraint and qos resources can be used together."""
@@ -439,8 +440,8 @@ class TestSLURMResources(TestWorkflows):
 
             # Assert both resources are correctly included
             sbatch_command = get_submit_command(job, params)
-            assert " --qos=high" in sbatch_command
-            assert " -C haswell" in sbatch_command
+            assert " --qos='high'" in sbatch_command
+            assert " -C 'haswell'" in sbatch_command
 
     def test_no_resources(self, mock_job):
         """
@@ -672,3 +673,88 @@ class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageB
 
     # Verify no slashes remain in the wildcard string
     assert "/" not in wildcard_str
+
+
+class TestSlurmExtraValidation:
+    """Test cases for the validate_slurm_extra function."""
+
+    @pytest.fixture
+    def mock_job(self):
+        """Create a mock job with configurable slurm_extra resource."""
+        def _create_job(slurm_extra=None):
+            mock_resources = MagicMock()
+            if slurm_extra is not None:
+                mock_resources.slurm_extra = slurm_extra
+                mock_resources.get.side_effect = lambda key, default=None: (
+                    slurm_extra if key == "slurm_extra" else default
+                )
+            else:
+                # No slurm_extra attribute
+                del mock_resources.slurm_extra
+                mock_resources.get.side_effect = lambda key, default=None: default
+
+            mock_job = MagicMock()
+            mock_job.resources = mock_resources
+            return mock_job
+        return _create_job
+
+    def test_no_slurm_extra(self, mock_job):
+        """Test that validation passes when no slurm_extra is set."""
+        job = mock_job()
+        # Should not raise any exception
+        validate_slurm_extra(job)
+
+    def test_empty_slurm_extra(self, mock_job):
+        """Test that validation passes when slurm_extra is empty."""
+        job = mock_job(slurm_extra="")
+        # Should not raise any exception
+        validate_slurm_extra(job)
+
+    def test_valid_slurm_extra(self, mock_job):
+        """Test that validation passes with allowed SLURM options."""
+        job = mock_job(slurm_extra="--mail-type=END --mail-user=user@example.com")
+        # Should not raise any exception
+        validate_slurm_extra(job)
+
+    def test_forbidden_job_name_long_form(self, mock_job):
+        """Test that --job-name is rejected."""
+        job = mock_job(slurm_extra="--job-name=my-job --mail-type=END")
+        with pytest.raises(WorkflowError, match="job-name.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_forbidden_job_name_short_form(self, mock_job):
+        """Test that -J is rejected."""
+        job = mock_job(slurm_extra="-J my-job --mail-type=END")
+        with pytest.raises(WorkflowError, match="job-name.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_forbidden_account_long_form(self, mock_job):
+        """Test that --account is rejected."""
+        job = mock_job(slurm_extra="--account=myaccount --mail-type=END")
+        with pytest.raises(WorkflowError, match="account.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_forbidden_account_short_form(self, mock_job):
+        """Test that -A is rejected."""
+        job = mock_job(slurm_extra="-A myaccount --mail-type=END")
+        with pytest.raises(WorkflowError, match="account.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_forbidden_comment(self, mock_job):
+        """Test that --comment is rejected."""
+        job = mock_job(slurm_extra="--comment='my comment' --mail-type=END")
+        with pytest.raises(WorkflowError, match="job-comment.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_forbidden_gres(self, mock_job):
+        """Test that --gres is rejected."""
+        job = mock_job(slurm_extra="--gres=gpu:1 --mail-type=END")
+        with pytest.raises(WorkflowError, match="generic-resources.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_multiple_forbidden_options(self, mock_job):
+        """Test that the first forbidden option found is reported."""
+        job = mock_job(slurm_extra="--job-name=test --account=myaccount")
+        # Should raise error for job-name (first one encountered)
+        with pytest.raises(WorkflowError, match="job-name.*not allowed"):
+            validate_slurm_extra(job)
