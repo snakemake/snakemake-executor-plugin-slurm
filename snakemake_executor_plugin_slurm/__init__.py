@@ -5,7 +5,6 @@ __license__ = "MIT"
 
 import csv
 from io import StringIO
-import logging
 import os
 from pathlib import Path
 import re
