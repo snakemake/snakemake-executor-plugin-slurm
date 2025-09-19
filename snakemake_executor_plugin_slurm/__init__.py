@@ -1,5 +1,7 @@
 __author__ = "David Lähnemann, Johannes Köster, Christian Meesters"
-__copyright__ = "Copyright 2023, David Lähnemann, Johannes Köster, Christian Meesters"
+__copyright__ = (
+    "Copyright 2023, David Lähnemann, Johannes Köster, Christian Meesters"
+)
 __email__ = "johannes.koester@uni-due.de"
 __license__ = "MIT"
 
@@ -17,8 +19,12 @@ from datetime import datetime, timedelta
 from typing import List, Generator, Optional
 import uuid
 
-from snakemake_interface_executor_plugins.executors.base import SubmittedJobInfo
-from snakemake_interface_executor_plugins.executors.remote import RemoteExecutor
+from snakemake_interface_executor_plugins.executors.base import (
+    SubmittedJobInfo,
+)
+from snakemake_interface_executor_plugins.executors.remote import (
+    RemoteExecutor,
+)
 from snakemake_interface_executor_plugins.settings import (
     ExecutorSettingsBase,
     CommonSettings,
@@ -50,8 +56,9 @@ def _get_status_command_default():
 
     if not squeue_available and not sacct_available:
         raise WorkflowError(
-            "Neither 'sacct' nor 'squeue' commands are available on this system. "
-            "At least one of these commands is required for job status queries."
+            "Neither 'sacct' nor 'squeue' commands are available on this "
+            "system. At least one of these commands is required for job "
+            "status queries."
         )
     if sacct_available:
         return "sacct"
@@ -171,8 +178,10 @@ class ExecutorSettings(ExecutorSettingsBase):
     efficiency_report: bool = field(
         default=False,
         metadata={
-            "help": "Generate an efficiency report at the end of the workflow. "
-            "This flag has no effect, if not set.",
+            "help": (
+                "Generate an efficiency report at the end of the workflow. "
+                "This flag has no effect, if not set."
+            ),
             "env_var": False,
             "required": False,
         },
@@ -235,7 +244,10 @@ class ExecutorSettings(ExecutorSettingsBase):
     reservation: Optional[str] = field(
         default=None,
         metadata={
-            "help": "If set, the given reservation will be used for job submission.",
+            "help": (
+                "If set, the given reservation will be used for job "
+                "submission."
+            ),
             "env_var": False,
             "required": False,
         },
@@ -253,7 +265,8 @@ common_settings = CommonSettings(
     # define whether your executor plugin executes locally
     # or remotely. In virtually all cases, it will be remote execution
     # (cluster, cloud, etc.). Only Snakemake's standard execution
-    # plugins (snakemake-executor-plugin-dryrun, snakemake-executor-plugin-local)
+    # plugins (snakemake-executor-plugin-dryrun,
+    #          snakemake-executor-plugin-local)
     # are expected to specify False here.
     non_local_exec=True,
     # Define whether your executor plugin implies that there is no shared
@@ -279,7 +292,9 @@ class Executor(RemoteExecutor):
         self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
         self._fallback_partition = None
-        self._preemption_warning = False  # no preemption warning has been issued
+        self._preemption_warning = (
+            False  # no preemption warning has been issued
+        )
         self.slurm_logdir = (
             Path(self.workflow.executor_settings.logdir)
             if self.workflow.executor_settings.logdir
@@ -297,10 +312,14 @@ class Executor(RemoteExecutor):
                 min_job_age = get_min_job_age()
                 sacct_available = is_query_tool_available("sacct")
 
-                # Calculate dynamic threshold: 3 times the initial status check interval
-                # The plugin starts with 40 seconds and increases, so we use (3 * 10) + 40 = 70 seconds as minimum
+                # Calculate dynamic threshold: 3 times the initial
+                # status check interval.
+                # The plugin starts with 40 seconds and increases,
+                # so we use (3 * 10) + 40 = 70 seconds as minimum
                 between_status_check_seconds = getattr(
-                    self.workflow.executor_settings, "seconds_between_status_checks", 70
+                    self.workflow.executor_settings,
+                    "seconds_between_status_checks",
+                    70,
                 )
                 dynamic_check_threshold = 3 * between_status_check_seconds
 
@@ -315,18 +334,27 @@ class Executor(RemoteExecutor):
                         and status_command == "sacct"
                     ):
                         self.logger.warning(
-                            f"MinJobAge is {min_job_age} seconds (< {dynamic_check_threshold}s). "
-                            f"This may cause 'sacct' to report inaccurate job states and the status_command option may be unreliable. "
-                            f"(Threshold is 3x status check interval: 3 × {between_status_check_seconds}s = {dynamic_check_threshold}s)"
+                            f"MinJobAge is {min_job_age} seconds "
+                            f"(< {dynamic_check_threshold}s). "
+                            f"This may cause 'sacct' to report inaccurate "
+                            "job states and the status_command option may "
+                            "be unreliable. "
+                            "(Threshold is 3x status check interval: 3 × "
+                            f"{between_status_check_seconds}s = "
+                            f"{dynamic_check_threshold}s)"
                         )
                     elif (
                         min_job_age >= dynamic_check_threshold
                         and status_command == "squeue"
                     ):
                         self.logger.warning(
-                            f"MinJobAge is {min_job_age} seconds (>= {dynamic_check_threshold}s). "
-                            f"The 'squeue' command should work reliably for status queries. "
-                            f"(Threshold is 3x status check interval: 3 × {between_status_check_seconds}s = {dynamic_check_threshold}s)"
+                            f"MinJobAge is {min_job_age} seconds (>= "
+                            f"{dynamic_check_threshold}s). "
+                            f"The 'squeue' command should work reliably for "
+                            "status queries. "
+                            "(Threshold is 3x status check interval: 3 × "
+                            f"{between_status_check_seconds}s = "
+                            f"{dynamic_check_threshold}s)"
                         )
 
     def get_status_command(self):
@@ -334,7 +362,8 @@ class Executor(RemoteExecutor):
         if hasattr(self.workflow.executor_settings, "status_command"):
             return self.workflow.executor_settings.status_command
         else:
-            # Fallback: determine the best command based on cluster configuration
+            # Fallback: determine the best command based on
+            # cluster configuration
             return _get_status_command_default()
 
     def shutdown(self) -> None:
@@ -350,15 +379,21 @@ class Executor(RemoteExecutor):
         self.clean_old_logs()
         # If the efficiency report is enabled, create it.
         if self.workflow.executor_settings.efficiency_report:
+            threshold = self.workflow.executor_settings.efficiency_threshold
+            report_path = (
+                self.workflow.executor_settings.efficiency_report_path
+            )
             create_efficiency_report(
-                e_threshold=self.workflow.executor_settings.efficiency_threshold,
+                e_threshold=threshold,
                 run_uuid=self.run_uuid,
-                e_report_path=self.workflow.executor_settings.efficiency_report_path,
+                e_report_path=report_path,
                 logger=self.logger,
             )
 
     def clean_old_logs(self) -> None:
-        """Delete files older than specified age from the SLURM log directory."""
+        """
+        Delete files older than specified age from the SLURM log directory.
+        """
         # shorthands:
         age_cutoff = self.workflow.executor_settings.delete_logfiles_older_than
         keep_all = self.workflow.executor_settings.keep_successful_logs
@@ -366,7 +401,9 @@ class Executor(RemoteExecutor):
             return
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
-        self.logger.info(f"Cleaning up log files older than {age_cutoff} day(s).")
+        self.logger.info(
+            f"Cleaning up log files older than {age_cutoff} day(s)."
+        )
 
         for path in self.slurm_logdir.rglob("*.log"):
             if path.is_file():
@@ -381,7 +418,8 @@ class Executor(RemoteExecutor):
             delete_empty_dirs(self.slurm_logdir)
         except (OSError, FileNotFoundError) as e:
             self.logger.error(
-                f"Could not delete empty directories in {self.slurm_logdir}: {e}"
+                "Could not delete empty directories in "
+                f" {self.slurm_logdir}: {e}"
             )
 
     def warn_on_jobcontext(self, done=None):
@@ -389,8 +427,10 @@ class Executor(RemoteExecutor):
             if "SLURM_JOB_ID" in os.environ:
                 self.logger.warning(
                     "You are running snakemake in a SLURM job context. "
-                    "This is not recommended, as it may lead to unexpected behavior. "
-                    "Please run Snakemake directly on the login node."
+                    "This is not recommended, as it may lead to unexpected "
+                    "behavior. "
+                    "If possible, please run Snakemake directly on the "
+                    "login node."
                 )
                 time.sleep(5)
                 delete_slurm_environment()
@@ -408,29 +448,38 @@ class Executor(RemoteExecutor):
         # with job_info being of type
         # snakemake_interface_executor_plugins.executors.base.SubmittedJobInfo.
 
-        group_or_rule = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
+        group_or_rule = (
+            f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
+        )
 
         try:
             wildcard_str = (
-                "_".join(job.wildcards).replace("/", "_") if job.wildcards else ""
+                "_".join(job.wildcards).replace("/", "_")
+                if job.wildcards
+                else ""
             )
         except AttributeError:
             wildcard_str = ""
 
         self.slurm_logdir.mkdir(parents=True, exist_ok=True)
-        slurm_logfile = self.slurm_logdir / group_or_rule / wildcard_str / "%j.log"
+        slurm_logfile = (
+            self.slurm_logdir / group_or_rule / wildcard_str / "%j.log"
+        )
         slurm_logfile.parent.mkdir(parents=True, exist_ok=True)
-        # this behavior has been fixed in slurm 23.02, but there might be plenty of
-        # older versions around, hence we should rather be conservative here.
+        # this behavior has been fixed in slurm 23.02, but there might be 
+        # plenty of older versions around, hence we should rather be 
+        # conservative here.
         assert "%j" not in str(self.slurm_logdir), (
-            "bug: jobid placeholder in parent dir of logfile. This does not work as "
-            "we have to create that dir before submission in order to make sbatch "
-            "happy. Otherwise we get silent fails without logfiles being created."
+            "bug: jobid placeholder in parent dir of logfile. This does not "
+            "work as we have to create that dir before submission in order to "
+            "make sbatch happy. Otherwise we get silent fails without "
+            "logfiles being created."
         )
 
         # generic part of a submission string:
         # we use a run_uuid as the job-name, to allow `--name`-based
-        # filtering in the job status checks (`sacct --name` and `squeue --name`)
+        # filtering in the job status checks (`sacct --name` and
+        # `squeue --name`)
         if wildcard_str == "":
             comment_str = f"rule_{job.name}"
         else:
@@ -458,7 +507,9 @@ class Executor(RemoteExecutor):
             call += f" --qos={self.workflow.executor_settings.qos}"
 
         if self.workflow.executor_settings.reservation:
-            call += f" --reservation={self.workflow.executor_settings.reservation}"
+            call += (
+                f" --reservation={self.workflow.executor_settings.reservation}"
+            )
 
         call += set_gres_string(job)
 
@@ -466,21 +517,24 @@ class Executor(RemoteExecutor):
             self.logger.warning(
                 "No wall time information given. This might or might not "
                 "work on your cluster. "
-                "If not, specify the resource runtime in your rule or as a reasonable "
-                "default via --default-resources."
+                "If not, specify the resource runtime in your rule or as "
+                "a reasonable default via --default-resources."
             )
 
-        if not job.resources.get("mem_mb_per_cpu") and not job.resources.get("mem_mb"):
+        if not job.resources.get("mem_mb_per_cpu") and not job.resources.get(
+            "mem_mb"
+        ):
             self.logger.warning(
-                "No job memory information ('mem_mb' or 'mem_mb_per_cpu') is given "
-                "- submitting without. This might or might not work on your cluster."
+                "No job memory information ('mem_mb' or 'mem_mb_per_cpu') is "
+                "given - submitting without. This might or might not work on "
+                "your cluster."
             )
 
         # MPI job
         if job.resources.get("mpi", False):
-            if not job.resources.get("tasks_per_node") and not job.resources.get(
-                "nodes"
-            ):
+            if not job.resources.get(
+                "tasks_per_node"
+            ) and not job.resources.get("nodes"):
                 self.logger.warning(
                     "MPI job detected, but no 'tasks_per_node' or 'nodes' "
                     "specified. Assuming 'tasks_per_node=1'."
@@ -525,21 +579,25 @@ class Executor(RemoteExecutor):
         # multicluster submissions yield submission infos like
         # "Submitted batch job <id> on cluster <name>" by default, but with the
         # --parsable option it simply yields "<id>;<name>".
-        # To extract the job id we split by semicolon and take the first element
-        # (this also works if no cluster name was provided)
+        # To extract the job id we split by semicolon and take the first
+        # element (this also works if no cluster name was provided)
         slurm_jobid = out.strip().split(";")[0]
         if not slurm_jobid:
-            raise WorkflowError("Failed to retrieve SLURM job ID from sbatch output.")
+            raise WorkflowError(
+                "Failed to retrieve SLURM job ID from sbatch output."
+            )
         slurm_logfile = slurm_logfile.with_name(
             slurm_logfile.name.replace("%j", slurm_jobid)
         )
         self.logger.info(
-            f"Job {job.jobid} has been submitted with SLURM jobid {slurm_jobid} "
-            f"(log: {slurm_logfile})."
+            f"Job {job.jobid} has been submitted with SLURM jobid "
+            f"{slurm_jobid} (log: {slurm_logfile})."
         )
         self.report_job_submission(
             SubmittedJobInfo(
-                job, external_jobid=slurm_jobid, aux={"slurm_logfile": slurm_logfile}
+                job,
+                external_jobid=slurm_jobid,
+                aux={"slurm_logfile": slurm_logfile},
             )
         )
 
@@ -570,12 +628,13 @@ class Executor(RemoteExecutor):
             "ERROR",
         )
         # Cap sleeping time between querying the status of all active jobs:
-        # If `AccountingStorageType`` for `sacct` is set to `accounting_storage/none`,
-        # sacct will query `slurmctld` (instead of `slurmdbd`) and this in turn can
-        # rely on default config, see: https://stackoverflow.com/a/46667605
-        # This config defaults to `MinJobAge=300`, which implies that jobs will be
-        # removed from `slurmctld` within 6 minutes of finishing. So we're conservative
-        # here, with half that time
+        # If `AccountingStorageType`` for `sacct` is set to
+        # `accounting_storage/none`, `sacct` will query `slurmctld` (instead
+        # of `slurmdbd`) and this in turn can rely on default config,
+        # see: https://stackoverflow.com/a/46667605
+        # This config defaults to `MinJobAge=300`, which implies that jobs will
+        # be removed from `slurmctld` within 6 minutes of finishing. So we're
+        # conservative here, with half that time.
         max_sleep_time = 180
 
         sacct_query_durations = []
@@ -590,9 +649,11 @@ class Executor(RemoteExecutor):
         active_jobs_seen_by_sacct = set()
         missing_sacct_status = set()
 
-        # We use this sacct syntax for argument 'starttime' to keep it compatible
-        # with slurm < 20.11
-        sacct_starttime = f"{datetime.now() - timedelta(days=2):%Y-%m-%dT%H:00}"
+        # We use this sacct syntax for argument 'starttime' to keep it
+        # compatible with slurm < 20.11
+        sacct_starttime = (
+            f"{datetime.now() - timedelta(days=2):%Y-%m-%dT%H:00}"
+        )
         # previously we had
         # f"--starttime now-2days --endtime now --name {self.run_uuid}"
         # in line 218 - once v20.11 is definitively not in use any more,
@@ -616,10 +677,14 @@ class Executor(RemoteExecutor):
                     sacct_command
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
-                    self.logger.debug(f"could not check status of job {self.run_uuid}")
+                    self.logger.debug(
+                        f"could not check status of job {self.run_uuid}"
+                    )
                     continue
                 sacct_query_durations.append(sacct_query_duration)
-                self.logger.debug(f"status_of_jobs after sacct is: {status_of_jobs}")
+                self.logger.debug(
+                    f"status_of_jobs after sacct is: {status_of_jobs}"
+                )
                 # only take jobs that are still active
                 active_jobs_ids_with_current_sacct_status = (
                     set(status_of_jobs.keys()) & active_jobs_ids
@@ -633,25 +698,28 @@ class Executor(RemoteExecutor):
                     | active_jobs_ids_with_current_sacct_status
                 )
                 self.logger.debug(
-                    f"active_jobs_seen_by_sacct are: {active_jobs_seen_by_sacct}"
+                    "active_jobs_seen_by_sacct are: "
+                    f"{active_jobs_seen_by_sacct}"
                 )
                 missing_sacct_status = (
                     active_jobs_seen_by_sacct
                     - active_jobs_ids_with_current_sacct_status
                 )
-                self.logger.debug(f"missing_sacct_status are: {missing_sacct_status}")
+                self.logger.debug(
+                    f"missing_sacct_status are: {missing_sacct_status}"
+                )
                 if not missing_sacct_status:
                     break
 
         if missing_sacct_status:
             self.logger.warning(
-                f"Unable to get the status of all active jobs that should be "
+                "Unable to get the status of all active jobs that should be "
                 f"in slurmdbd, even after {status_attempts} attempts.\n"
-                f"The jobs with the following slurm job ids were previously seen "
-                "by sacct, but sacct doesn't report them any more:\n"
+                "The jobs with the following slurm job ids were previously "
+                " seen by sacct, but sacct doesn't report them any more:\n"
                 f"{missing_sacct_status}\n"
-                f"Please double-check with your slurm cluster administrator, that "
-                "slurmdbd job accounting is properly set up.\n"
+                "Please double-check with your slurm cluster administrator, "
+                "that slurmdbd job accounting is properly set up.\n"
             )
 
         if status_of_jobs is not None:
@@ -669,7 +737,9 @@ class Executor(RemoteExecutor):
                     self.report_job_success(j)
                     any_finished = True
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
-                    if not self.workflow.executor_settings.keep_successful_logs:
+                    if (
+                        not self.workflow.executor_settings.keep_successful_logs
+                    ):
                         self.logger.debug(
                             "removing log for successful job "
                             f"with SLURM ID '{j.external_jobid}'"
@@ -715,7 +785,8 @@ We leave it to SLURM to resume your job(s)"""
 
             if not any_finished:
                 self.next_seconds_between_status_checks = min(
-                    self.next_seconds_between_status_checks + 10, max_sleep_time
+                    self.next_seconds_between_status_checks + 10,
+                    max_sleep_time,
                 )
             else:
                 self.next_seconds_between_status_checks = 40
@@ -725,7 +796,9 @@ We leave it to SLURM to resume your job(s)"""
         # This method is called when Snakemake is interrupted.
         if active_jobs:
             # TODO chunk jobids in order to avoid too long command lines
-            jobids = " ".join([job_info.external_jobid for job_info in active_jobs])
+            jobids = " ".join(
+                [job_info.external_jobid for job_info in active_jobs]
+            )
             try:
                 # timeout set to 60, because a scheduler cycle usually is
                 # about 30 sec, but can be longer in extreme cases.
@@ -783,9 +856,9 @@ We leave it to SLURM to resume your job(s)"""
                 self.logger.warning(
                     "The SLURM database might not be available ... "
                     f"Error message: '{error_message}'"
-                    "This error message indicates that the SLURM database is currently "
-                    "not available. This is not an error of the Snakemake plugin, "
-                    "but some kind of server issue. "
+                    "This error message indicates that the SLURM database is "
+                    "currently not available. This is not an error of the "
+                    "Snakemake plugin, but some kind of server issue. "
                     "Please consult with your HPC provider."
                 )
             else:
@@ -808,7 +881,9 @@ We leave it to SLURM to resume your job(s)"""
             # split the account upon ',' and whitespace, to allow
             # multiple accounts being given
             accounts = [
-                a for a in re.split(r"[,\s]+", job.resources.slurm_account) if a
+                a
+                for a in re.split(r"[,\s]+", job.resources.slurm_account)
+                if a
             ]
             for account in accounts:
                 # here, we check whether the given or guessed account is valid
@@ -867,7 +942,9 @@ We leave it to SLURM to resume your job(s)"""
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
             possible_account = sacct_out.replace("(null)", "").strip()
-            if possible_account == "none":  # some clusters may not use an account
+            if (
+                possible_account == "none"
+            ):  # some clusters may not use an account
                 return None
         except subprocess.CalledProcessError as e:
             self.logger.warning(
@@ -960,10 +1037,10 @@ We leave it to SLURM to resume your job(s)"""
         jobname = re.compile(r"--job-name[=?|\s+]|-J\s?")
         if re.search(jobname, job.resources.slurm_extra):
             raise WorkflowError(
-                "The --job-name option is not allowed in the 'slurm_extra' parameter. "
-                "The job name is set by snakemake and must not be overwritten. "
-                "It is internally used to check the stati of the all submitted jobs "
-                "by this workflow."
-                "Please consult the documentation if you are unsure how to "
-                "query the status of your jobs."
+                "The --job-name option is not allowed in the 'slurm_extra' "
+                "parameter. The job name is set by snakemake and must not be "
+                "overwritten. It is internally used to check the stati of the "
+                "all submitted jobs by this workflow. Please consult the "
+                "documentation if you are unsure how to query the status of "
+                "your jobs."
             )
