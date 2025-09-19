@@ -8,7 +8,8 @@ def get_min_job_age():
     """
     Runs 'scontrol show config', parses the output, and extracts the MinJobAge value.
     Returns the value as an integer (seconds), or None if not found or parse error.
-    Handles various time units: s/sec/secs/seconds, h/hours, or no unit (assumes seconds).
+    Handles various time units: s/sec/secs/seconds, h/hours, or no unit 
+    (assumes seconds).
     """
     try:
         cmd = "scontrol show config"
@@ -82,8 +83,8 @@ def should_recommend_squeue_status_command(min_threshold_seconds=120):
     """
     min_job_age = get_min_job_age()
 
-    # If MinJobAge is sufficient (>= threshold), squeue might work for job status queries
-    # However, `sacct` is the preferred command for job status queries:
+    # If MinJobAge is sufficient (>= threshold), squeue might work for job status
+    # queries. However, `sacct` is the preferred command for job status queries:
     # The SLURM accounting database will answer queries for a huge number of jobs
     # more reliably than `squeue`, which might not be configured to show past jobs
     # on every cluster.
