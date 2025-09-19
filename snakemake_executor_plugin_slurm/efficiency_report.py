@@ -58,7 +58,9 @@ def parse_reqmem(reqmem, number_of_nodes=1):
 def get_sacct_data(run_uuid, logger):
     """Fetch raw sacct data for a workflow."""
     cmd = f"sacct --name={run_uuid} --parsable2 --noheader"
-    cmd += " --format=JobID,JobName,Comment,Elapsed,TotalCPU,NNodes,NCPUS,MaxRSS,ReqMem"
+    cmd += (
+        " --format=JobID,JobName,Comment,Elapsed,TotalCPU,NNodes,NCPUS,MaxRSS,ReqMem"
+    )
 
     try:
         result = subprocess.run(

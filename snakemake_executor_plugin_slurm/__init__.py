@@ -1,7 +1,5 @@
 __author__ = "David Lähnemann, Johannes Köster, Christian Meesters"
-__copyright__ = (
-    "Copyright 2023, David Lähnemann, Johannes Köster, Christian Meesters"
-)
+__copyright__ = "Copyright 2023, David Lähnemann, Johannes Köster, Christian Meesters"
 __email__ = "johannes.koester@uni-due.de"
 __license__ = "MIT"
 
@@ -245,8 +243,7 @@ class ExecutorSettings(ExecutorSettingsBase):
         default=None,
         metadata={
             "help": (
-                "If set, the given reservation will be used for job "
-                "submission."
+                "If set, the given reservation will be used for job submission."
             ),
             "env_var": False,
             "required": False,
@@ -292,9 +289,7 @@ class Executor(RemoteExecutor):
         self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
         self._fallback_partition = None
-        self._preemption_warning = (
-            False  # no preemption warning has been issued
-        )
+        self._preemption_warning = False  # no preemption warning has been issued
         self.slurm_logdir = (
             Path(self.workflow.executor_settings.logdir)
             if self.workflow.executor_settings.logdir
@@ -380,9 +375,7 @@ class Executor(RemoteExecutor):
         # If the efficiency report is enabled, create it.
         if self.workflow.executor_settings.efficiency_report:
             threshold = self.workflow.executor_settings.efficiency_threshold
-            report_path = (
-                self.workflow.executor_settings.efficiency_report_path
-            )
+            report_path = self.workflow.executor_settings.efficiency_report_path
             create_efficiency_report(
                 e_threshold=threshold,
                 run_uuid=self.run_uuid,
@@ -401,9 +394,7 @@ class Executor(RemoteExecutor):
             return
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
-        self.logger.info(
-            f"Cleaning up log files older than {age_cutoff} day(s)."
-        )
+        self.logger.info(f"Cleaning up log files older than {age_cutoff} day(s).")
 
         for path in self.slurm_logdir.rglob("*.log"):
             if path.is_file():
@@ -418,8 +409,7 @@ class Executor(RemoteExecutor):
             delete_empty_dirs(self.slurm_logdir)
         except (OSError, FileNotFoundError) as e:
             self.logger.error(
-                "Could not delete empty directories in "
-                f" {self.slurm_logdir}: {e}"
+                f"Could not delete empty directories in {self.slurm_logdir}: {e}"
             )
 
     def warn_on_jobcontext(self, done=None):
@@ -448,26 +438,20 @@ class Executor(RemoteExecutor):
         # with job_info being of type
         # snakemake_interface_executor_plugins.executors.base.SubmittedJobInfo.
 
-        group_or_rule = (
-            f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
-        )
+        group_or_rule = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
 
         try:
             wildcard_str = (
-                "_".join(job.wildcards).replace("/", "_")
-                if job.wildcards
-                else ""
+                "_".join(job.wildcards).replace("/", "_") if job.wildcards else ""
             )
         except AttributeError:
             wildcard_str = ""
 
         self.slurm_logdir.mkdir(parents=True, exist_ok=True)
-        slurm_logfile = (
-            self.slurm_logdir / group_or_rule / wildcard_str / "%j.log"
-        )
+        slurm_logfile = self.slurm_logdir / group_or_rule / wildcard_str / "%j.log"
         slurm_logfile.parent.mkdir(parents=True, exist_ok=True)
-        # this behavior has been fixed in slurm 23.02, but there might be 
-        # plenty of older versions around, hence we should rather be 
+        # this behavior has been fixed in slurm 23.02, but there might be
+        # plenty of older versions around, hence we should rather be
         # conservative here.
         assert "%j" not in str(self.slurm_logdir), (
             "bug: jobid placeholder in parent dir of logfile. This does not "
@@ -507,9 +491,7 @@ class Executor(RemoteExecutor):
             call += f" --qos={self.workflow.executor_settings.qos}"
 
         if self.workflow.executor_settings.reservation:
-            call += (
-                f" --reservation={self.workflow.executor_settings.reservation}"
-            )
+            call += f" --reservation={self.workflow.executor_settings.reservation}"
 
         call += set_gres_string(job)
 
@@ -521,9 +503,7 @@ class Executor(RemoteExecutor):
                 "a reasonable default via --default-resources."
             )
 
-        if not job.resources.get("mem_mb_per_cpu") and not job.resources.get(
-            "mem_mb"
-        ):
+        if not job.resources.get("mem_mb_per_cpu") and not job.resources.get("mem_mb"):
             self.logger.warning(
                 "No job memory information ('mem_mb' or 'mem_mb_per_cpu') is "
                 "given - submitting without. This might or might not work on "
@@ -532,9 +512,9 @@ class Executor(RemoteExecutor):
 
         # MPI job
         if job.resources.get("mpi", False):
-            if not job.resources.get(
-                "tasks_per_node"
-            ) and not job.resources.get("nodes"):
+            if not job.resources.get("tasks_per_node") and not job.resources.get(
+                "nodes"
+            ):
                 self.logger.warning(
                     "MPI job detected, but no 'tasks_per_node' or 'nodes' "
                     "specified. Assuming 'tasks_per_node=1'."
@@ -583,9 +563,7 @@ class Executor(RemoteExecutor):
         # element (this also works if no cluster name was provided)
         slurm_jobid = out.strip().split(";")[0]
         if not slurm_jobid:
-            raise WorkflowError(
-                "Failed to retrieve SLURM job ID from sbatch output."
-            )
+            raise WorkflowError("Failed to retrieve SLURM job ID from sbatch output.")
         slurm_logfile = slurm_logfile.with_name(
             slurm_logfile.name.replace("%j", slurm_jobid)
         )
@@ -651,9 +629,7 @@ class Executor(RemoteExecutor):
 
         # We use this sacct syntax for argument 'starttime' to keep it
         # compatible with slurm < 20.11
-        sacct_starttime = (
-            f"{datetime.now() - timedelta(days=2):%Y-%m-%dT%H:00}"
-        )
+        sacct_starttime = f"{datetime.now() - timedelta(days=2):%Y-%m-%dT%H:00}"
         # previously we had
         # f"--starttime now-2days --endtime now --name {self.run_uuid}"
         # in line 218 - once v20.11 is definitively not in use any more,
@@ -677,14 +653,10 @@ class Executor(RemoteExecutor):
                     sacct_command
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
-                    self.logger.debug(
-                        f"could not check status of job {self.run_uuid}"
-                    )
+                    self.logger.debug(f"could not check status of job {self.run_uuid}")
                     continue
                 sacct_query_durations.append(sacct_query_duration)
-                self.logger.debug(
-                    f"status_of_jobs after sacct is: {status_of_jobs}"
-                )
+                self.logger.debug(f"status_of_jobs after sacct is: {status_of_jobs}")
                 # only take jobs that are still active
                 active_jobs_ids_with_current_sacct_status = (
                     set(status_of_jobs.keys()) & active_jobs_ids
@@ -698,16 +670,13 @@ class Executor(RemoteExecutor):
                     | active_jobs_ids_with_current_sacct_status
                 )
                 self.logger.debug(
-                    "active_jobs_seen_by_sacct are: "
-                    f"{active_jobs_seen_by_sacct}"
+                    "active_jobs_seen_by_sacct are: " f"{active_jobs_seen_by_sacct}"
                 )
                 missing_sacct_status = (
                     active_jobs_seen_by_sacct
                     - active_jobs_ids_with_current_sacct_status
                 )
-                self.logger.debug(
-                    f"missing_sacct_status are: {missing_sacct_status}"
-                )
+                self.logger.debug(f"missing_sacct_status are: {missing_sacct_status}")
                 if not missing_sacct_status:
                     break
 
@@ -737,9 +706,7 @@ class Executor(RemoteExecutor):
                     self.report_job_success(j)
                     any_finished = True
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
-                    if (
-                        not self.workflow.executor_settings.keep_successful_logs
-                    ):
+                    if not self.workflow.executor_settings.keep_successful_logs:
                         self.logger.debug(
                             "removing log for successful job "
                             f"with SLURM ID '{j.external_jobid}'"
@@ -796,9 +763,7 @@ We leave it to SLURM to resume your job(s)"""
         # This method is called when Snakemake is interrupted.
         if active_jobs:
             # TODO chunk jobids in order to avoid too long command lines
-            jobids = " ".join(
-                [job_info.external_jobid for job_info in active_jobs]
-            )
+            jobids = " ".join([job_info.external_jobid for job_info in active_jobs])
             try:
                 # timeout set to 60, because a scheduler cycle usually is
                 # about 30 sec, but can be longer in extreme cases.
@@ -881,9 +846,7 @@ We leave it to SLURM to resume your job(s)"""
             # split the account upon ',' and whitespace, to allow
             # multiple accounts being given
             accounts = [
-                a
-                for a in re.split(r"[,\s]+", job.resources.slurm_account)
-                if a
+                a for a in re.split(r"[,\s]+", job.resources.slurm_account) if a
             ]
             for account in accounts:
                 # here, we check whether the given or guessed account is valid
@@ -942,9 +905,7 @@ We leave it to SLURM to resume your job(s)"""
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
             possible_account = sacct_out.replace("(null)", "").strip()
-            if (
-                possible_account == "none"
-            ):  # some clusters may not use an account
+            if possible_account == "none":  # some clusters may not use an account
                 return None
         except subprocess.CalledProcessError as e:
             self.logger.warning(
