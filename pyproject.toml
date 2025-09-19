@@ -34,7 +34,7 @@ pandas = "^2.2.3"
 omit = [".*", "*/site-packages/*", "Snakefile"]
 
 [tool.black]
-line-length = 79
+line-length = 87
 target-version = ['py311']
 
 [build-system]
