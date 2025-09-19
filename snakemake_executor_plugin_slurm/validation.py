@@ -55,14 +55,15 @@ def validate_slurm_extra(job):
     Raises:
         WorkflowError: If forbidden SLURM options are found in slurm_extra
     """
-    # no need to test?
-    if not job.resources.slurm_extra:
+    # skip testing if no slurm_extra is set
+    slurm_extra = getattr(job.resources, "slurm_extra", None)
+    if not slurm_extra:
         return
 
     forbidden_options = get_forbidden_slurm_options()
 
     for pattern, option_name in forbidden_options.items():
-        if re.search(pattern, job.resources.slurm_extra):
+        if re.search(pattern, slurm_extra):
             raise WorkflowError(
                 f"The --{option_name.replace(' ', '-')} option is not "
                 f"allowed in the 'slurm_extra' parameter. "
