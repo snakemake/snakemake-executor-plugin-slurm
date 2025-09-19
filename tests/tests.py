@@ -681,6 +681,7 @@ class TestSlurmExtraValidation:
     @pytest.fixture
     def mock_job(self):
         """Create a mock job with configurable slurm_extra resource."""
+
         def _create_job(slurm_extra=None):
             mock_resources = MagicMock()
             if slurm_extra is not None:
@@ -696,6 +697,7 @@ class TestSlurmExtraValidation:
             mock_job = MagicMock()
             mock_job.resources = mock_resources
             return mock_job
+
         return _create_job
 
     def test_no_slurm_extra(self, mock_job):
