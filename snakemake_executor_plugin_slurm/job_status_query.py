@@ -14,8 +14,10 @@ def get_min_job_age():
     try:
         cmd = "scontrol show config"
         cmd = shlex.split(cmd)
-        output = subprocess.check_output(cmd, text=True, stderr=subprocess.PIPE)
-    except subprocess.CalledProcessError:
+        output = subprocess.check_output(
+            cmd, text=True, stderr=subprocess.PIPE, timeout=10
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
         return None
 
     for line in output.splitlines():
