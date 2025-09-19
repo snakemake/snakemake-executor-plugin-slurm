@@ -67,20 +67,20 @@ def is_query_tool_available(tool_name):
         return False
 
 
-def should_enable_status_command_option():
+def should_recommend_squeue_status_command(min_threshold_seconds=120):
     """
-    Determine if the status_command option should be available based on:
-    1. MinJobAge configuration (if very low, squeue might not work well)
-    2. Availability of sacct command
+    Determine if the status query with squeue should be recommended based on
+    the MinJobAge configuration (if very low, squeue might not work well)
 
     Args:
-        min_threshold_seconds: The minimum threshold in seconds for MinJobAge to be considered sufficient.
-                              Default is 120 seconds (3 * 40s, where 40s is the default initial status check interval).
+        min_threshold_seconds: The minimum threshold in seconds for MinJobAge
+                               to be considered sufficient. Default is 120
+                               seconds (3 * 40s, where 40s is the default 
+                               initial status check interval).
 
     Returns True if the option should be available, False otherwise.
     """
     min_job_age = get_min_job_age()
-    sacct_available = is_sacct_available()
 
     # If MinJobAge is sufficient (>= threshold), squeue might work for job status queries
     # However, `sacct` is the preferred command for job status queries:
@@ -88,7 +88,8 @@ def should_enable_status_command_option():
     # more reliably than `squeue`, which might not be configured to show past jobs
     # on every cluster.
     if (
-        min_job_age is not None and min_job_age >= min_threshold_seconds and sacct_available
+        min_job_age is not None
+        and min_job_age >= min_threshold_seconds
     ):
         return True
 
@@ -140,13 +141,13 @@ def query_job_status_squeue(jobuid) -> list:
         Dictionary mapping job ID to JobStatus object
     """
     # Build squeue command
-    query_command = """
-        squeue \
-            --format=%i|%T \  
-            --states=all \
-            --noheader \
-            --name {jobuid}
-            """
-    query_command = shlex.split(query_command)
+    query_command = [
+        "squeue",
+        "--format=%i|%T",
+        "--states=all", 
+        "--noheader",
+        "--name",
+        f"{jobuid}"
+    ]
 
     return query_command

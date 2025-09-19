@@ -36,218 +36,215 @@ from .utils import (
 from .job_status_query import (
     get_min_job_age,
     is_query_tool_available,
-    should_enable_status_command_option,
+    should_recommend_squeue_status_command,
 )
 from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
-from .job_status_query import (
-    should_enable_status_command_option,
-    get_min_job_age,
-    is_query_tool_available,
-)
 
 
 def _get_status_command_default():
     """Get smart default for status_command based on cluster configuration."""
-    should_enable = should_enable_status_command_option()
     sacct_available = is_query_tool_available("sacct")
     squeue_available = is_query_tool_available("squeue")
+    # squeue is assumed to always be available on SLURM clusters
 
-    if should_enable and sacct_available:
-        return "sacct"
-    elif not should_enable and squeue_available:
-        return "squeue"
-    else:  # neither command is available or reliable
+    if not squeue_available and not sacct_available:
         raise WorkflowError(
-            "No suitable job status query tool available: "
-            "'sacct' seems missing and 'squeue' can only display a job status "
-            f"for finished jobs for {get_min_job_age()} seconds."
+            "Neither 'sacct' nor 'squeue' commands are available on this system. "
+            "At least one of these commands is required for job status queries."
         )
+    if sacct_available:
+        return "sacct"
+    else:
+        return "squeue"
 
 
-def _create_executor_settings_class():
-    """Create ExecutorSettings class with conditional fields based on cluster configuration."""
-    # Use a conservative default threshold for class creation (3 * 40s = 120s)
-    # The actual validation in the executor will use the configured init_seconds_before_status_checks
-    should_enable = should_enable_status_command_option(min_threshold_seconds=120)
+def _get_status_command_help():
+    """Get help text with computed default."""
+    default_cmd = _get_status_command_default()
+    sacct_available = is_query_tool_available("sacct")
+    squeue_recommended = should_recommend_squeue_status_command()
 
-    # Base fields that are always present
-    base_fields = {
-        "logdir": (
-            Optional[Path],
-            field(
-                default=None,
-                metadata={
-                    "help": "Per default the SLURM log directory is relative to "
-                    "the working directory."
-                    "This flag allows to set an alternative directory.",
-                    "env_var": False,
-                    "required": False,
-                },
-            ),
-        ),
-        "keep_successful_logs": (
-            bool,
-            field(
-                default=False,
-                metadata={
-                    "help": "Per default SLURM log files will be deleted upon sucessful "
-                    "completion of a job. Whenever a SLURM job fails, its log "
-                    "file will be preserved. "
-                    "This flag allows to keep all SLURM log files, even those "
-                    "of successful jobs.",
-                    "env_var": False,
-                    "required": False,
-                },
-            ),
-        ),
-        "delete_logfiles_older_than": (
-            Optional[int],
-            field(
-                default=10,
-                metadata={
-                    "help": "Per default SLURM log files in the SLURM log directory "
-                    "of a workflow will be deleted after 10 days. For this, "
-                    "best leave the default log directory unaltered. "
-                    "Setting this flag allows to change this behaviour. "
-                    "If set to <=0, no old files will be deleted. ",
-                },
-            ),
-        ),
-        "init_seconds_before_status_checks": (
-            Optional[int],
-            field(
-                default=40,
-                metadata={
-                    "help": "Defines the time in seconds before the first status "
-                    "check is performed after job submission.",
-                    "env_var": False,
-                    "required": False,
-                },
-            ),
-        ),
-        "status_attempts": (
-            Optional[int],
-            field(
-                default=5,
-                metadata={
-                    "help": "Defines the number of attempts to query the status of "
-                    "all active jobs. If the status query fails, the next attempt "
-                    "will be performed after the next status check interval."
-                    "The default is 5 status attempts before giving up. The maximum "
-                    "time between status checks is 180 seconds.",
-                    "env_var": False,
-                    "required": False,
-                },
-            ),
-        ),
-        "requeue": (
-            bool,
-            field(
-                default=False,
-                metadata={
-                    "help": "Allow requeuing preempted of failed jobs, "
-                    "if no cluster default. Results in "
-                    "`sbatch ... --requeue ...` "
-                    "This flag has no effect, if not set.",
-                    "env_var": False,
-                    "required": False,
-                },
-            ),
-        ),
-        "no_account": (
-            bool,
-            field(
-                default=False,
-                metadata={
-                    "help": "Do not use any account for submission. "
-                    "This flag has no effect, if not set.",
-                    "env_var": False,
-                    "required": False,
-                },
-            ),
-        ),
-        "efficiency_report": (
-            bool,
-            field(
-                default=False,
-                metadata={
-                    "help": "Generate an efficiency report at the end of the workflow. "
-                    "This flag has no effect, if not set.",
-                    "env_var": False,
-                    "required": False,
-                },
-            ),
-        ),
-        "efficiency_report_path": (
-            Optional[Path],
-            field(
-                default=None,
-                metadata={
-                    "help": "Path to the efficiency report file. "
-                    "If not set, the report will be written to "
-                    "the current working directory with the name "
-                    "'efficiency_report_<run_uuid>.csv'. "
-                    "This flag has no effect, if not set.",
-                    "env_var": False,
-                    "required": False,
-                },
-            ),
-        ),
-        "efficiency_threshold": (
-            Optional[float],
-            field(
-                default=0.8,
-                metadata={
-                    "help": "The efficiency threshold for the efficiency report. "
-                    "Jobs with an efficiency below this threshold will be reported. "
-                    "This flag has no effect, if not set.",
-                },
-            ),
-        ),
-        "reservation": (
-            Optional[str],
-            field(
-                default=None,
-                metadata={
-                    "help": "If set, the given reservation will be used for job submission.",
-                    "env_var": False,
-                    "required": False,
-                },
-            ),
-        ),
-    }
+    base_help = "Command to query job status. Options: 'sacct', 'squeue'. "
 
-    # Add status_command field only if needed
-    if should_enable:
-        base_fields["status_command"] = (
-            Optional[str],
-            field(
-                default_factory=_get_status_command_default,
-                metadata={
-                    "help": "Allows to choose between 'sacct' (the default) and 'squeue'.",
-                    "env_var": False,
-                    "required": False,
-                },
-            ),
-        )
+    if default_cmd == "sacct":
+        if sacct_available and not squeue_recommended:
+            info = (
+                "'sacct' detected and will be used "
+                "(MinJobAge may be too low for reliable 'squeue' usage)"
+            )
+        else:
+            info = "'sacct' detected and will be used"
+    else:  # default_cmd == "squeue"
+        if squeue_recommended:
+            # cumbersome, due to black and the need to stay below 80 chars
+            msg_part1 = "'squeue' recommended (MinJobAge is sufficient )"
+            msg_part2 = " for reliable usage"
+            info = msg_part1 + msg_part2
+        elif not sacct_available:
+            info = (
+                "'sacct' not available, falling back to 'squeue'. "
+                "WARNING: 'squeue' may not work reliably if MinJobAge is "
+                "too low"
+            )
+        else:
+            info = (
+                "'squeue' will be used. "
+                "WARNING: MinJobAge may be too low for reliable 'squeue' usage"
+            )
 
-    def post_init(self):
+    return (
+        f"{base_help}Default: '{default_cmd}' ({info}). "
+        f"Set explicitly to override auto-detection."
+    )
+
+
+@dataclass
+class ExecutorSettings(ExecutorSettingsBase):
+    """Settings for the SLURM executor plugin."""
+
+    logdir: Optional[Path] = field(
+        default=None,
+        metadata={
+            "help": "Per default the SLURM log directory is relative to "
+            "the working directory. "
+            "This flag allows to set an alternative directory.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
+    keep_successful_logs: bool = field(
+        default=False,
+        metadata={
+            "help": "Per default SLURM log files will be deleted upon "
+            "successful completion of a job. Whenever a SLURM job fails, "
+            "its log file will be preserved. "
+            "This flag allows to keep all SLURM log files, even those "
+            "of successful jobs.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
+    delete_logfiles_older_than: Optional[int] = field(
+        default=10,
+        metadata={
+            "help": "Per default SLURM log files in the SLURM log directory "
+            "of a workflow will be deleted after 10 days. For this, "
+            "best leave the default log directory unaltered. "
+            "Setting this flag allows to change this behaviour. "
+            "If set to <=0, no old files will be deleted.",
+        },
+    )
+
+    init_seconds_before_status_checks: Optional[int] = field(
+        default=40,
+        metadata={
+            "help": "Defines the time in seconds before the first status "
+            "check is performed on submitted jobs.",
+        },
+    )
+
+    requeue: bool = field(
+        default=False,
+        metadata={
+            "help": "Requeue jobs if they fail with exit code != 0, "
+            "if no cluster default. Results in "
+            "`sbatch ... --requeue ...` "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
+    no_account: bool = field(
+        default=False,
+        metadata={
+            "help": "Do not use any account for submission. "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
+    efficiency_report: bool = field(
+        default=False,
+        metadata={
+            "help": "Generate an efficiency report at the end of the workflow. "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
+    efficiency_report_path: Optional[Path] = field(
+        default=None,
+        metadata={
+            "help": "Path to the efficiency report file. "
+            "If not set, the report will be written to "
+            "the current working directory with the name "
+            "'efficiency_report_<run_uuid>.csv'. "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
+    efficiency_threshold: Optional[float] = field(
+        default=0.8,
+        metadata={
+            "help": "Threshold for efficiency report. "
+            "Jobs with efficiency below this threshold will be reported.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
+    status_command: Optional[str] = field(
+        default_factory=_get_status_command_default,
+        metadata={
+            "help": _get_status_command_help(),
+            "env_var": False,
+            "required": False,
+        },
+    )
+
+    status_attempts: Optional[int] = field(
+        default=5,
+        metadata={
+            "help": "Defines the number of attempts to query the status of "
+            "all active jobs. If the status query fails, the next attempt "
+            "will be performed after the next status check interval. "
+            "The default is 5 status attempts before giving up. The maximum "
+            "time between status checks is 180 seconds.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
+    qos: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": "If set, the given QoS will be used for job submission.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
+    reservation: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": "If set, the given reservation will be used for job submission.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
+    def __post_init__(self):
         """Validate settings after initialization."""
-        # Note: Validation with logging is handled in the Executor class
-        # where self.logger is available. This method is kept for potential
-        # future validation that doesn't require logging.
+        # Add any validation logic here if needed in the future
         pass
-
-    # Add the __post_init__ method
-    base_fields["__post_init__"] = post_init
-
-    # Create the class dynamically
-    return dataclass(type("ExecutorSettings", (ExecutorSettingsBase,), base_fields))
-
-
-# Create the actual ExecutorSettings class
-ExecutorSettings = _create_executor_settings_class()
 
 
 # Required:
@@ -268,9 +265,6 @@ common_settings = CommonSettings(
     pass_default_resources_args=True,
     pass_envvar_declarations_to_cmd=False,
     auto_deploy_default_storage_provider=False,
-    # wait a bit until slurmdbd has job info available
-    init_seconds_before_status_checks=40,
-    pass_group_args=True,
 )
 
 
@@ -305,7 +299,9 @@ class Executor(RemoteExecutor):
 
                 # Calculate dynamic threshold: 3 times the initial status check interval
                 # The plugin starts with 40 seconds and increases, so we use (3 * 10) + 40 = 70 seconds as minimum
-                between_status_check_seconds = getattr(self.workflow.executor_settings, 'seconds_between_status_checks', 70)
+                between_status_check_seconds = getattr(
+                    self.workflow.executor_settings, "seconds_between_status_checks", 70
+                )
                 dynamic_check_threshold = 3 * between_status_check_seconds
 
                 if not sacct_available and status_command == "sacct":
@@ -314,17 +310,23 @@ class Executor(RemoteExecutor):
                         "Using 'squeue' instead for job status queries."
                     )
                 elif sacct_available and min_job_age is not None:
-                    if min_job_age < dynamic_check_threshold and status_command == "sacct":
+                    if (
+                        min_job_age < dynamic_check_threshold
+                        and status_command == "sacct"
+                    ):
                         self.logger.warning(
-                            f"MinJobAge is {min_job_age} seconds (< {dynamic_checkthreshold}s). "
+                            f"MinJobAge is {min_job_age} seconds (< {dynamic_check_threshold}s). "
                             f"This may cause 'sacct' to report inaccurate job states and the status_command option may be unreliable. "
-                            f"(Threshold is 3x status check interval: 3 × {initial_status_check_seconds}s = {dynamic_threshold}s)"
+                            f"(Threshold is 3x status check interval: 3 × {between_status_check_seconds}s = {dynamic_check_threshold}s)"
                         )
-                    elif min_job_age >= dynamic_check_threshold and status_command == "squeue":
+                    elif (
+                        min_job_age >= dynamic_check_threshold
+                        and status_command == "squeue"
+                    ):
                         self.logger.warning(
-                            f"MinJobAge is {min_job_age} seconds (>= {dynamic_threshold}s). "
+                            f"MinJobAge is {min_job_age} seconds (>= {dynamic_check_threshold}s). "
                             f"The 'squeue' command should work reliably for status queries. "
-                            f"(Threshold is 3x status check interval: 3 × {initial_status_check_seconds}s = {dynamic_threshold}s)"
+                            f"(Threshold is 3x status check interval: 3 × {between_status_check_seconds}s = {dynamic_check_threshold}s)"
                         )
 
     def get_status_command(self):
@@ -442,7 +444,7 @@ class Executor(RemoteExecutor):
             "run_uuid": self.run_uuid,
             "slurm_logfile": slurm_logfile,
             "comment_str": comment_str,
-            "account": self.get_account_arg(job),
+            "account": next(self.get_account_arg(job)),
             "partition": self.get_partition_arg(job),
             "workdir": self.workflow.workdir_init,
         }
@@ -451,6 +453,9 @@ class Executor(RemoteExecutor):
 
         if self.workflow.executor_settings.requeue:
             call += " --requeue"
+
+        if self.workflow.executor_settings.qos:
+            call += f" --qos={self.workflow.executor_settings.qos}"
 
         if self.workflow.executor_settings.reservation:
             call += f" --reservation={self.workflow.executor_settings.reservation}"
@@ -471,13 +476,6 @@ class Executor(RemoteExecutor):
                 "- submitting without. This might or might not work on your cluster."
             )
 
-            # fixes #40 - set ntasks regardless of mpi, because
-            # SLURM v22.05 introduced the requirement for all jobs
-            gpu_job = job.resources.get("gpu") or "gpu" in job.resources.get("gres", "")
-            if gpu_job:
-                call += f" --ntasks-per-gpu={job.resources.get('tasks', 1)}"
-            else:
-                call += f" --ntasks={job.resources.get('tasks', 1)}"
         # MPI job
         if job.resources.get("mpi", False):
             if not job.resources.get("tasks_per_node") and not job.resources.get(
@@ -807,10 +805,21 @@ We leave it to SLURM to resume your job(s)"""
         else raises an error - implicetly.
         """
         if job.resources.get("slurm_account"):
-            # here, we check whether the given or guessed account is valid
-            # if not, a WorkflowError is raised
-            self.test_account(job.resources.slurm_account)
-            return f" -A '{job.resources.slurm_account}'"
+            # split the account upon ',' and whitespace, to allow
+            # multiple accounts being given
+            accounts = [
+                a for a in re.split(r"[,\s]+", job.resources.slurm_account) if a
+            ]
+            for account in accounts:
+                # here, we check whether the given or guessed account is valid
+                # if not, a WorkflowError is raised
+                self.test_account(account)
+            # sbatch only allows one account per submission
+            # yield one after the other, if multiple were given
+            # we have to quote the account, because it might
+            # contain build-in shell commands - see issue #354
+            for account in accounts:
+                yield f" -A {shlex.quote(account)}"
         else:
             if self._fallback_account_arg is None:
                 self.logger.warning("No SLURM account given, trying to guess.")
@@ -818,7 +827,7 @@ We leave it to SLURM to resume your job(s)"""
                 if account:
                     self.logger.warning(f"Guessed SLURM account: {account}")
                     self.test_account(f"{account}")
-                    self._fallback_account_arg = f" -A {account}"
+                    self._fallback_account_arg = f" -A {shlex.quote(account)}"
                 else:
                     self.logger.warning(
                         "Unable to guess SLURM account. Trying to proceed without."
@@ -826,7 +835,7 @@ We leave it to SLURM to resume your job(s)"""
                     self._fallback_account_arg = (
                         ""  # no account specific args for sbatch
                     )
-            return self._fallback_account_arg
+            yield self._fallback_account_arg
 
     def get_partition_arg(self, job: JobExecutorInterface):
         """
@@ -841,7 +850,9 @@ We leave it to SLURM to resume your job(s)"""
                 self._fallback_partition = self.get_default_partition(job)
             partition = self._fallback_partition
         if partition:
-            return f" -p {partition}"
+            # we have to quote the partition, because it might
+            # contain build-in shell commands
+            return f" -p {shlex.quote(partition)}"
         else:
             return ""
 
@@ -869,32 +880,35 @@ We leave it to SLURM to resume your job(s)"""
         """
         tests whether the given account is registered, raises an error, if not
         """
-        cmd = "sshare -U --format Account%256 --noheader"
+        # first we need to test with sacctmgr because sshare might not
+        # work in a multicluster environment
+        cmd = f'sacctmgr -n -s list user "{os.environ["USER"]}" format=account%256'
+        sacctmgr_report = sshare_report = ""
         try:
             accounts = subprocess.check_output(
                 cmd, shell=True, text=True, stderr=subprocess.PIPE
             )
         except subprocess.CalledProcessError as e:
-            sshare_report = (
+            sacctmgr_report = (
                 "Unable to test the validity of the given or guessed"
-                f" SLURM account '{account}' with sshare: {e.stderr}."
+                f" SLURM account '{account}' with sacctmgr: {e.stderr}."
             )
             accounts = ""
 
         if not accounts.strip():
-            cmd = f'sacctmgr -n -s list user "{os.environ["USER"]}" format=account%256'
+            cmd = "sshare -U --format Account%256 --noheader"
             try:
                 accounts = subprocess.check_output(
                     cmd, shell=True, text=True, stderr=subprocess.PIPE
                 )
             except subprocess.CalledProcessError as e:
-                sacctmgr_report = (
+                sshare_report = (
                     "Unable to test the validity of the given or guessed "
-                    f"SLURM account '{account}' with sacctmgr: {e.stderr}."
+                    f"SLURM account '{account}' with sshare: {e.stderr}."
                 )
                 raise WorkflowError(
-                    f"The 'sshare' reported: '{sshare_report}' "
-                    f"and likewise 'sacctmgr' reported: '{sacctmgr_report}'."
+                    f"The 'sacctmgr' reported: '{sacctmgr_report}' "
+                    f"and likewise 'sshare' reported: '{sshare_report}'."
                 )
 
         # The set() has been introduced during review to eliminate
@@ -903,7 +917,7 @@ We leave it to SLURM to resume your job(s)"""
 
         if not accounts:
             self.logger.warning(
-                f"Both 'sshare' and 'sacctmgr' returned empty results for account "
+                f"Both 'sacctmgr' and 'sshare' returned empty results for account "
                 f"'{account}'. Proceeding without account validation."
             )
             return ""
