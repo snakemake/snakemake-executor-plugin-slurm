@@ -75,7 +75,7 @@ def should_recommend_squeue_status_command(min_threshold_seconds=120):
     Args:
         min_threshold_seconds: The minimum threshold in seconds for MinJobAge
                                to be considered sufficient. Default is 120
-                               seconds (3 * 40s, where 40s is the default 
+                               seconds (3 * 40s, where 40s is the default
                                initial status check interval).
 
     Returns True if the option should be available, False otherwise.
@@ -87,10 +87,7 @@ def should_recommend_squeue_status_command(min_threshold_seconds=120):
     # The SLURM accounting database will answer queries for a huge number of jobs
     # more reliably than `squeue`, which might not be configured to show past jobs
     # on every cluster.
-    if (
-        min_job_age is not None
-        and min_job_age >= min_threshold_seconds
-    ):
+    if min_job_age is not None and min_job_age >= min_threshold_seconds:
         return True
 
     # In other cases, sacct should work fine and the option might not be needed
@@ -144,10 +141,10 @@ def query_job_status_squeue(jobuid) -> list:
     query_command = [
         "squeue",
         "--format=%i|%T",
-        "--states=all", 
+        "--states=all",
         "--noheader",
         "--name",
-        f"{jobuid}"
+        f"{jobuid}",
     ]
 
     return query_command
