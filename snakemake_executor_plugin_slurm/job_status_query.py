@@ -8,7 +8,7 @@ def get_min_job_age():
     """
     Runs 'scontrol show config', parses the output, and extracts the MinJobAge value.
     Returns the value as an integer (seconds), or None if not found or parse error.
-    Handles various time units: s/sec/secs/seconds, h/hours, or no unit 
+    Handles various time units: s/sec/secs/seconds, h/hours, or no unit
     (assumes seconds).
     """
     try:
