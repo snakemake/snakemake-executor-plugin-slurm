@@ -389,7 +389,7 @@ class TestSLURMResources(TestWorkflows):
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-        assert " -C 'haswell'" in get_submit_command(job, params)
+        assert " -C haswell" in get_submit_command(job, params)
 
     def test_qos_resource(self, mock_job):
         """Test that the qos resource is correctly added to the sbatch command."""
