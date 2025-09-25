@@ -702,7 +702,6 @@ class TestSlurmExtraValidation:
 
         return _create_job
 
-
     def test_valid_slurm_extra(self, mock_job):
         """Test that validation passes with allowed SLURM options."""
         job = mock_job(slurm_extra="--mail-type=END --mail-user=user@example.com")
