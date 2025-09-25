@@ -413,7 +413,7 @@ class TestSLURMResources(TestWorkflows):
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-        assert " --qos='normal'" in get_submit_command(job, params)
+        assert " --qos=normal" in get_submit_command(job, params)
 
     def test_both_constraint_and_qos(self, mock_job):
         """Test that both constraint and qos resources can be used together."""
@@ -440,8 +440,8 @@ class TestSLURMResources(TestWorkflows):
 
             # Assert both resources are correctly included
             sbatch_command = get_submit_command(job, params)
-            assert " --qos='high'" in sbatch_command
-            assert " -C 'haswell'" in sbatch_command
+            assert " --qos=high" in sbatch_command
+            assert " -C haswell" in sbatch_command
 
     def test_no_resources(self, mock_job):
         """
@@ -701,6 +701,7 @@ class TestSlurmExtraValidation:
             return mock_job
 
         return _create_job
+
 
     def test_valid_slurm_extra(self, mock_job):
         """Test that validation passes with allowed SLURM options."""
