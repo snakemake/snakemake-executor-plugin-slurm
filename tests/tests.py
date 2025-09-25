@@ -684,7 +684,6 @@ class TestSlurmExtraValidation:
 
         def _create_job(**resources):
             mock_resources = MagicMock()
-<<<<<<< HEAD
             # Configure get method to return values from resources dict
             mock_resources.get.side_effect = lambda key, default=None: resources.get(
                 key, default
@@ -692,16 +691,6 @@ class TestSlurmExtraValidation:
             # Add direct attribute access for certain resources
             for key, value in resources.items():
                 setattr(mock_resources, key, value)
-=======
-            if slurm_extra is not None:
-                mock_resources.slurm_extra = slurm_extra
-                mock_resources.get.side_effect = lambda _key, default=None: (
-                    slurm_extra if _key == "slurm_extra" else default
-                )
-            else:
-                # Do not set slurm_extra attribute at all
-                mock_resources.get.side_effect = lambda _key, default=None: default
->>>>>>> e8d45384a356c5761889e8694a7d2865765e272b
 
             mock_job = MagicMock()
             mock_job.resources = mock_resources
@@ -712,7 +701,6 @@ class TestSlurmExtraValidation:
             return mock_job
 
         return _create_job
-
 
     def test_valid_slurm_extra(self, mock_job):
         """Test that validation passes with allowed SLURM options."""
