@@ -686,13 +686,12 @@ class TestSlurmExtraValidation:
             mock_resources = MagicMock()
             if slurm_extra is not None:
                 mock_resources.slurm_extra = slurm_extra
-                mock_resources.get.side_effect = lambda key, default=None: (
-                    slurm_extra if key == "slurm_extra" else default
+                mock_resources.get.side_effect = lambda _key, default=None: (
+                    slurm_extra if _key == "slurm_extra" else default
                 )
             else:
-                # No slurm_extra attribute
-                del mock_resources.slurm_extra
-                mock_resources.get.side_effect = lambda key, default=None: default
+                # Do not set slurm_extra attribute at all
+                mock_resources.get.side_effect = lambda _key, default=None: default
 
             mock_job = MagicMock()
             mock_job.resources = mock_resources
