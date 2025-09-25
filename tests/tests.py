@@ -711,42 +711,42 @@ class TestSlurmExtraValidation:
     def test_forbidden_job_name_long_form(self, mock_job):
         """Test that --job-name is rejected."""
         job = mock_job(slurm_extra="--job-name=my-job --mail-type=END")
-        with pytest.raises(WorkflowError, match="job-name.*not allowed"):
+        with pytest.raises(WorkflowError, match=r"job-name.*not allowed"):
             validate_slurm_extra(job)
 
     def test_forbidden_job_name_short_form(self, mock_job):
         """Test that -J is rejected."""
         job = mock_job(slurm_extra="-J my-job --mail-type=END")
-        with pytest.raises(WorkflowError, match="job-name.*not allowed"):
+        with pytest.raises(WorkflowError, match=r"job-name.*not allowed"):
             validate_slurm_extra(job)
 
     def test_forbidden_account_long_form(self, mock_job):
         """Test that --account is rejected."""
         job = mock_job(slurm_extra="--account=myaccount --mail-type=END")
-        with pytest.raises(WorkflowError, match="account.*not allowed"):
+        with pytest.raises(WorkflowError, match=r"account.*not allowed"):
             validate_slurm_extra(job)
 
     def test_forbidden_account_short_form(self, mock_job):
         """Test that -A is rejected."""
         job = mock_job(slurm_extra="-A myaccount --mail-type=END")
-        with pytest.raises(WorkflowError, match="account.*not allowed"):
+        with pytest.raises(WorkflowError, match=r"account.*not allowed"):
             validate_slurm_extra(job)
 
     def test_forbidden_comment(self, mock_job):
         """Test that --comment is rejected."""
         job = mock_job(slurm_extra="--comment='my comment' --mail-type=END")
-        with pytest.raises(WorkflowError, match="job-comment.*not allowed"):
+        with pytest.raises(WorkflowError, match=r"job-comment.*not allowed"):
             validate_slurm_extra(job)
 
     def test_forbidden_gres(self, mock_job):
         """Test that --gres is rejected."""
         job = mock_job(slurm_extra="--gres=gpu:1 --mail-type=END")
-        with pytest.raises(WorkflowError, match="generic-resources.*not allowed"):
+        with pytest.raises(WorkflowError, match=r"generic-resources.*not allowed"):
             validate_slurm_extra(job)
 
     def test_multiple_forbidden_options(self, mock_job):
         """Test that the first forbidden option found is reported."""
         job = mock_job(slurm_extra="--job-name=test --account=myaccount")
         # Should raise error for job-name (first one encountered)
-        with pytest.raises(WorkflowError, match="job-name.*not allowed"):
+        with pytest.raises(WorkflowError, match=r"job-name.*not allowed"):
             validate_slurm_extra(job)
