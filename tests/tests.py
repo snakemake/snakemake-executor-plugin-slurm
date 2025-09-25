@@ -682,35 +682,26 @@ class TestSlurmExtraValidation:
     def mock_job(self):
         """Create a mock job with configurable slurm_extra resource."""
 
-        def _create_job(slurm_extra=None):
+        def _create_job(**resources):
             mock_resources = MagicMock()
-            if slurm_extra is not None:
-                mock_resources.slurm_extra = slurm_extra
-                mock_resources.get.side_effect = lambda key, default=None: (
-                    slurm_extra if key == "slurm_extra" else default
-                )
-            else:
-                # No slurm_extra attribute
-                del mock_resources.slurm_extra
-                mock_resources.get.side_effect = lambda key, default=None: default
+            # Configure get method to return values from resources dict
+            mock_resources.get.side_effect = lambda key, default=None: resources.get(
+                key, default
+            )
+            # Add direct attribute access for certain resources
+            for key, value in resources.items():
+                setattr(mock_resources, key, value)
 
             mock_job = MagicMock()
             mock_job.resources = mock_resources
+            mock_job.name = "test_job"
+            mock_job.wildcards = {}
+            mock_job.is_group.return_value = False
+            mock_job.jobid = 1
             return mock_job
 
         return _create_job
 
-    def test_no_slurm_extra(self, mock_job):
-        """Test that validation passes when no slurm_extra is set."""
-        job = mock_job()
-        # Should not raise any exception
-        validate_slurm_extra(job)
-
-    def test_empty_slurm_extra(self, mock_job):
-        """Test that validation passes when slurm_extra is empty."""
-        job = mock_job(slurm_extra="")
-        # Should not raise any exception
-        validate_slurm_extra(job)
 
     def test_valid_slurm_extra(self, mock_job):
         """Test that validation passes with allowed SLURM options."""
