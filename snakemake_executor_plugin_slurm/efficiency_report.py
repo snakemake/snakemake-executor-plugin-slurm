@@ -20,7 +20,6 @@ def time_to_seconds(time_str):
         d, time_str = time_str.split("-", 1)
         days = int(d) * 86400
 
-
     parts = time_str.split(":")
 
     if len(parts) == 3:  # H:M:S
