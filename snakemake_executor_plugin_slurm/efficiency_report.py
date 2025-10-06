@@ -4,7 +4,6 @@ from pathlib import Path
 import subprocess
 import shlex
 
-import os  # only temporarily needed for print debugging
 import numpy as np
 
 
