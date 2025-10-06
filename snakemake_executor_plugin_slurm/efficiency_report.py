@@ -4,22 +4,33 @@ from pathlib import Path
 import subprocess
 import shlex
 
-import os  # only temporarily needed for printf debugging
+import os  # only temporarily needed for print debugging
 import numpy as np
 
 
 def time_to_seconds(time_str):
-    """Convert SLURM time format to seconds."""
-    if pd.isna(time_str) or time_str.strip() == "":
+    """Convert SLURM time format (D-HH:MM:SS, HH:MM:SS, MM:SS, S) to seconds."""
+    if pd.isna(time_str) or str(time_str).strip() == "":
         return 0
+
+    time_str = str(time_str).strip()
+
+    days = 0
+    if "-" in time_str:  # Format D-HH:MM:SS
+        d, time_str = time_str.split("-", 1)
+        days = int(d) * 86400
+
+
     parts = time_str.split(":")
 
     if len(parts) == 3:  # H:M:S
-        return int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
+        h, m, s = int(parts[0]), int(parts[1]), float(parts[2])
+        return days + h * 3600 + m * 60 + s
     elif len(parts) == 2:  # M:S
-        return int(parts[0]) * 60 + float(parts[1])
+        m, s = int(parts[0]), float(parts[1])
+        return days + m * 60 + s
     elif len(parts) == 1:  # S
-        return float(parts[0])
+        return days + float(parts[0])
     return 0
 
 
