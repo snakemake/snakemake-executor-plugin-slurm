@@ -9,11 +9,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from snakemake_executor_plugin_slurm import ExecutorSettings
-from snakemake_executor_plugin_slurm.efficiency_report import parse_sacct_data, time_to_seconds
+from snakemake_executor_plugin_slurm.efficiency_report import (
+    parse_sacct_data,
+    time_to_seconds,
+)
 from snakemake_executor_plugin_slurm.utils import set_gres_string
 from snakemake_executor_plugin_slurm.submit_string import get_submit_command
 from snakemake_interface_common.exceptions import WorkflowError
 import pandas as pd
+
 
 class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
     __test__ = True
@@ -59,7 +63,6 @@ def test_parse_sacct_data():
     assert df.iloc[0]["MaxRSS_MB"] > 0  # Should have actual memory usage from job step
 
 
-
 class TestTimeToSeconds:
     """Test the time_to_seconds function with SLURM sacct time formats."""
 
@@ -67,11 +70,15 @@ class TestTimeToSeconds:
         """Test Elapsed format: [D-]HH:MM:SS or [DD-]HH:MM:SS (no fractional seconds)."""
         # Single digit days
         assert time_to_seconds("1-00:00:00") == 86400  # 1 day
-        assert time_to_seconds("1-12:30:45") == 86400 + 12 * 3600 + 30 * 60 + 45  # 131445
+        assert (
+            time_to_seconds("1-12:30:45") == 86400 + 12 * 3600 + 30 * 60 + 45
+        )  # 131445
         assert time_to_seconds("9-23:59:59") == 9 * 86400 + 23 * 3600 + 59 * 60 + 59
-        
+
         # Double digit days
-        assert time_to_seconds("10-01:02:03") == 10 * 86400 + 1 * 3600 + 2 * 60 + 3  # 867723
+        assert (
+            time_to_seconds("10-01:02:03") == 10 * 86400 + 1 * 3600 + 2 * 60 + 3
+        )  # 867723
         assert time_to_seconds("99-00:00:01") == 99 * 86400 + 1  # 8553601
 
     def test_elapsed_format_hours_minutes_seconds(self):
@@ -85,8 +92,10 @@ class TestTimeToSeconds:
         """Test TotalCPU format: [D-][HH:]MM:SS or [DD-][HH:]MM:SS (with fractional seconds)."""
         # With days and hours
         assert time_to_seconds("1-12:30:45.5") == 86400 + 12 * 3600 + 30 * 60 + 45.5
-        assert time_to_seconds("10-01:02:03.123") == 10 * 86400 + 1 * 3600 + 2 * 60 + 3.123
-        
+        assert (
+            time_to_seconds("10-01:02:03.123") == 10 * 86400 + 1 * 3600 + 2 * 60 + 3.123
+        )
+
         # With days, no hours (MM:SS format)
         assert time_to_seconds("1-30:45") == 86400 + 30 * 60 + 45
         assert time_to_seconds("1-30:45.5") == 86400 + 30 * 60 + 45.5
@@ -107,7 +116,7 @@ class TestTimeToSeconds:
         assert time_to_seconds("59") == 59
         assert time_to_seconds("90") == 90  # Can exceed 59 for total CPU time
         assert time_to_seconds("3600") == 3600  # Large seconds value
-        
+
         # Fractional seconds
         assert time_to_seconds("30.5") == 30.5
         assert time_to_seconds("90.123") == 90.123
@@ -121,7 +130,7 @@ class TestTimeToSeconds:
         assert time_to_seconds("00:24.041") == 24.041  # 24.041 seconds
         assert time_to_seconds("00:03.292") == 3.292  # 3.292 seconds
         assert time_to_seconds("00:20.749") == 20.749  # 20.749 seconds
-        
+
         # Longer running jobs
         assert time_to_seconds("02:15:30") == 2 * 3600 + 15 * 60 + 30  # 2h 15m 30s
         assert time_to_seconds("1-12:00:00") == 86400 + 12 * 3600  # 1 day 12 hours
@@ -147,20 +156,23 @@ class TestTimeToSeconds:
     def test_pandas_na_values(self):
         """Test pandas NA and NaN values."""
         assert time_to_seconds(pd.NA) == 0
-        assert time_to_seconds(pd.NaType()) == 0 if hasattr(pd, 'NaType') else True  # Skip if not available
+        assert (
+            time_to_seconds(pd.NaType()) == 0 if hasattr(pd, "NaType") else True
+        )  # Skip if not available
 
     def test_edge_case_values(self):
         """Test edge case values that might appear in SLURM output."""
         # Large day values
         assert time_to_seconds("999-23:59:59") == 999 * 86400 + 23 * 3600 + 59 * 60 + 59
-        
+
         # Zero padding variations (should work with datetime parsing)
         assert time_to_seconds("01:02:03") == 1 * 3600 + 2 * 60 + 3
         assert time_to_seconds("1:2:3") == 1 * 3600 + 2 * 60 + 3
-        
+
         # Single digit values
         assert time_to_seconds("5") == 5
         assert time_to_seconds("1:5") == 1 * 60 + 5
+
 
 class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase):
     __test__ = True

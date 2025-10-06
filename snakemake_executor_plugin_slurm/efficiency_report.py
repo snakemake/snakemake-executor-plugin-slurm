@@ -11,11 +11,11 @@ import os
 def time_to_seconds(time_str):
     """
     Convert SLURM sacct time format to seconds.
-    
+
     Handles sacct output formats:
     - Elapsed: [D-]HH:MM:SS or [DD-]HH:MM:SS (no fractional seconds)
     - TotalCPU: [D-][HH:]MM:SS or [DD-][HH:]MM:SS (with fractional seconds)
-    
+
     Examples:
     - "1-12:30:45" -> 131445 seconds (1 day + 12h 30m 45s)
     - "23:59:59" -> 86399 seconds
@@ -26,32 +26,34 @@ def time_to_seconds(time_str):
         return 0
 
     time_str = str(time_str).strip()
-    
+
     # Try different SLURM time formats with datetime parsing
     time_formats = [
         "%d-%H:%M:%S.%f",  # D-HH:MM:SS.ffffff (with fractional seconds)
-        "%d-%H:%M:%S",     # D-HH:MM:SS
-        "%H:%M:%S.%f",     # HH:MM:SS.ffffff (with fractional seconds)
-        "%H:%M:%S",        # HH:MM:SS
-        "%M:%S.%f",        # MM:SS.ffffff (with fractional seconds)
-        "%M:%S",           # MM:SS
-        "%S.%f",           # SS.ffffff (with fractional seconds)
-        "%S"               # SS
+        "%d-%H:%M:%S",  # D-HH:MM:SS
+        "%H:%M:%S.%f",  # HH:MM:SS.ffffff (with fractional seconds)
+        "%H:%M:%S",  # HH:MM:SS
+        "%M:%S.%f",  # MM:SS.ffffff (with fractional seconds)
+        "%M:%S",  # MM:SS
+        "%S.%f",  # SS.ffffff (with fractional seconds)
+        "%S",  # SS
     ]
-    
+
     for fmt in time_formats:
         try:
             time_obj = datetime.strptime(time_str, fmt)
-            
-            total_seconds = (time_obj.hour * 3600 + 
-                           time_obj.minute * 60 + 
-                           time_obj.second + 
-                           time_obj.microsecond / 1000000)
-            
+
+            total_seconds = (
+                time_obj.hour * 3600
+                + time_obj.minute * 60
+                + time_obj.second
+                + time_obj.microsecond / 1000000
+            )
+
             # Add days if present (datetime treats day 1 as the first day)
             if fmt.startswith("%d-"):
                 total_seconds += time_obj.day * 86400
-                
+
             return total_seconds
         except ValueError:
             continue
