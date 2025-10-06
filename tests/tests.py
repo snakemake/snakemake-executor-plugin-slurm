@@ -67,7 +67,10 @@ class TestTimeToSeconds:
     """Test the time_to_seconds function with SLURM sacct time formats."""
 
     def test_elapsed_format_with_days(self):
-        """Test Elapsed format: [D-]HH:MM:SS or [DD-]HH:MM:SS (no fractional seconds)."""
+        """
+        Test Elapsed format: [D-]HH:MM:SS or
+        [DD-]HH:MM:SS (no fractional seconds).
+        """
         # Single digit days
         assert time_to_seconds("1-00:00:00") == 86400  # 1 day
         assert (
@@ -89,7 +92,10 @@ class TestTimeToSeconds:
         assert time_to_seconds("12:30:45") == 12 * 3600 + 30 * 60 + 45  # 45045
 
     def test_totalcpu_format_with_days(self):
-        """Test TotalCPU format: [D-][HH:]MM:SS or [DD-][HH:]MM:SS (with fractional seconds)."""
+        """
+        Test TotalCPU format: [D-][HH:]MM:SS or [DD-][HH:]MM:SS
+        (with fractional seconds).
+        """
         # With days and hours
         assert time_to_seconds("1-12:30:45.5") == 86400 + 12 * 3600 + 30 * 60 + 45.5
         assert (
