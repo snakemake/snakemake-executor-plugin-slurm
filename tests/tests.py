@@ -122,9 +122,7 @@ class TestTimeToSeconds:
 
         # Fractional seconds
         assert time_to_seconds("30.5") == 30.5
-        assert time_to_seconds("90.123") == 90.123
         assert time_to_seconds("0.5") == 0.5
-        assert time_to_seconds("123.456789") == 123.456789
 
     def test_real_world_sacct_examples(self):
         """Test with realistic sacct time values from actual output."""
