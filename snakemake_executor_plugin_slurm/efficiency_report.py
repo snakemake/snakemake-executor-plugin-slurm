@@ -34,15 +34,15 @@ def time_to_seconds(time_str):
     # Try different SLURM time formats with datetime parsing
     time_formats = [
         "%d-%H:%M:%S.%f",  # D-HH:MM:SS.ffffff (with fractional seconds)
-        "%d-%H:%M:%S",     # D-HH:MM:SS
-        "%d-%M:%S",        # D-MM:SS
-        "%d-%M:%S.%f",     # D-MM:SS.ffffff (with fractional seconds)
-        "%H:%M:%S.%f",     # HH:MM:SS.ffffff (with fractional seconds)
-        "%H:%M:%S",        # HH:MM:SS
-        "%M:%S.%f",        # MM:SS.ffffff (with fractional seconds)
-        "%M:%S",           # MM:SS
-        "%S.%f",           # SS.ffffff (with fractional seconds)
-        "%S",              # SS
+        "%d-%H:%M:%S",  # D-HH:MM:SS
+        "%d-%M:%S",  # D-MM:SS
+        "%d-%M:%S.%f",  # D-MM:SS.ffffff (with fractional seconds)
+        "%H:%M:%S.%f",  # HH:MM:SS.ffffff (with fractional seconds)
+        "%H:%M:%S",  # HH:MM:SS
+        "%M:%S.%f",  # MM:SS.ffffff (with fractional seconds)
+        "%M:%S",  # MM:SS
+        "%S.%f",  # SS.ffffff (with fractional seconds)
+        "%S",  # SS
     ]
 
     for fmt in time_formats:
