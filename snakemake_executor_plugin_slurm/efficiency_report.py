@@ -22,7 +22,11 @@ def time_to_seconds(time_str):
     - "45:30" -> 2730 seconds (45 minutes 30 seconds)
     - "30.5" -> 30.5 seconds (fractional seconds for TotalCPU)
     """
-    if pd.isna(time_str) or str(time_str).strip() == "":
+    if (
+        pd.isna(time_str)
+        or str(time_str).strip() == ""
+        or str(time_str).strip() == "invalid"
+    ):
         return 0
 
     time_str = str(time_str).strip()
@@ -31,10 +35,12 @@ def time_to_seconds(time_str):
     time_formats = [
         "%d-%H:%M:%S.%f",  # D-HH:MM:SS.ffffff (with fractional seconds)
         "%d-%H:%M:%S",  # D-HH:MM:SS
+        "%d-%M:%S",  # D-MM:SS
         "%H:%M:%S.%f",  # HH:MM:SS.ffffff (with fractional seconds)
         "%H:%M:%S",  # HH:MM:SS
         "%M:%S.%f",  # MM:SS.ffffff (with fractional seconds)
         "%M:%S",  # MM:SS
+        "%M:%S.%f",  # M:SS.ffffff (with fractional seconds)
         "%S.%f",  # SS.ffffff (with fractional seconds)
         "%S",  # SS
     ]
@@ -57,6 +63,7 @@ def time_to_seconds(time_str):
             return total_seconds
         except ValueError:
             continue
+    return 0  # If all parsing attempts fail, return 0
 
 
 def parse_maxrss(maxrss):

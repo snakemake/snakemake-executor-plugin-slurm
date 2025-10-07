@@ -82,7 +82,7 @@ class TestTimeToSeconds:
         assert (
             time_to_seconds("10-01:02:03") == 10 * 86400 + 1 * 3600 + 2 * 60 + 3
         )  # 867723
-        
+
     def test_elapsed_format_hours_minutes_seconds(self):
         """Test Elapsed format: HH:MM:SS (no fractional seconds)."""
         assert time_to_seconds("00:00:00") == 0
