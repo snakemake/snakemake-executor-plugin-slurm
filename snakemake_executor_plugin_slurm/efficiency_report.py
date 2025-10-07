@@ -36,6 +36,7 @@ def time_to_seconds(time_str):
         "%d-%H:%M:%S.%f",  # D-HH:MM:SS.ffffff (with fractional seconds)
         "%d-%H:%M:%S",  # D-HH:MM:SS
         "%d-%M:%S",  # D-MM:SS
+        "%d-%M:%S.%f",  # D-MM:SS.ffffff (with fractional seconds)
         "%H:%M:%S.%f",  # HH:MM:SS.ffffff (with fractional seconds)
         "%H:%M:%S",  # HH:MM:SS
         "%M:%S.%f",  # MM:SS.ffffff (with fractional seconds)
