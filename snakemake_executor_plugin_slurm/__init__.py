@@ -342,10 +342,9 @@ class Executor(RemoteExecutor):
         # MPI job
         if job.resources.get("mpi", False):
             if not job.resources.get("tasks_per_node") and not job.resources.get(
-                "nodes"
-            ):
+                "nodes") and not job.resources.get("tasks"):
                 self.logger.warning(
-                    "MPI job detected, but no 'tasks_per_node' or 'nodes' "
+                    "MPI job detected, but no 'tasks_per_node' or 'tasks'or 'nodes' "
                     "specified. Assuming 'tasks_per_node=1'."
                     "Probably not what you want."
                 )

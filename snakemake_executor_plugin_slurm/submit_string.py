@@ -85,6 +85,24 @@ def get_submit_command(job, params):
         # SLURM v22.05 will require it for all jobs
         call += f" --ntasks={job.resources.get('tasks') or 1}"
 
+    # if the job is an MPI job, we need to have some task setting:
+    if job.resources.get("mpi", False):
+        if job.resources.get("tasks_per_node") and not job.resources.get("tasks"):
+            self.logger.e(
+                "MPI job detected, with both 'tasks_per_node' and 'tasks' specified."
+            )
+            raise WorkflowError(
+                "For MPI jobs, please specify either 'tasks_per_node' or 'tasks', not both."
+            )
+        if job.resources.get("tasks_per_node"):
+            call += f" --ntasks-per-node={job.resources.tasks_per_node}"
+        elif job.resources.get("tasks"):
+            call += f" --ntasks={job.resources.tasks}"
+        # nodes CAN be set independently of tasks or tasks_per_node
+        # this is at a user's discretion
+        if job.resources.get("nodes"):
+            call += f" --nodes={job.resources.nodes}"
+
     # we need to set cpus-per-task OR cpus-per-gpu, the function
     # will return a string with the corresponding value
     call += f" {get_cpu_setting(job, gpu_job)}"
