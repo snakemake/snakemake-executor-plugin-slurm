@@ -99,9 +99,8 @@ def get_submit_command(job, params):
         elif job.resources.get("tasks"):
             call += f" --ntasks={job.resources.tasks}"
         # nodes CAN be set independently of tasks or tasks_per_node
-        # this is at a user's discretion
-        if job.resources.get("nodes"):
-            call += f" --nodes={job.resources.nodes}"
+        # this is at a user's discretion. The nodes flag might already
+        # be set above, if the user specified it.
 
     # we need to set cpus-per-task OR cpus-per-gpu, the function
     # will return a string with the corresponding value
