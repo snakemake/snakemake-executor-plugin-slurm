@@ -1,3 +1,4 @@
+from snakemake_interface_common.exceptions import WorkflowError
 from snakemake_executor_plugin_slurm_jobstep import get_cpu_setting
 from types import SimpleNamespace
 import shlex
@@ -88,11 +89,9 @@ def get_submit_command(job, params):
     # if the job is an MPI job, we need to have some task setting:
     if job.resources.get("mpi", False):
         if job.resources.get("tasks_per_node") and not job.resources.get("tasks"):
-            self.logger.e(
-                "MPI job detected, with both 'tasks_per_node' and 'tasks' specified."
-            )
             raise WorkflowError(
-                "For MPI jobs, please specify either 'tasks_per_node' or 'tasks', not both."
+                "For MPI jobs, please specify either "
+                "'tasks_per_node' or 'tasks', not both."
             )
         if job.resources.get("tasks_per_node"):
             call += f" --ntasks-per-node={job.resources.tasks_per_node}"
