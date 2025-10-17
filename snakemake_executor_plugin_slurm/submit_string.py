@@ -95,7 +95,7 @@ def get_submit_command(job, params):
             )
         if job.resources.get("tasks_per_node"):
             call += f" --ntasks-per-node={job.resources.tasks_per_node}"
-        elif job.resources.get("tasks"):
+        if job.resources.get("tasks"):
             call += f" --ntasks={job.resources.tasks}"
         # nodes CAN be set independently of tasks or tasks_per_node
         # this is at a user's discretion. The nodes flag might already
