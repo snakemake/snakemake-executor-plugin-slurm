@@ -107,7 +107,7 @@ def get_submit_command(job, params):
                     "For MPI jobs, 'tasks_per_node' must be greater than 1."
                 )
             call += f" --ntasks-per-node={job.resources.tasks_per_node}"
-        if job.resources.get("tasks"):
+        elif job.resources.get("tasks"):
             if job.resources.get("tasks") == 1:
                 raise WorkflowError("For MPI jobs, 'tasks' must be greater than 1.")
             call += f" --ntasks={job.resources.tasks}"
