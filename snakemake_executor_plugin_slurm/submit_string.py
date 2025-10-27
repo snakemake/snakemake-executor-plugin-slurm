@@ -95,6 +95,12 @@ def get_submit_command(job, params):
                 "For MPI jobs, please specify either "
                 "'tasks_per_node' or 'tasks' (at least one is required)."
             )
+        # raise an error if both task settings are used
+        if job.resources.get("tasks_per_node") and job.resources.get("tasks"):
+            raise WorkflowError(
+                "For MPI jobs, please specify either 'tasks_per_node' or 'tasks', "
+                "but not both."
+            )
         if job.resources.get("tasks_per_node"):
             if job.resources.get("tasks_per_node") <= 1:
                 raise WorkflowError(
