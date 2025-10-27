@@ -341,17 +341,6 @@ class Executor(RemoteExecutor):
                 "- submitting without. This might or might not work on your cluster."
             )
 
-        # MPI job
-        if job.resources.get("mpi", False):
-            if not job.resources.get("tasks_per_node") and not job.resources.get(
-                "nodes"
-            ):
-                self.logger.warning(
-                    "MPI job detected, but no 'tasks_per_node' or 'nodes' "
-                    "specified. Assuming 'tasks_per_node=1'."
-                    "Probably not what you want."
-                )
-
         exec_job = self.format_job_exec(job)
 
         # and finally the job to execute with all the snakemake parameters
