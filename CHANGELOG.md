@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.9.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.8.0...v1.9.0) (2025-10-27)
+
+
+### Features
+
+* preventing overwrites ([#358](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/358)) ([799f95b](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/799f95b21f36b58df8595d13f90f9fcfb02dad3d))
+
+
+### Bug Fixes
+
+* mpi task settings ([#363](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/363)) ([7f0742a](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/7f0742a8f242ecfd57f807830ce9824f3de8e574))
+* time conversion for efficiency reports with jobs taking longer than 1 day ([#362](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/362)) ([ba263ce](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/ba263ce300a0f534b007642c6c4fe29c26aa600f))
+
 ## [1.8.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.7.0...v1.8.0) (2025-09-18)
 
 
