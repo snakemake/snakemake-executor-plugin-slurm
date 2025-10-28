@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.9.0...v1.9.1) (2025-10-27)
+
+
+### Bug Fixes
+
+* logo path ([#365](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/365)) ([a2bd944](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/a2bd944a46110308e5afdc3af9fecbc8c75c0b80))
+
 ## [1.9.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.8.0...v1.9.0) (2025-10-27)
 
 
