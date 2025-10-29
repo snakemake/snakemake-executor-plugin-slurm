@@ -143,16 +143,16 @@ def parse_num_gpus(job, logger):
 
     # 2. Parse "gres" string if present
     if gres:
-        logger.error(f"\nSpecifying GPUs as gres: is not currently supported on the Cannon plugin.")
-        logger.error(f"Please use the slurm_extra: resource instead.")
-        logger.error(f"Example: slurm_extra: \"'--gres=gpu:{gpu}'\" (notice the nested quotes which are required)")
-        raise WorkflowError(f"Unsupported GPU specification format: gres:\n")        
-        # gres = str(gres)
-        # match = re.match(r"^gpu(?::[a-zA-Z0-9_]+)?:(\d+)$", gres)
-        # if match:
-        #     return int(match.group(1))
-        # else:
-        #     raise WorkflowError(f"Invalid GRES format in resources.gres: '{gres}'")
+        # logger.error(f"\nSpecifying GPUs as gres: is not currently supported on the Cannon plugin.")
+        # logger.error(f"Please use the slurm_extra: resource instead.")
+        # logger.error(f"Example: slurm_extra: \"'--gres=gpu:{gpu}'\" (notice the nested quotes which are required)")
+        # raise WorkflowError(f"Unsupported GPU specification format: gres:\n")        
+        gres = str(gres)
+        match = re.match(r"^gpu(?::[a-zA-Z0-9_]+)?:(\d+)$", gres)
+        if match:
+            return int(match.group(1))
+        else:
+            raise WorkflowError(f"Invalid GRES format in resources.gres: '{gres}'")
 
     # 3. Parse slurm_extra
     match = re.search(r"--gres=gpu(?::[^\s,:=]+)?:(\d+)", slurm_extra.lower())

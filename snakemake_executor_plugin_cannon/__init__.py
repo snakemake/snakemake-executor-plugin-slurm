@@ -18,6 +18,7 @@ import uuid
 
 from snakemake_interface_executor_plugins.executors.base import SubmittedJobInfo
 from snakemake_interface_executor_plugins.executors.remote import RemoteExecutor
+
 from snakemake_interface_executor_plugins.settings import (
     ExecutorSettingsBase,
     CommonSettings,
@@ -34,6 +35,7 @@ from .utils import (
 )
 from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
+from .validation import validate_slurm_extra
 
 from . import cannon as CANNON
 
@@ -352,17 +354,6 @@ class Executor(RemoteExecutor):
                 "No job memory information ('mem_mb' or 'mem_mb_per_cpu') is given "
                 "- submitting without. This might or might not work on your cluster."
             )
-
-        # MPI job
-        if job.resources.get("mpi", False):
-            if not job.resources.get("tasks_per_node") and not job.resources.get(
-                "nodes"
-            ):
-                self.logger.warning(
-                    "MPI job detected, but no 'tasks_per_node' or 'nodes' "
-                    "specified. Assuming 'tasks_per_node=1'."
-                    "Probably not what you want."
-                )
 
         exec_job = self.format_job_exec(job)
 
@@ -696,6 +687,7 @@ We leave it to SLURM to resume your job(s)"""
             # we have to quote the account, because it might
             # contain build-in shell commands - see issue #354
             for account in accounts:
+                self.test_account(account)
                 yield f" -A {shlex.quote(account)}"
         else:
             if self._fallback_account_arg is None:
@@ -898,13 +890,5 @@ We leave it to SLURM to resume your job(s)"""
         return ""
 
     def check_slurm_extra(self, job):
-        jobname = re.compile(r"--job-name[=?|\s+]|-J\s?")
-        if re.search(jobname, job.resources.slurm_extra):
-            raise WorkflowError(
-                "The --job-name option is not allowed in the 'slurm_extra' parameter. "
-                "The job name is set by snakemake and must not be overwritten. "
-                "It is internally used to check the stati of the all submitted jobs "
-                "by this workflow."
-                "Please consult the documentation if you are unsure how to "
-                "query the status of your jobs."
-            )
+        """Validate that slurm_extra doesn't contain executor-managed options."""
+        validate_slurm_extra(job)

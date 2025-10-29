@@ -23,7 +23,7 @@ rule b:
         os.path.join(OUTDIR, "b.log")
     threads: 2
     shell:
-        "cp {input} {output} 2> {log}"
+        "ls test-out; cp -f {input} {output} 2> {log}"
 
 
 rule c:

@@ -154,7 +154,7 @@ set-resources:
     mem: 10G
     cpus_per_task: 4
     runtime: 2h
-    slurm_extra: "'--gres=gpu:2'"
+    gres: "'gpu:2'"
 ```
 
 Note that the `slurm_partition:` specification can be blank or omitted, as in rule *b*, since this plugin will select the partition for you based on the other resources provided. However, if `slurm_partition:` is provided with a value, as in rule *a*, that partition will be used.
@@ -165,7 +165,7 @@ The resource flags and default values are used in profiles as described [above](
 
 #### Setting GPUs
 
-Currently, on the Cannon cluster, this plugin only supports GPU specification via the `slurm_extra:` field. See your *b* above for an example requesting 2 GPUs.
+Use the `gres:` field to supply the number of GPUs. See *b* above for an example requesting 2 GPUs.
 
 #### Knowing which rules are in a workflow
 

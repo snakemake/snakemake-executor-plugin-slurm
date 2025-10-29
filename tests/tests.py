@@ -9,10 +9,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from snakemake_executor_plugin_cannon import ExecutorSettings
-from snakemake_executor_plugin_cannon.efficiency_report import parse_sacct_data
+from snakemake_executor_plugin_cannon.efficiency_report import (
+    parse_sacct_data,
+    time_to_seconds,
+)
 from snakemake_executor_plugin_cannon.utils import set_gres_string
 from snakemake_executor_plugin_cannon.submit_string import get_submit_command
+from snakemake_executor_plugin_cannon.validation import validate_slurm_extra
 from snakemake_interface_common.exceptions import WorkflowError
+import pandas as pd
 
 
 class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
@@ -57,6 +62,115 @@ def test_parse_sacct_data():
     assert all(df["RequestedMem_MB"] == 32000.0)
     # check that MaxRSS_MB is properly calculated from job steps
     assert df.iloc[0]["MaxRSS_MB"] > 0  # Should have actual memory usage from job step
+
+
+class TestTimeToSeconds:
+    """Test the time_to_seconds function with SLURM sacct time formats."""
+
+    def test_elapsed_format_with_days(self):
+        """
+        Test Elapsed format: [D-]HH:MM:SS or
+        [DD-]HH:MM:SS (no fractional seconds).
+        """
+        # Single digit days
+        assert time_to_seconds("1-00:00:00") == 86400  # 1 day
+        assert (
+            time_to_seconds("1-12:30:45") == 86400 + 12 * 3600 + 30 * 60 + 45
+        )  # 131445
+        assert time_to_seconds("9-23:59:59") == 9 * 86400 + 23 * 3600 + 59 * 60 + 59
+
+        # Double digit days
+        assert (
+            time_to_seconds("10-01:02:03") == 10 * 86400 + 1 * 3600 + 2 * 60 + 3
+        )  # 867723
+
+    def test_elapsed_format_hours_minutes_seconds(self):
+        """Test Elapsed format: HH:MM:SS (no fractional seconds)."""
+        assert time_to_seconds("00:00:00") == 0
+        assert time_to_seconds("01:00:00") == 3600  # 1 hour
+        assert time_to_seconds("23:59:59") == 23 * 3600 + 59 * 60 + 59  # 86399
+        assert time_to_seconds("12:30:45") == 12 * 3600 + 30 * 60 + 45  # 45045
+
+    def test_totalcpu_format_with_days(self):
+        """
+        Test TotalCPU format: [D-][HH:]MM:SS or [DD-][HH:]MM:SS
+        (with fractional seconds).
+        """
+        # With days and hours
+        assert time_to_seconds("1-12:30:45.5") == 86400 + 12 * 3600 + 30 * 60 + 45.5
+        assert (
+            time_to_seconds("10-01:02:03.123") == 10 * 86400 + 1 * 3600 + 2 * 60 + 3.123
+        )
+
+        # With days, no hours (MM:SS format)
+        assert time_to_seconds("1-30:45") == 86400 + 30 * 60 + 45
+        assert time_to_seconds("1-30:45.5") == 86400 + 30 * 60 + 45.5
+
+    def test_totalcpu_format_minutes_seconds(self):
+        """Test TotalCPU format: MM:SS with fractional seconds."""
+        assert time_to_seconds("00:00") == 0
+        assert time_to_seconds("01:00") == 60  # 1 minute
+        assert time_to_seconds("59:59") == 59 * 60 + 59  # 3599
+        assert time_to_seconds("30:45") == 30 * 60 + 45  # 1845
+        assert time_to_seconds("30:45.5") == 30 * 60 + 45.5  # 1845.5
+
+    def test_totalcpu_format_seconds_only(self):
+        """Test TotalCPU format: SS or SS.sss (seconds only with fractional)."""
+        assert time_to_seconds("0") == 0
+        assert time_to_seconds("1") == 1
+        assert time_to_seconds("30") == 30
+        assert time_to_seconds("59") == 59
+
+        # Fractional seconds
+        assert time_to_seconds("30.5") == 30.5
+        assert time_to_seconds("0.5") == 0.5
+
+    def test_real_world_sacct_examples(self):
+        """Test with realistic sacct time values from actual output."""
+        # From your test data
+        assert time_to_seconds("00:01:31") == 91  # 1 minute 31 seconds
+        assert time_to_seconds("00:24.041") == 24.041  # 24.041 seconds
+        assert time_to_seconds("00:03.292") == 3.292  # 3.292 seconds
+        assert time_to_seconds("00:20.749") == 20.749  # 20.749 seconds
+
+        # Longer running jobs
+        assert time_to_seconds("02:15:30") == 2 * 3600 + 15 * 60 + 30  # 2h 15m 30s
+        assert time_to_seconds("1-12:00:00") == 86400 + 12 * 3600  # 1 day 12 hours
+        assert time_to_seconds("7-00:00:00") == 7 * 86400  # 1 week
+
+    def test_empty_and_invalid_inputs(self):
+        """Test empty, None, and invalid inputs."""
+        assert time_to_seconds("") == 0
+        assert time_to_seconds("   ") == 0
+        assert time_to_seconds(None) == 0
+        assert time_to_seconds(pd.NA) == 0
+        assert time_to_seconds("invalid") == 0
+        assert time_to_seconds("1:2:3:4") == 0  # Too many colons
+        assert time_to_seconds("abc:def") == 0
+        assert time_to_seconds("-1:00:00") == 0  # Negative values
+
+    def test_whitespace_handling(self):
+        """Test that whitespace is properly handled."""
+        assert time_to_seconds(" 30 ") == 30
+        assert time_to_seconds("  1-02:30:45  ") == 86400 + 2 * 3600 + 30 * 60 + 45
+        assert time_to_seconds("\t12:30:45\n") == 12 * 3600 + 30 * 60 + 45
+
+    def test_pandas_na_values(self):
+        """Test pandas NA and NaN values."""
+        assert time_to_seconds(pd.NA) == 0
+        assert (
+            time_to_seconds(pd.NaType()) == 0 if hasattr(pd, "NaType") else True
+        )  # Skip if not available
+
+    def test_edge_case_values(self):
+        """Test edge case values that might appear in SLURM output."""
+        # Zero padding variations (should work with datetime parsing)
+        assert time_to_seconds("01:02:03") == 1 * 3600 + 2 * 60 + 3
+        assert time_to_seconds("1:2:3") == 1 * 3600 + 2 * 60 + 3
+
+        # Single digit values
+        assert time_to_seconds("5") == 5
+        assert time_to_seconds("1:5") == 1 * 60 + 5
 
 
 class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase):
@@ -673,3 +787,79 @@ class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageB
     # Verify no slashes remain in the wildcard string
     assert "/" not in wildcard_str
 
+
+class TestSlurmExtraValidation:
+    """Test cases for the validate_slurm_extra function."""
+
+    @pytest.fixture
+    def mock_job(self):
+        """Create a mock job with configurable slurm_extra resource."""
+
+        def _create_job(**resources):
+            mock_resources = MagicMock()
+            # Configure get method to return values from resources dict
+            mock_resources.get.side_effect = lambda key, default=None: resources.get(
+                key, default
+            )
+            # Add direct attribute access for certain resources
+            for key, value in resources.items():
+                setattr(mock_resources, key, value)
+
+            mock_job = MagicMock()
+            mock_job.resources = mock_resources
+            mock_job.name = "test_job"
+            mock_job.wildcards = {}
+            mock_job.is_group.return_value = False
+            mock_job.jobid = 1
+            return mock_job
+
+        return _create_job
+
+    def test_valid_slurm_extra(self, mock_job):
+        """Test that validation passes with allowed SLURM options."""
+        job = mock_job(slurm_extra="--mail-type=END --mail-user=user@example.com")
+        # Should not raise any exception
+        validate_slurm_extra(job)
+
+    def test_forbidden_job_name_long_form(self, mock_job):
+        """Test that --job-name is rejected."""
+        job = mock_job(slurm_extra="--job-name=my-job --mail-type=END")
+        with pytest.raises(WorkflowError, match=r"job-name.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_forbidden_job_name_short_form(self, mock_job):
+        """Test that -J is rejected."""
+        job = mock_job(slurm_extra="-J my-job --mail-type=END")
+        with pytest.raises(WorkflowError, match=r"job-name.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_forbidden_account_long_form(self, mock_job):
+        """Test that --account is rejected."""
+        job = mock_job(slurm_extra="--account=myaccount --mail-type=END")
+        with pytest.raises(WorkflowError, match=r"account.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_forbidden_account_short_form(self, mock_job):
+        """Test that -A is rejected."""
+        job = mock_job(slurm_extra="-A myaccount --mail-type=END")
+        with pytest.raises(WorkflowError, match=r"account.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_forbidden_comment(self, mock_job):
+        """Test that --comment is rejected."""
+        job = mock_job(slurm_extra="--comment='my comment' --mail-type=END")
+        with pytest.raises(WorkflowError, match=r"job-comment.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_forbidden_gres(self, mock_job):
+        """Test that --gres is rejected."""
+        job = mock_job(slurm_extra="--gres=gpu:1 --mail-type=END")
+        with pytest.raises(WorkflowError, match=r"generic-resources.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_multiple_forbidden_options(self, mock_job):
+        """Test that the first forbidden option found is reported."""
+        job = mock_job(slurm_extra="--job-name=test --account=myaccount")
+        # Should raise error for job-name (first one encountered)
+        with pytest.raises(WorkflowError, match=r"job-name.*not allowed"):
+            validate_slurm_extra(job)

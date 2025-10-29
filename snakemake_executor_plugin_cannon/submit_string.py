@@ -1,3 +1,4 @@
+from snakemake_interface_common.exceptions import WorkflowError
 from snakemake_executor_plugin_slurm_jobstep import get_cpu_setting
 from types import SimpleNamespace
 import shlex
@@ -83,7 +84,36 @@ def get_submit_command(job, params):
     else:
         # fixes #40 - set ntasks regardless of mpi, because
         # SLURM v22.05 will require it for all jobs
-        call += f" --ntasks={job.resources.get('tasks') or 1}"
+        # if the job is a MPI job, ntasks will be set later
+        if not job.resources.get("mpi", False):
+            call += f" --ntasks={job.resources.get('tasks') or 1}"
+
+    # if the job is an MPI job, we need to have some task setting:
+    if job.resources.get("mpi", False):
+        if not job.resources.get("tasks_per_node") and not job.resources.get("tasks"):
+            raise WorkflowError(
+                "For MPI jobs, please specify either "
+                "'tasks_per_node' or 'tasks' (at least one is required)."
+            )
+        # raise an error if both task settings are used
+        if job.resources.get("tasks_per_node") and job.resources.get("tasks"):
+            raise WorkflowError(
+                "For MPI jobs, please specify either 'tasks_per_node' or 'tasks', "
+                "but not both."
+            )
+        if job.resources.get("tasks_per_node"):
+            if job.resources.get("tasks_per_node") <= 1:
+                raise WorkflowError(
+                    "For MPI jobs, 'tasks_per_node' must be greater than 1."
+                )
+            call += f" --ntasks-per-node={job.resources.tasks_per_node}"
+        elif job.resources.get("tasks"):
+            if job.resources.get("tasks") == 1:
+                raise WorkflowError("For MPI jobs, 'tasks' must be greater than 1.")
+            call += f" --ntasks={job.resources.tasks}"
+        # nodes CAN be set independently of tasks or tasks_per_node
+        # this is at a user's discretion. The nodes flag might already
+        # be set above, if the user specified it.
 
     # we need to set cpus-per-task OR cpus-per-gpu, the function
     # will return a string with the corresponding value

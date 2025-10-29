@@ -3,24 +3,67 @@ import pandas as pd
 from pathlib import Path
 import subprocess
 import shlex
-
-import os  # only temporarily needed for printf debugging
+from datetime import datetime
 import numpy as np
+import os
 
 
 def time_to_seconds(time_str):
-    """Convert SLURM time format to seconds."""
-    if pd.isna(time_str) or time_str.strip() == "":
-        return 0
-    parts = time_str.split(":")
+    """
+    Convert SLURM sacct time format to seconds.
 
-    if len(parts) == 3:  # H:M:S
-        return int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
-    elif len(parts) == 2:  # M:S
-        return int(parts[0]) * 60 + float(parts[1])
-    elif len(parts) == 1:  # S
-        return float(parts[0])
-    return 0
+    Handles sacct output formats:
+    - Elapsed: [D-]HH:MM:SS or [DD-]HH:MM:SS (no fractional seconds)
+    - TotalCPU: [D-][HH:]MM:SS or [DD-][HH:]MM:SS (with fractional seconds)
+
+    Examples:
+    - "1-12:30:45" -> 131445 seconds (1 day + 12h 30m 45s)
+    - "23:59:59" -> 86399 seconds
+    - "45:30" -> 2730 seconds (45 minutes 30 seconds)
+    - "30.5" -> 30.5 seconds (fractional seconds for TotalCPU)
+    """
+    if (
+        pd.isna(time_str)
+        or str(time_str).strip() == ""
+        or str(time_str).strip() == "invalid"
+    ):
+        return 0
+
+    time_str = str(time_str).strip()
+
+    # Try different SLURM time formats with datetime parsing
+    time_formats = [
+        "%d-%H:%M:%S.%f",  # D-HH:MM:SS.ffffff (with fractional seconds)
+        "%d-%H:%M:%S",  # D-HH:MM:SS
+        "%d-%M:%S",  # D-MM:SS
+        "%d-%M:%S.%f",  # D-MM:SS.ffffff (with fractional seconds)
+        "%H:%M:%S.%f",  # HH:MM:SS.ffffff (with fractional seconds)
+        "%H:%M:%S",  # HH:MM:SS
+        "%M:%S.%f",  # MM:SS.ffffff (with fractional seconds)
+        "%M:%S",  # MM:SS
+        "%S.%f",  # SS.ffffff (with fractional seconds)
+        "%S",  # SS
+    ]
+
+    for fmt in time_formats:
+        try:
+            time_obj = datetime.strptime(time_str, fmt)
+
+            total_seconds = (
+                time_obj.hour * 3600
+                + time_obj.minute * 60
+                + time_obj.second
+                + time_obj.microsecond / 1000000
+            )
+
+            # Add days if present (datetime treats day 1 as the first day)
+            if fmt.startswith("%d-"):
+                total_seconds += time_obj.day * 86400
+
+            return total_seconds
+        except ValueError:
+            continue
+    return 0  # If all parsing attempts fail, return 0
 
 
 def parse_maxrss(maxrss):
