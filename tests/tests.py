@@ -18,14 +18,11 @@ from snakemake_executor_plugin_slurm.efficiency_report import (
 )
 from snakemake_executor_plugin_slurm.utils import set_gres_string
 from snakemake_executor_plugin_slurm.submit_string import get_submit_command
-<<<<<<< HEAD
 from snakemake_executor_plugin_slurm.partitions import (
     read_partition_file,
     get_best_partition,
 )
-=======
 from snakemake_executor_plugin_slurm.validation import validate_slurm_extra
->>>>>>> c980d1f36f5e0e3e71a4c74893a8d3cea6f8df48
 from snakemake_interface_common.exceptions import WorkflowError
 import pandas as pd
 
@@ -798,7 +795,6 @@ class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageB
     assert "/" not in wildcard_str
 
 
-<<<<<<< HEAD
 class TestPartitionSelection:
     @pytest.fixture
     def basic_partition_config(self):
@@ -1038,36 +1034,7 @@ class TestPartitionSelection:
             mock_job.resources = mock_resources
             mock_job.threads = threads
             mock_job.name = "test_job"
-=======
-class TestSlurmExtraValidation:
-    """Test cases for the validate_slurm_extra function."""
 
-    @pytest.fixture
-    def mock_job(self):
-        """Create a mock job with configurable slurm_extra resource."""
-
-        def _create_job(**resources):
-            mock_resources = MagicMock()
-            # Configure get method to return values from resources dict
-            mock_resources.get.side_effect = lambda key, default=None: resources.get(
-                key, default
-            )
-            # Add direct attribute access for certain resources
-            for key, value in resources.items():
-                setattr(mock_resources, key, value)
-
-            mock_job = MagicMock()
-            mock_job.resources = mock_resources
-            mock_job.name = "test_job"
-            mock_job.wildcards = {}
-            mock_job.is_group.return_value = False
-            mock_job.jobid = 1
->>>>>>> c980d1f36f5e0e3e71a4c74893a8d3cea6f8df48
-            return mock_job
-
-        return _create_job
-
-<<<<<<< HEAD
     @pytest.fixture
     def mock_logger(self):
         """Create a mock logger."""
@@ -1310,7 +1277,35 @@ class TestSlurmExtraValidation:
             assert "No suitable partition found" in mock_logger.warning.call_args[0][0]
         finally:
             temp_path.unlink()
-=======
+
+
+class TestSlurmExtraValidation:
+    """Test cases for the validate_slurm_extra function."""
+
+    @pytest.fixture
+    def mock_job(self):
+        """Create a mock job with configurable slurm_extra resource."""
+
+        def _create_job(**resources):
+            mock_resources = MagicMock()
+            # Configure get method to return values from resources dict
+            mock_resources.get.side_effect = lambda key, default=None: resources.get(
+                key, default
+            )
+            # Add direct attribute access for certain resources
+            for key, value in resources.items():
+                setattr(mock_resources, key, value)
+
+            mock_job = MagicMock()
+            mock_job.resources = mock_resources
+            mock_job.name = "test_job"
+            mock_job.wildcards = {}
+            mock_job.is_group.return_value = False
+            mock_job.jobid = 1
+            return mock_job
+
+        return _create_job
+
     def test_valid_slurm_extra(self, mock_job):
         """Test that validation passes with allowed SLURM options."""
         job = mock_job(slurm_extra="--mail-type=END --mail-user=user@example.com")
@@ -1359,4 +1354,3 @@ class TestSlurmExtraValidation:
         # Should raise error for job-name (first one encountered)
         with pytest.raises(WorkflowError, match=r"job-name.*not allowed"):
             validate_slurm_extra(job)
->>>>>>> c980d1f36f5e0e3e71a4c74893a8d3cea6f8df48
