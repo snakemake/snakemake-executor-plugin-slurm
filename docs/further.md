@@ -559,8 +559,10 @@ rule myrule:
     input: ...
     output: ...
     resources:
-        slurm_extra="--qos=long --mail-type=ALL --mail-user=<your email>"
+        slurm_extra="--mail-type=ALL --mail-user=<your email>"
 ```
+
+.. note:: We prevent you from overwriting all flags, which are used or configurable internally. This prevents conflicts and breaking job submission.
 
 Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles) to specify such resources.
 
