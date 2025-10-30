@@ -3,6 +3,7 @@ __copyright__ = "Copyright 2023, David Lähnemann, Johannes Köster, Christian M
 __email__ = "johannes.koester@uni-due.de"
 __license__ = "MIT"
 
+import atexit
 import csv
 from io import StringIO
 import os
@@ -35,6 +36,7 @@ from .utils import (
 )
 from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
+from .partitions import read_partition_file, get_best_partition
 from .validation import validate_slurm_extra
 
 
@@ -111,6 +113,15 @@ class ExecutorSettings(ExecutorSettingsBase):
             "This flag has no effect, if not set.",
             "env_var": False,
             "required": False,
+        },
+    )
+    partition_config: Optional[Path] = field(
+        default=None,
+        metadata={
+            "help": "Path to YAML file defining partition limits for dynamic "
+            "partition selection. When provided, jobs will be dynamically "
+            "assigned to the best-fitting partition based on "
+            "See documentation for complete list of available limits.",
         },
     )
     efficiency_report: bool = field(
@@ -201,6 +212,12 @@ class Executor(RemoteExecutor):
             if self.workflow.executor_settings.logdir
             else Path(".snakemake/slurm_logs").resolve()
         )
+        self._partitions = (
+            read_partition_file(self.workflow.executor_settings.partition_config)
+            if self.workflow.executor_settings.partition_config
+            else None
+        )
+        atexit.register(self.clean_old_logs)
 
     def shutdown(self) -> None:
         """
@@ -305,6 +322,8 @@ class Executor(RemoteExecutor):
         if job.resources.get("slurm_extra"):
             self.check_slurm_extra(job)
 
+        # NOTE removed partition from below, such that partition
+        # selection can benefit from resource checking as the call is built up.
         job_params = {
             "run_uuid": self.run_uuid,
             "slurm_logfile": slurm_logfile,
@@ -698,9 +717,13 @@ We leave it to SLURM to resume your job(s)"""
         returns a default partition, if applicable
         else raises an error - implicetly.
         """
+        partition = None
         if job.resources.get("slurm_partition"):
             partition = job.resources.slurm_partition
-        else:
+        elif self._partitions:
+            partition = get_best_partition(self._partitions, job, self.logger)
+        # we didnt get a partition yet so try fallback.
+        if not partition:
             if self._fallback_partition is None:
                 self._fallback_partition = self.get_default_partition(job)
             partition = self._fallback_partition
