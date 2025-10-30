@@ -121,6 +121,8 @@ class ExecutorSettings(ExecutorSettingsBase):
             "partition selection. When provided, jobs will be dynamically "
             "assigned to the best-fitting partition based on "
             "See documentation for complete list of available limits.",
+        },
+    )
     efficiency_report: bool = field(
         default=False,
         metadata={
