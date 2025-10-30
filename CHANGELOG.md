@@ -1,5 +1,72 @@
 # Changelog
 
+## [1.8.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.7.0...v1.8.0) (2025-09-18)
+
+
+### Features
+
+* adding image for mastodon posts ([#349](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/349)) ([b27168c](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/b27168ccadc5c259dd09dd13cce3a06cd7b78238))
+
+
+### Bug Fixes
+
+* account lookup / test in multicluster environment ([#350](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/350)) ([d6759d0](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/d6759d09ad3608c261556f49ef5c7372ef20e1a1))
+* quoting parameters ([#355](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/355)) ([660c800](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/660c8000fa3db9a4b90e2d36d17c66f3c56b79ed))
+
+## [1.7.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.6.1...v1.7.0) (2025-09-09)
+
+
+### Features
+
+* new flag for SLURM qos ([#351](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/351)) ([55068ae](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/55068ae6a47c61b38487110f59eaa6da13e4c051))
+
+## [1.6.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.6.0...v1.6.1) (2025-08-21)
+
+
+### Bug Fixes
+
+* efficiency report jobsteps ([#338](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/338)) ([a4cbe36](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/a4cbe368bd4d2bfc6461b59be3b00f3c1c7e327b))
+* gpu tasks are unset if &lt;= 0 ([#347](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/347)) ([564e0f7](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/564e0f775a373fb1c44fa06f0f974af54615f892))
+* updated poetry ([#343](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/343)) ([58d471d](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/58d471db0d15b264a0167df7ebc6e5e8216063b1))
+
+
+### Documentation
+
+* added notes about ntasks per gpu ([#346](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/346)) ([adcd86e](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/adcd86e5ce1c9eaf1ad75d2004eafbd21a2670fd))
+
+## [1.6.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.5.0...v1.6.0) (2025-07-22)
+
+
+### Features
+
+* added github action to label long pending issues as 'stale' ([#239](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/239)) ([6d7c50a](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6d7c50ae492c9557b6cc39119c572c5b5ef1b341))
+* treat sbatch errors as job errors instead of workflow errors ([#322](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/322)) ([5e38507](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/5e3850762c73abf1fff8ba9e1e8c18379251041f))
+* using the current version of the announcement bot for Mastodon  ([#333](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/333)) ([03e0e24](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/03e0e2426edbe2957be93f02f3ae3834f710faff))
+
+
+### Bug Fixes
+
+* allow unsetting of tasks for gpu jobs ([#318](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/318)) ([53ac8b0](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/53ac8b09a78213dd552216a05eb43dcc3444706c))
+
+## [1.5.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.4.0...v1.5.0) (2025-07-04)
+
+
+### Features
+
+* measuring compute efficiency per job ([#221](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/221)) ([3cef6b7](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/3cef6b7889c8ba09280f345bade3497b144bedc7))
+
+## [1.4.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.3.6...v1.4.0) (2025-06-12)
+
+
+### Features
+
+* adding reservation flag ([#323](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/323)) ([d4e0a0f](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/d4e0a0f4160f5336c5bf36be8f097b8a01f77718))
+
+
+### Documentation
+
+* review and edit new docs ([#237](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/237)) ([ec82a70](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/ec82a70b95652afcbc21d44a4dbca14d78dc8936))
+
 ## [1.3.6](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.3.5...v1.3.6) (2025-05-18)
 
 

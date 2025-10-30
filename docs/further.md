@@ -415,7 +415,7 @@ rule gpu_task:
 
 In this example, `cpus_per_gpu=4` allocates four CPU cores for each GPU requested.
 
-.. note:: If `cpus_per_gpu` is set to a value less than or equal to zero, Snakemake will not include a CPU request in the SLURM submission, and the cluster's default CPU allocation policy will apply.
+.. note:: If `cpus_per_gpu` is set to a value less than or equal to zero, Snakemake will not include a CPU request in the SLURM submission, and the cluster's default CPU allocation policy will apply. The same applies to `tasks_per_gpu`. If set to zero or lower, the SLURM parameter `--ntasks-per-gpu` will not be set.
 
 ##### Sample Workflow Profile for GPU Jobs
 
@@ -690,6 +690,19 @@ This configuration directs SLURM logs to a centralized location, making them eas
 
 Running Snakemake within an active SLURM job can lead to unpredictable behavior, as the execution environment may not be properly configured for job submission.
 To mitigate potential issues, the SLURM executor plugin detects when it's operating inside a SLURM job and issues a warning, pausing for 5 seconds before proceeding.
+
+### Getting Job Efficiency Information
+
+With `--slurm-efficiency-report` you can generate a table of all efficiency data. A logfile `efficiency_report_<workflow_id>.log` will be generated in your current directory. This is equivalent to the information with `seff <jobid>` for individual jobs. It works best if "comments" are stored as a job property on your cluster as this plugin uses the "comment" parameter to store the rule name.
+
+### Submittings Jobs into SLURM reservations
+
+The plugin allows specifying a flag `--slurm-reservation=<name>` to use a particular reservation.
+It does not validate the spelling nor eligibility to this reservation.
+
+### Using SLURM QoS
+
+To use SLURM's quality of service flags (`--qos` to `sbatch`) the plugin allows specifying `--slurm-qos=<qos-string>`, too. Both, the reservation and the qos may be particularly useful in a course setting.
 
 ### Frequently Asked Questions
 

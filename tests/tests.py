@@ -1,3 +1,7 @@
+import os
+import re
+
+from pathlib import Path
 from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
@@ -8,6 +12,7 @@ import yaml
 from pathlib import Path
 
 from snakemake_executor_plugin_slurm import ExecutorSettings
+from snakemake_executor_plugin_slurm.efficiency_report import parse_sacct_data
 from snakemake_executor_plugin_slurm.utils import set_gres_string
 from snakemake_executor_plugin_slurm.submit_string import get_submit_command
 from snakemake_executor_plugin_slurm.partitions import (
@@ -24,7 +29,82 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
         return "slurm"
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
-        return ExecutorSettings(init_seconds_before_status_checks=1)
+        return ExecutorSettings(
+            init_seconds_before_status_checks=2,
+            # seconds_between_status_checks=5,
+        )
+
+
+def test_parse_sacct_data():
+    from io import StringIO
+
+    test_data = [
+        "10294159|b10191d0-6985-4c3a-8ccb-"
+        "aa7d23ebffc7|rule_bam_bwa_mem_mosdepth_"
+        "simulate_reads|00:01:31|00:24.041|1|1||32000M",
+        "10294159.batch|batch||00:01:31|00:03.292|1|1|71180K|",
+        "10294159.0|python3.12||00:01:10|00:20.749|1|1|183612K|",
+        "10294160|b10191d0-6985-4c3a-8ccb-"
+        "aa7d23ebffc7|rule_bam_bwa_mem_mosdepth_"
+        "simulate_reads|00:01:30|00:24.055|1|1||32000M",
+        "10294160.batch|batch||00:01:30|00:03.186|1|1|71192K|",
+        "10294160.0|python3.12||00:01:10|00:20.868|1|1|184352K|",
+    ]
+    df = parse_sacct_data(
+        lines=test_data, e_threshold=0.0, run_uuid="test", logger=None
+    )
+    output = StringIO()
+    df.to_csv(output, index=False)
+    print(output.getvalue())
+    # this should only be two rows once collapsed
+    assert len(df) == 2
+    # check that RuleName is properly inherited from main jobs
+    assert all(df["RuleName"] == "rule_bam_bwa_mem_mosdepth_simulate_reads")
+    # check that RequestedMem_MB is properly inherited
+    assert all(df["RequestedMem_MB"] == 32000.0)
+    # check that MaxRSS_MB is properly calculated from job steps
+    assert df.iloc[0]["MaxRSS_MB"] > 0  # Should have actual memory usage from job step
+
+
+class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+    __test__ = True
+
+    def get_executor(self) -> str:
+        return "slurm"
+
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        self.REPORT_PATH = Path.cwd() / "efficiency_report_test"
+
+        return ExecutorSettings(
+            efficiency_report=True,
+            init_seconds_before_status_checks=5,
+            efficiency_report_path=self.REPORT_PATH,
+            # seconds_between_status_checks=5,
+        )
+
+    def test_simple_workflow(self, tmp_path):
+        self.run_workflow("simple", tmp_path)
+
+        # The efficiency report is created in the
+        # current working directory
+        pattern = re.compile(r"efficiency_report_[\w-]+\.csv")
+        report_found = False
+
+        report_path = None
+        # using a short handle for the expected path
+        expected_path = self.REPORT_PATH
+
+        # Check if the efficiency report file exists - based on the regex pattern
+        for fname in os.listdir(expected_path):
+            if pattern.match(fname):
+                report_found = True
+                report_path = os.path.join(expected_path, fname)
+                # Verify it's not empty
+                assert (
+                    os.stat(report_path).st_size > 0
+                ), f"Efficiency report {report_path} is empty"
+                break
+        assert report_found, "Efficiency report file not found"
 
 
 class TestWorkflowsRequeue(TestWorkflows):
@@ -315,7 +395,7 @@ class TestSLURMResources(TestWorkflows):
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-        assert " -C 'haswell'" in get_submit_command(job, params)
+        assert " -C haswell" in get_submit_command(job, params)
 
     def test_qos_resource(self, mock_job):
         """Test that the qos resource is correctly added to the sbatch command."""
@@ -339,7 +419,7 @@ class TestSLURMResources(TestWorkflows):
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-        assert " --qos='normal'" in get_submit_command(job, params)
+        assert " --qos=normal" in get_submit_command(job, params)
 
     def test_both_constraint_and_qos(self, mock_job):
         """Test that both constraint and qos resources can be used together."""
@@ -366,8 +446,8 @@ class TestSLURMResources(TestWorkflows):
 
             # Assert both resources are correctly included
             sbatch_command = get_submit_command(job, params)
-            assert " --qos='high'" in sbatch_command
-            assert " -C 'haswell'" in sbatch_command
+            assert " --qos=high" in sbatch_command
+            assert " -C haswell" in sbatch_command
 
     def test_no_resources(self, mock_job):
         """
@@ -444,8 +524,126 @@ class TestSLURMResources(TestWorkflows):
             process_mock.communicate.return_value = ("123", "")
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
-            # Assert the qoes is included (even if empty)
+            # Assert the qos is included (even if empty)
             assert "--qos=''" in get_submit_command(job, params)
+
+    def test_taks(self, mock_job):
+        """Test that tasks are correctly included in the sbatch command."""
+        # Create a job with tasks
+        job = mock_job(tasks=4)
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+            "tasks": 4,
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+        assert "--ntasks=4" in get_submit_command(job, params)
+
+    def test_gpu_tasks(self, mock_job):
+        """Test that GPU tasks are correctly included in the sbatch command."""
+        # Create a job with GPU tasks
+        job = mock_job(gpu=1, tasks_per_gpu=2)
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+            "tasks_per_gpu": 2,
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+        assert "--ntasks-per-gpu=2" in get_submit_command(job, params)
+
+    def test_no_gpu_task(self, mock_job):
+        """Test that no GPU tasks are included when not specified."""
+        # Create a job without GPU tasks
+        job = mock_job(gpu=1, tasks_per_gpu=-1)
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+            "tasks_per_gpu": -1,
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+        assert "--ntasks-per-gpu" not in get_submit_command(job, params)
+
+    def test_task_set_for_unset_tasks(self, mock_job):
+        """Test that tasks are set to 1 when unset."""
+        # Create a job without tasks
+        job = mock_job(tasks=None)
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+        assert "--ntasks=1" in get_submit_command(job, params)
+
+    def test_gpu_tasks_set_for_unset_tasks(self, mock_job):
+        """Test that GPU tasks are set to 1 when unset."""
+        # Create a job without GPU tasks
+        job = mock_job(gpu=1)
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+        assert "--ntasks-per-gpu=1" in get_submit_command(job, params)
 
 
 class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageBase):
