@@ -1033,6 +1033,10 @@ class TestPartitionSelection:
             mock_job.resources = mock_resources
             mock_job.threads = threads
             mock_job.name = "test_job"
+            mock_job.is_group.return_value = False
+            mock_job.jobid = 1
+            return mock_job
+        return _create_job
 
     @pytest.fixture
     def mock_logger(self):
