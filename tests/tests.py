@@ -9,7 +9,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 import tempfile
 import yaml
-from pathlib import Path
 
 from snakemake_executor_plugin_slurm import ExecutorSettings
 from snakemake_executor_plugin_slurm.efficiency_report import (
