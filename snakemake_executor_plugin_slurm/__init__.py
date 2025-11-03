@@ -343,6 +343,11 @@ class Executor(RemoteExecutor):
 
         exec_job = self.format_job_exec(job)
 
+        # Prevent forwarding Snakemake retry attempts into the remote
+        # jobstep. Convert any "--attempt <n>" or "--attempt=<n>" to
+        # a single attempt in the remote context.
+        exec_job = re.sub(r"--attempt(?:[=\s]+)\d+", "--attempt 1", exec_job)
+
         # and finally the job to execute with all the snakemake parameters
         call += f' --wrap="{exec_job}"'
 
