@@ -3,7 +3,6 @@ SLURM parameter validation functions for the Snakemake executor plugin.
 """
 
 import re
-import subprocess
 from snakemake_interface_common.exceptions import WorkflowError
 
 
