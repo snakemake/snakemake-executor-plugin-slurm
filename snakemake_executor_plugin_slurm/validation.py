@@ -3,7 +3,41 @@ SLURM parameter validation functions for the Snakemake executor plugin.
 """
 
 import re
+import subprocess
 from snakemake_interface_common.exceptions import WorkflowError
+
+
+def validate_slurm_job_id(job_id, output):
+    """
+    Validate that the SLURM job ID is a positive integer.
+
+    Args:
+        job_id (str): The SLURM job ID to validate.
+
+    Raises:
+        WorkflowError: If the job ID is not a positive integer or we cannot
+                       determine a valid job ID from the given input string.
+    """
+    if re.match(r"^\d+$", job_id):
+        return job_id
+    else:
+        # try matching a positive integer, raise an error if more than one match or no match found
+        # Match standalone integers, excluding those followed by %, letters, or digits (units/percentages/floats)
+        # Allows format: "1234" or "1234; clustername" (SLURM multi-cluster format)
+
+        # If the first attempt to validate the job fails, try parsing the sbatch output
+        # a bit more sophisticatedly:
+        matches = re.findall(r"\b\d+(?![%A-Za-z\d.])", output)
+        if len(matches) == 1:
+            return matches[0]
+        elif len(matches) > 1:
+            raise WorkflowError(
+                f"Multiple possible SLURM job IDs found in: {output}. Was looking for exactly one positive integer."
+            )
+        elif not matches:
+            raise WorkflowError(
+                f"No valid SLURM job ID found in: {output}. Was looking for exactly one positive integer."
+            )
 
 
 def get_forbidden_slurm_options():
