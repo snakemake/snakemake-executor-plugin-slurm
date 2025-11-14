@@ -385,7 +385,7 @@ class Executor(RemoteExecutor):
         # this slurm_jobid might be wrong: some cluster admin give convulted
         # sbatch outputs. So we need to validate it properly:
         if not slurm_jobid:
-            slurm_jobid = validate_slurm_job_id(slurm_jobidout)
+            slurm_jobid = validate_slurm_job_id(slurm_jobid, out)
         slurm_logfile = slurm_logfile.with_name(
             slurm_logfile.name.replace("%j", slurm_jobid)
         )
