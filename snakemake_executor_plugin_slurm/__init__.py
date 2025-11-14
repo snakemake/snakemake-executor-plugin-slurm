@@ -212,10 +212,21 @@ class Executor(RemoteExecutor):
             if self.workflow.executor_settings.logdir
             else Path(".snakemake/slurm_logs").resolve()
         )
-        self._partitions = (
-            read_partition_file(self.workflow.executor_settings.partition_config)
-            if self.workflow.executor_settings.partition_config
-            else None
+        # Check the environment variable "SNAKEMAKE_SLURM_PARTITIONS",
+        # if set, read the partitions from the given file. Let the CLI
+        # option override this behavior. 
+        if os.getenv("SNAKEMAKE_SLURM_PARTITIONS") and not self.workflow.executor_settings.partition_config:
+            partition_file = Path(os.getenv("SNAKEMAKE_SLURM_PARTITIONS"))
+            self.logger.info(
+                f"Reading SLURM partition configuration from "
+                f"environment variable file: {partition_file}"
+            )
+            self._partitions = read_partition_file(partition_file)
+        else:
+            self._partitions = (
+                read_partition_file(self.workflow.executor_settings.partition_config)
+                if self.workflow.executor_settings.partition_config
+                else None
         )
         atexit.register(self.clean_old_logs)
 
