@@ -25,7 +25,7 @@ def validate_or_get_slurm_job_id(job_id, output):
         return job_id
     else:
         # Try matching a positive integer, raise an error if more than one match or
-        # no match found. Match standalone integers, excluding those followed by %, 
+        # no match found. Match standalone integers, excluding those followed by %,
         # letters, or digits (units/percentages/floats). Allows format: "1234" or
         # "1234; clustername" (SLURM multi-cluster format).
 
