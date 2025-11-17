@@ -30,12 +30,10 @@ def validate_or_get_slurm_job_id(job_id, output):
 
         # If the first attempt to validate the job fails, try parsing the sbatch output
         # a bit more sophisticatedly (
-        # The regex below matches standalone positive integers, there has to be a 
+        # The regex below matches standalone positive integers, there has to be a
         # word boundary before the number and the number must not be followed by
         # a percent sign, letter, digit, or dot):
-        matches = re.findall(
-            r"\b\d+(?![%A-Za-z\d.])", output
-        )
+        matches = re.findall(r"\b\d+(?![%A-Za-z\d.])", output)
         if len(matches) == 1:
             return matches[0]
         elif len(matches) > 1:
