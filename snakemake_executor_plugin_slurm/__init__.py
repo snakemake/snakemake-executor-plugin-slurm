@@ -35,7 +35,7 @@ from .utils import (
 )
 from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
-from .validation import validate_slurm_job_id, validate_slurm_extra
+from .validation import validate_or_get_slurm_job_id, validate_slurm_extra
 
 
 @dataclass
@@ -383,9 +383,9 @@ class Executor(RemoteExecutor):
         # (this also works if no cluster name was provided)
         slurm_jobid = out.strip().split(";")[0]
         # this slurm_jobid might be wrong: some cluster admin give convulted
-        # sbatch outputs. So we need to validate it properly:
-        if not slurm_jobid:
-            slurm_jobid = validate_slurm_job_id(slurm_jobid, out)
+        # sbatch outputs. So we need to validate it properly (and replace it
+        # if necessary).
+        slurm_jobid = validate_or_get_slurm_job_id(slurm_jobid, out)
         slurm_logfile = slurm_logfile.with_name(
             slurm_logfile.name.replace("%j", slurm_jobid)
         )
