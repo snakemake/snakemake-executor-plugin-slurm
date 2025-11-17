@@ -869,35 +869,6 @@ class TestSlurmExtraValidation:
 
 
 class TestSlurmJobIdValidation:
-        def test_complex_multiline_output_debug(self):
-                """Debug: Print regex matches for complex multiline SLURM output."""
-                output = """
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                            SLURM Job Submission                               ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-
-Cluster Information:
-    - Queue utilization: 67.8%
-    - Available memory: 512 GiB
-    - Free storage: 2.5 TiB (1500 files pending)
-
-Job Configuration:
-    - Requested memory: 64 GiB
-    - Requested time: 48.5 hours
-    - Cores: 16
-
-Submitting job 202411170001 to cluster...
-
-Status:
-    - Queue position: 23
-    - Estimated start: 15.3 minutes
-"""
-                import re
-                # Use the same regex as in validate_or_get_slurm_job_id
-                regex = r"(?<![\d.])(?<![\d.][kKmMgG]|[kK][iI][bB]|[mM][iI][bB]|[gG][iI][bB]|files|cores|cpus|hours)\b(\d{4,})\b(?!\s*(?:k|K|m|M|g|G|kiB|KiB|miB|MiB|giB|GiB|files|cores|cpus|hours|%))"
-                matches = re.findall(regex, output)
-                print("DEBUG REGEX MATCHES:", matches)
-                # No assert, just print for debug
     """Test cases for the validate_or_get_slurm_job_id function."""
 
     def test_parsable_format_simple(self):
