@@ -12,6 +12,7 @@ def validate_or_get_slurm_job_id(job_id, output):
 
     Args:
         job_id (str): The SLURM job ID to validate.
+        output (str): The full sbatch output to parse if job_id is invalid.
 
     Raises:
         WorkflowError: If the job ID is not a positive integer or we cannot
