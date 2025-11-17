@@ -382,7 +382,7 @@ class Executor(RemoteExecutor):
         # To extract the job id we split by semicolon and take the first element
         # (this also works if no cluster name was provided)
         slurm_jobid = out.strip().split(";")[0]
-        # this slurm_jobid might be wrong: some cluster admin give convulted
+        # this slurm_jobid might be wrong: some cluster admin give convoluted
         # sbatch outputs. So we need to validate it properly (and replace it
         # if necessary).
         slurm_jobid = validate_or_get_slurm_job_id(slurm_jobid, out)
