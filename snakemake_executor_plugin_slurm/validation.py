@@ -30,11 +30,22 @@ def validate_or_get_slurm_job_id(job_id, output):
         # "1234; clustername" (SLURM multi-cluster format).
 
         # If the first attempt to validate the job fails, try parsing the sbatch output
-        # a bit more sophisticatedly (
-        # The regex below matches standalone positive integers, there has to be a
-        # word boundary before the number and the number must not be followed by
-        # a percent sign, letter, digit, or dot):
-        matches = re.findall(r"\b\d+(?![%A-Za-z\d.])", output)
+        # a bit more sophisticatedly.
+        # The regex below matches standalone positive integers with a word boundary
+        # before the number. The number must NOT be:
+        # - Part of a decimal number (neither before nor after the dot)
+        # - Followed by a percent sign with optional space (23% or 23 %)
+        # - Followed by units/counts with optional space:
+        #   * Memory units: k, K, m, M, g, G, kiB, KiB, miB, MiB, giB, GiB
+        #   * Resource counts: files, cores, hours, cpus/CPUs (case-insensitive)
+        #   * minutes are excluded, because of the match to 'm' for Megabytes
+        #   Units must be followed by whitespace, hyphen, period, or end of string
+        # Use negative lookbehind to exclude digits after a dot, and negative lookahead
+        # to exclude digits before a dot or followed by units/percent
+        matches = re.findall(
+            r"(?<![.\d])\d+(?![.\d]|\s*%|\s*(?:[kKmMgG](?:iB)?|files|cores|hours|[cC][pP][uU][sS]?)(?:\s|[-.]|$))",
+            output,
+        )
         if len(matches) == 1:
             return matches[0]
         elif len(matches) > 1:
