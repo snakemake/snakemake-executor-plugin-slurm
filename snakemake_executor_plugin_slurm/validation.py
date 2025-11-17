@@ -43,7 +43,8 @@ def validate_or_get_slurm_job_id(job_id, output):
         # Use negative lookbehind to exclude digits after a dot, and negative lookahead
         # to exclude digits before a dot or followed by units/percent
         matches = re.findall(
-            r"(?<![.\d])\d+(?![.\d]|\s*%|\s*(?:[kKmMgG](?:iB)?|files|cores|hours|[cC][pP][uU][sS]?)(?:\s|[-.]|$))",
+            r"(?<![.\d])\d+(?![.\d]|\s*%|\s*(?:[kKmMgG](?:iB)?|files|cores|"
+            r"hours|[cC][pP][uU][sS]?)(?:\s|[-.]|$))",
             output,
         )
         if len(matches) == 1:
