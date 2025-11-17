@@ -6,7 +6,7 @@ import re
 from snakemake_interface_common.exceptions import WorkflowError
 
 
-def validate_slurm_job_id(job_id, output):
+def validate_or_get_slurm_job_id(job_id, output):
     """
     Validate that the SLURM job ID is a positive integer.
 
@@ -17,6 +17,9 @@ def validate_slurm_job_id(job_id, output):
         WorkflowError: If the job ID is not a positive integer or we cannot
                        determine a valid job ID from the given input string.
     """
+    # this regex just matches a positive integer
+    # strict validation would require to check for a JOBID with either
+    # the SLURM database or control daemon. This is too much overhead.
     if re.match(r"^\d+$", job_id):
         return job_id
     else:
@@ -26,7 +29,10 @@ def validate_slurm_job_id(job_id, output):
         # "1234; clustername" (SLURM multi-cluster format).
 
         # If the first attempt to validate the job fails, try parsing the sbatch output
-        # a bit more sophisticatedly:
+        # a bit more sophisticatedly (
+        # The regex below matches standalone positive integers, there has to be a 
+        # word boundary before the number and the number must not be followed by
+        # a percent sign, letter, digit, or dot):
         matches = re.findall(
             r"\b\d+(?![%A-Za-z\d.])", output
         )
