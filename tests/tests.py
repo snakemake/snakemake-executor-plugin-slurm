@@ -1,17 +1,12 @@
 import os
 import re
 import sys
-
-sys.path.insert(0, os.path.dirname(__file__))
-
 from pathlib import Path
 from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
 from unittest.mock import MagicMock, patch
 import pytest
-
-
 from snakemake_executor_plugin_slurm import ExecutorSettings
 from snakemake_executor_plugin_slurm.efficiency_report import (
     parse_sacct_data,
@@ -26,8 +21,12 @@ import pandas as pd
 
 from snakemake.common import run, dpath
 
+sys.path.insert(0, os.path.dirname(__file__))
+
+
 def test_partition_selection():
     dpath(run("test_partition_selection"))
+
 
 class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
     __test__ = True
