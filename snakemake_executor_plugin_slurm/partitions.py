@@ -259,9 +259,7 @@ class Partition:
             or job.resources.get("clusters")
             or job.resources.get("cluster")
         )
-        print(
-            f"Partition '{self.name}' checking job {job.name} for cluster compatibility: {job_cluster}"
-        )
+
         if job_cluster is not None:
             # Job specifies a cluster - partition must match
             if self.cluster is not None and self.cluster != job_cluster:
