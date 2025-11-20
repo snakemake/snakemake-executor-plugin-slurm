@@ -121,7 +121,7 @@ class ExecutorSettings(ExecutorSettingsBase):
             "help": "Path to YAML file defining partition limits for dynamic "
             "partition selection. When provided, jobs will be dynamically "
             "assigned to the best-fitting partition based on their resource "
-            "requirements. See documentation for complete list of available limits."
+            "requirements. See documentation for complete list of available limits. "
             "Alternatively, the environment variable SNAKEMAKE_SLURM_PARTITIONS "
             "can be set to point to such a file. "
             "If both are set, this flag takes precedence.",
