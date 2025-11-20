@@ -643,7 +643,10 @@ class TestPartitionSelection:
     def test_cluster_mismatch_excludes_partitions(
         self, multicluster_partition_config, temp_yaml_file, mock_job, mock_logger
     ):
-        """Test that jobs requesting a cluster exclude partitions from other clusters."""
+        """
+        Test that jobs requesting a cluster exclude partitions from other
+        clusters.
+        """
         temp_path = temp_yaml_file(multicluster_partition_config)
 
         try:
