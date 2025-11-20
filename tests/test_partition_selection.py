@@ -279,10 +279,10 @@ class TestPartitionSelection:
             # Should select 'default' partition as it supports CPU jobs
             assert selected_partition == "default"
             # Check that the final call contains the auto-selection message
-            assert mock_logger.warning.call_count >= 1
+            assert mock_logger.info.call_count >= 1
             assert (
                 "Auto-selected partition 'default'"
-                in mock_logger.warning.call_args_list[-1][0][0]
+                in mock_logger.info.call_args_list[-1][0][0]
             )
         finally:
             temp_path.unlink()
@@ -303,10 +303,10 @@ class TestPartitionSelection:
 
             # Should select 'gpu' partition as it supports GPU jobs
             assert selected_partition == "gpu"
-            assert mock_logger.warning.call_count >= 1
+            assert mock_logger.info.call_count >= 1
             assert (
                 "Auto-selected partition 'gpu'"
-                in mock_logger.warning.call_args_list[-1][0][0]
+                in mock_logger.info.call_args_list[-1][0][0]
             )
         finally:
             temp_path.unlink()
@@ -326,10 +326,10 @@ class TestPartitionSelection:
 
             # Should return None when no suitable partition found
             assert selected_partition is None
-            assert mock_logger.warning.call_count >= 1
+            assert mock_logger.info.call_count >= 1
             assert (
                 "No suitable partition found"
-                in mock_logger.warning.call_args_list[-1][0][0]
+                in mock_logger.info.call_args_list[-1][0][0]
             )
         finally:
             temp_path.unlink()
@@ -355,10 +355,10 @@ class TestPartitionSelection:
 
             # Should select the comprehensive partition
             assert selected_partition == "comprehensive"
-            assert mock_logger.warning.call_count >= 1
+            assert mock_logger.info.call_count >= 1
             assert (
                 "Auto-selected partition 'comprehensive'"
-                in mock_logger.warning.call_args_list[-1][0][0]
+                in mock_logger.info.call_args_list[-1][0][0]
             )
         finally:
             temp_path.unlink()
@@ -400,10 +400,10 @@ class TestPartitionSelection:
 
             # Should select 'default' partition as it supports MPI, 'gpu' doesn't
             assert selected_partition == "default"
-            assert mock_logger.warning.call_count >= 1
+            assert mock_logger.info.call_count >= 1
             assert (
                 "Auto-selected partition 'default'"
-                in mock_logger.warning.call_args_list[-1][0][0]
+                in mock_logger.info.call_args_list[-1][0][0]
             )
         finally:
             temp_path.unlink()
@@ -467,10 +467,10 @@ class TestPartitionSelection:
 
             # Should select 'gpu' partition as it supports v100 GPUs
             assert selected_partition == "gpu"
-            assert mock_logger.warning.call_count >= 1
+            assert mock_logger.info.call_count >= 1
             assert (
                 "Auto-selected partition 'gpu'"
-                in mock_logger.warning.call_args_list[-1][0][0]
+                in mock_logger.info.call_args_list[-1][0][0]
             )
         finally:
             temp_path.unlink()
@@ -489,10 +489,10 @@ class TestPartitionSelection:
 
             # Should select comprehensive partition as it can handle 32 cpus per task
             assert selected_partition == "comprehensive"
-            assert mock_logger.warning.call_count >= 1
+            assert mock_logger.info.call_count >= 1
             assert (
                 "Auto-selected partition 'comprehensive'"
-                in mock_logger.warning.call_args_list[-1][0][0]
+                in mock_logger.info.call_args_list[-1][0][0]
             )
         finally:
             temp_path.unlink()
