@@ -326,10 +326,10 @@ class TestPartitionSelection:
 
             # Should return None when no suitable partition found
             assert selected_partition is None
-            assert mock_logger.info.call_count >= 1
+            assert mock_logger.warning.call_count >= 1
             assert (
                 "No suitable partition found"
-                in mock_logger.info.call_args_list[-1][0][0]
+                in mock_logger.warning.call_args_list[-1][0][0]
             )
         finally:
             temp_path.unlink()
@@ -598,7 +598,7 @@ class TestPartitionSelection:
 
             # Should select a partition from 'normal' cluster
             assert selected_partition in ["normal-small", "normal-large"]
-            assert mock_logger.warning.call_count >= 1
+            assert mock_logger.info.call_count >= 1
         finally:
             temp_path.unlink()
 
@@ -617,7 +617,7 @@ class TestPartitionSelection:
 
             # Should select deviating-small partition
             assert selected_partition == "deviating-small"
-            assert mock_logger.warning.call_count >= 1
+            assert mock_logger.info.call_count >= 1
         finally:
             temp_path.unlink()
 
@@ -636,7 +636,7 @@ class TestPartitionSelection:
 
             # Should select normal-large partition
             assert selected_partition == "normal-large"
-            assert mock_logger.warning.call_count >= 1
+            assert mock_logger.info.call_count >= 1
         finally:
             temp_path.unlink()
 
@@ -677,7 +677,7 @@ class TestPartitionSelection:
 
             # Should select a partition (any cluster is acceptable)
             assert selected_partition is not None
-            assert mock_logger.warning.call_count >= 1
+            assert mock_logger.info.call_count >= 1
         finally:
             temp_path.unlink()
 
@@ -748,7 +748,7 @@ class TestPartitionSelection:
 
             # Only large partition should be selected
             assert selected_partition == "large"
-            assert mock_logger.warning.call_count >= 1
+            assert mock_logger.info.call_count >= 1
 
         finally:
             temp_path.unlink()
@@ -809,7 +809,7 @@ class TestPartitionSelection:
             selected_partition = get_best_partition(partitions, job, mock_logger)
 
             assert selected_partition == "normal-large"
-            assert mock_logger.warning.call_count >= 1
+            assert mock_logger.info.call_count >= 1
 
             # Job targeting deviating cluster with 128 threads
             # Should exactly match deviating-medium
@@ -818,7 +818,7 @@ class TestPartitionSelection:
             selected_partition = get_best_partition(partitions, job, mock_logger)
 
             assert selected_partition == "deviating-medium"
-            assert mock_logger.warning.call_count >= 1
+            assert mock_logger.info.call_count >= 1
 
         finally:
             temp_path.unlink()
