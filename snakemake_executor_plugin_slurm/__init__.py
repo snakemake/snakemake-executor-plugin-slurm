@@ -120,8 +120,13 @@ class ExecutorSettings(ExecutorSettingsBase):
         metadata={
             "help": "Path to YAML file defining partition limits for dynamic "
             "partition selection. When provided, jobs will be dynamically "
-            "assigned to the best-fitting partition based on "
-            "See documentation for complete list of available limits.",
+            "assigned to the best-fitting partition based on their resource "
+            "requirements. See documentation for complete list of available limits."
+            "Alternatively, the environment variable SNAKEMAKE_SLURM_PARTITIONS "
+            "can be set to point to such a file. "
+            "If both are set, this flag takes precedence.",
+            "env_var": False,
+            "required": False,
         },
     )
     efficiency_report: bool = field(
@@ -214,8 +219,11 @@ class Executor(RemoteExecutor):
         )
         # Check the environment variable "SNAKEMAKE_SLURM_PARTITIONS",
         # if set, read the partitions from the given file. Let the CLI
-        # option override this behavior. 
-        if os.getenv("SNAKEMAKE_SLURM_PARTITIONS") and not self.workflow.executor_settings.partition_config:
+        # option override this behavior.
+        if (
+            os.getenv("SNAKEMAKE_SLURM_PARTITIONS")
+            and not self.workflow.executor_settings.partition_config
+        ):
             partition_file = Path(os.getenv("SNAKEMAKE_SLURM_PARTITIONS"))
             self.logger.info(
                 f"Reading SLURM partition configuration from "
@@ -227,7 +235,7 @@ class Executor(RemoteExecutor):
                 read_partition_file(self.workflow.executor_settings.partition_config)
                 if self.workflow.executor_settings.partition_config
                 else None
-        )
+            )
         atexit.register(self.clean_old_logs)
 
     def shutdown(self) -> None:
