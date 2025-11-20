@@ -21,13 +21,12 @@ from snakemake_executor_plugin_slurm.validation import validate_slurm_extra
 from snakemake_interface_common.exceptions import WorkflowError
 import pandas as pd
 
-# Import partition selection tests
-try:
-    from .test_partition_selection import *
-except ImportError:
-    # When run directly, the relative import may fail
-    from test_partition_selection import *
+sys.path.insert(0, os.path.dirname(__file__))
 
+from snakemake.common import run, dpath
+
+def test_partition_selection():
+    dpath(run("test_partition_selection"))
 
 class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
     __test__ = True
