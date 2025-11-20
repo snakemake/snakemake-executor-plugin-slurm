@@ -22,7 +22,11 @@ from snakemake_interface_common.exceptions import WorkflowError
 import pandas as pd
 
 # Import partition selection tests
-from .test_partition_selection import *  # noqa: F401, F403
+try:
+    from .test_partition_selection import *
+except ImportError:
+    # When run directly, the relative import may fail
+    from test_partition_selection import *
 
 
 class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
