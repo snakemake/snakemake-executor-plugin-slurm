@@ -125,12 +125,15 @@ def get_effective_threads(job: JobExecutorInterface) -> int:
     if threads == 1 or threads is None:
         resource_threads = job.resources.get("threads")
         if resource_threads is not None:
-            if isinstance(resource_threads, str):
-                try:
-                    resource_threads = int(resource_threads)
-                except ValueError:
-                    resource_threads = threads
+            try:
+                resource_threads = int(resource_threads)
+            except ValueError:
+                resource_threads = threads
             threads = resource_threads if resource_threads > 1 else threads
+    
+    # ensuring a valid thread count
+    if threads is None or threads < 1:
+        threads = 1
     return threads
 
 
