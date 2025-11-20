@@ -20,7 +20,9 @@ def read_partition_file(partition_file: Path) -> List["Partition"]:
     except yaml.YAMLError as e:
         raise WorkflowError(f"Error parsing partition file {partition_file}: {e}")
     except Exception as e:
-        raise WorkflowError(f"Unexpected error reading partition file {partition_file}: {e}")
+        raise WorkflowError(
+            f"Unexpected error reading partition file {partition_file}: {e}"
+        )
     if not isinstance(config, dict) or "partitions" not in config:
         raise WorkflowError(
             f"Partition file {partition_file} is missing 'partitions' section"
@@ -35,9 +37,13 @@ def read_partition_file(partition_file: Path) -> List["Partition"]:
         if not partition_name or not partition_name.strip():
             raise KeyError("Partition name cannot be empty")
 
+        # Extract optional cluster name from partition config
+        cluster = partition_config.pop("cluster", None)
+
         out.append(
             Partition(
                 name=partition_name,
+                cluster=cluster,
                 limits=PartitionLimits(**partition_config),
             )
         )
@@ -222,6 +228,7 @@ class Partition:
 
     name: str
     limits: PartitionLimits
+    cluster: Optional[str] = None
 
     def score_job_fit(self, job: JobExecutorInterface) -> Optional[float]:
         """
@@ -233,7 +240,6 @@ class Partition:
         # naive approach here is to just sum the ratio of requested resource to limit, of course this limits us to only consider numerical resources # noqa: E501
         # here a higher score indicates a better fit
         # TODO decide how to handle unspecified limits, for now we assume inf for numerical limits, none for others. # noqa: E501
-
         score = 0.0
 
         numerical_resources = {
@@ -245,6 +251,21 @@ class Partition:
             "tasks_per_node": self.limits.max_tasks_per_node,
             "mpi_tasks": self.limits.max_mpi_tasks,
         }
+
+        # Check cluster compatibility, first:
+        # Accept multiple possible resource names for cluster specification
+        job_cluster = (
+            job.resources.get("slurm_cluster")
+            or job.resources.get("clusters")
+            or job.resources.get("cluster")
+        )
+        print(
+            f"Partition '{self.name}' checking job {job.name} for cluster compatibility: {job_cluster}"
+        )
+        if job_cluster is not None:
+            # Job specifies a cluster - partition must match
+            if self.cluster is not None and self.cluster != job_cluster:
+                return None  # Partition is for a different cluster
 
         for resource_key, limit in numerical_resources.items():
             job_requirement = job.resources.get(resource_key, 0)
@@ -266,7 +287,10 @@ class Partition:
         # Check thread requirements (check both job.threads and resources.threads)
         effective_threads = get_effective_threads(job)
         if effective_threads > 0:
-            if not isinf(self.limits.max_threads) and effective_threads > self.limits.max_threads:
+            if (
+                not isinf(self.limits.max_threads)
+                and effective_threads > self.limits.max_threads
+            ):
                 # Debug: partition cannot accommodate threads
                 return None
             if not isinf(self.limits.max_threads):
@@ -275,11 +299,14 @@ class Partition:
         cpu_count, cpu_type = get_job_cpu_requirement(job)
         if cpu_type == "task" and cpu_count > 0:
             # Check cpu_count against max_threads
-            if not isinf(self.limits.max_threads) and cpu_count > self.limits.max_threads:
+            if (
+                not isinf(self.limits.max_threads)
+                and cpu_count > self.limits.max_threads
+            ):
                 return None
             if not isinf(self.limits.max_threads):
                 score += cpu_count / self.limits.max_threads
-            
+
             # Also check against max_cpus_per_task
             if (
                 not isinf(self.limits.max_cpus_per_task)
