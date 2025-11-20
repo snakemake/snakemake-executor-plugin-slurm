@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.0.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.9.2...v2.0.0) (2025-11-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* proposal for dynamic partition selection ([#321](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/321))
+
+### Features
+
+* proposal for dynamic partition selection ([#321](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/321)) ([95821f9](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/95821f962dcef87dd22953c60fb7346800a1ecc5))
+
+
+### Bug Fixes
+
+* naming SLURM logs, SLURM logs not just "log files" ([#372](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/372)) ([ce7cc4b](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/ce7cc4b58de64501d9b6e03f007ac834cec49c1d))
+
 ## [1.9.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.9.1...v1.9.2) (2025-10-28)
 
 
