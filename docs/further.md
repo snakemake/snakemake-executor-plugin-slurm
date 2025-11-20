@@ -94,12 +94,14 @@ The following limits can be defined for each partition:
 | `max_nodes`             | int       | Maximum number of nodes            | unlimited |
 | `max_tasks`             | int       | Maximum number of tasks            | unlimited |
 | `max_tasks_per_node`    | int       | Maximum tasks per node             | unlimited |
+| `max_threads` | int       | Maximum threads per node | unlimited |
 | `max_gpu`               | int       | Maximum number of GPUs             | 0         |
 | `available_gpu_models`  | list[str] | List of available GPU models       | none      |
 | `max_cpus_per_gpu`      | int       | Maximum CPUs per GPU               | unlimited |
 | `supports_mpi`          | bool      | Whether MPI jobs are supported     | true      |
 | `max_mpi_tasks`         | int       | Maximum MPI tasks                  | unlimited |
 | `available_constraints` | list[str] | List of available node constraints | none      |
+| `cluster` | str       | Cluster name in multi-cluster setup | none |
 
 ##### Example Partition Configuration
 
@@ -126,6 +128,33 @@ partitions:
     available_gpu_models: ["a100", "v100", "rtx3090"]
     max_cpus_per_gpu: 8
 ```
+
+The plugin supports automatic partition selection on clusters with SLURM multi-cluster setup. You can specify which cluster each partition belongs to in your partition configuration file:
+
+```yaml
+partitions:
+  d-standard:
+    cluster: "deviating"
+    max_runtime: "6d"
+    max_nodes: 1
+    max_threads: 127
+  d-parallel:
+    cluster: "deviating"
+    supports_mpi: true
+    max_threads: 128
+    max_runtime: "6d"
+  standard:
+    cluster: "other"
+    max_runtime: "6d"
+    max_nodes: 1
+    max_threads: 127
+  parallel:
+    cluster: "other"
+    supports_mpi: true
+    max_threads: 128
+    max_runtime: "6d"
+```
+
 
 ##### How Partition Selection Works
 

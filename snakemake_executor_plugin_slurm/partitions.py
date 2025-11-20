@@ -58,8 +58,8 @@ def get_best_partition(
     scored_partitions = []
     for p in candidate_partitions:
         score = p.score_job_fit(job)
-        logger.warning(
-            f"Partition '{p.name}' score for job {job.name} (threads={job.resources.get('threads')}): {score}"
+        logger.debug(
+            f"Partition '{p.name}' score for job {job.name}: {score}"
         )
         if score is not None:
             scored_partitions.append((p, score))
@@ -67,7 +67,7 @@ def get_best_partition(
     if scored_partitions:
         best_partition, best_score = max(scored_partitions, key=lambda x: x[1])
         partition = best_partition.name
-        logger.warning(
+        logger.info(
             f"Auto-selected partition '{partition}' for job {job.name} "
             f"with score {best_score:.3f}"
         )
