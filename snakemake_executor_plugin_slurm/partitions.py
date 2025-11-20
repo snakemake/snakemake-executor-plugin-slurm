@@ -167,7 +167,7 @@ def get_job_cpu_requirement(job: JobExecutorInterface) -> tuple[int, str]:
             cpus_per_task = int(cpus_per_task)
 
         if cpus_per_task < 0:
-            return (0, "none")
+            raise WorkflowError("cpus_per_task cannot be negative")
         # ensure that at least 1 cpu is requested because 0 is not allowed by slurm
         return (max(1, cpus_per_task), "task")
 
