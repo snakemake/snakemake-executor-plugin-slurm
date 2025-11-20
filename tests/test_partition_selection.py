@@ -11,7 +11,6 @@ from snakemake_executor_plugin_slurm.partitions import (
 )
 
 
-
 class TestPartitionSelection:
     @pytest.fixture
     def basic_partition_config(self):
@@ -196,7 +195,7 @@ class TestPartitionSelection:
 
     def test_read_nonexistent_file(self):
         """Test reading a non-existent file raises appropriate error."""
-        
+
         nonexistent_path = Path("/nonexistent/path/to/file.yaml")
 
         with pytest.raises(WorkflowError, match="Partition file not found"):
@@ -204,7 +203,7 @@ class TestPartitionSelection:
 
     def test_read_invalid_yaml_file(self):
         """Test reading an invalid YAML file raises appropriate error."""
-        
+
         invalid_yaml = "partitions:\n  - name: test\n    invalid: {\n"
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -219,7 +218,7 @@ class TestPartitionSelection:
 
     def test_read_file_missing_partitions_key(self, invalid_key_config, temp_yaml_file):
         """Test reading a file without 'partitions' key raises KeyError."""
-        
+
         temp_path = temp_yaml_file(invalid_key_config)
 
         try:
@@ -306,7 +305,7 @@ class TestPartitionSelection:
             assert selected_partition == "gpu"
             assert mock_logger.warning.call_count >= 1
             assert (
-                "Auto-selected partition 'gpu'" 
+                "Auto-selected partition 'gpu'"
                 in mock_logger.warning.call_args_list[-1][0][0]
             )
         finally:
@@ -328,7 +327,10 @@ class TestPartitionSelection:
             # Should return None when no suitable partition found
             assert selected_partition is None
             assert mock_logger.warning.call_count >= 1
-            assert "No suitable partition found" in mock_logger.warning.call_args_list[-1][0][0]
+            assert (
+                "No suitable partition found"
+                in mock_logger.warning.call_args_list[-1][0][0]
+            )
         finally:
             temp_path.unlink()
 
@@ -377,7 +379,10 @@ class TestPartitionSelection:
             # Should return None due to constraint mismatch
             assert selected_partition is None
             assert mock_logger.warning.call_count >= 1
-            assert "No suitable partition found" in mock_logger.warning.call_args_list[-1][0][0]
+            assert (
+                "No suitable partition found"
+                in mock_logger.warning.call_args_list[-1][0][0]
+            )
         finally:
             temp_path.unlink()
 
@@ -419,7 +424,10 @@ class TestPartitionSelection:
             # Should return None due to GPU model mismatch
             assert selected_partition is None
             assert mock_logger.warning.call_count >= 1
-            assert "No suitable partition found" in mock_logger.warning.call_args_list[-1][0][0]
+            assert (
+                "No suitable partition found"
+                in mock_logger.warning.call_args_list[-1][0][0]
+            )
         finally:
             temp_path.unlink()
 
@@ -438,7 +446,10 @@ class TestPartitionSelection:
             # Should return None when no partitions available
             assert selected_partition is None
             assert mock_logger.warning.call_count >= 1
-            assert "No suitable partition found" in mock_logger.warning.call_args_list[-1][0][0]
+            assert (
+                "No suitable partition found"
+                in mock_logger.warning.call_args_list[-1][0][0]
+            )
         finally:
             temp_path.unlink()
 
@@ -458,7 +469,7 @@ class TestPartitionSelection:
             assert selected_partition == "gpu"
             assert mock_logger.warning.call_count >= 1
             assert (
-                "Auto-selected partition 'gpu'" 
+                "Auto-selected partition 'gpu'"
                 in mock_logger.warning.call_args_list[-1][0][0]
             )
         finally:
@@ -502,7 +513,10 @@ class TestPartitionSelection:
             # Should return None as no partition can accommodate the runtime
             assert selected_partition is None
             assert mock_logger.warning.call_count >= 1
-            assert "No suitable partition found" in mock_logger.warning.call_args_list[-1][0][0]
+            assert (
+                "No suitable partition found"
+                in mock_logger.warning.call_args_list[-1][0][0]
+            )
         finally:
             temp_path.unlink()
 
@@ -564,29 +578,29 @@ class TestPartitionSelection:
         }
 
     def test_cluster_specification_via_slurm_cluster(
-         self, multicluster_partition_config, temp_yaml_file, mock_job, mock_logger
-     ):
-         """Test cluster specification using slurm_cluster resource."""
-         temp_path = temp_yaml_file(multicluster_partition_config)
+        self, multicluster_partition_config, temp_yaml_file, mock_job, mock_logger
+    ):
+        """Test cluster specification using slurm_cluster resource."""
+        temp_path = temp_yaml_file(multicluster_partition_config)
 
-         try:
-             partitions = read_partition_file(temp_path)
-             
-             # Verify cluster field is read correctly
-             # Find partitions by name instead of assuming order
-             partition_map = {p.name: p for p in partitions}
-             assert partition_map["normal-small"].cluster == "normal"
-             assert partition_map["deviating-small"].cluster == "deviating"
-             
-             # Job targeting 'normal' cluster
-             job = mock_job(threads=16, mem_mb=32000, slurm_cluster="normal")
-             selected_partition = get_best_partition(partitions, job, mock_logger)
-             
-             # Should select a partition from 'normal' cluster
-             assert selected_partition in ["normal-small", "normal-large"]
-             assert mock_logger.warning.call_count >= 1
-         finally:
-             temp_path.unlink()
+        try:
+            partitions = read_partition_file(temp_path)
+
+            # Verify cluster field is read correctly
+            # Find partitions by name instead of assuming order
+            partition_map = {p.name: p for p in partitions}
+            assert partition_map["normal-small"].cluster == "normal"
+            assert partition_map["deviating-small"].cluster == "deviating"
+
+            # Job targeting 'normal' cluster
+            job = mock_job(threads=16, mem_mb=32000, slurm_cluster="normal")
+            selected_partition = get_best_partition(partitions, job, mock_logger)
+
+            # Should select a partition from 'normal' cluster
+            assert selected_partition in ["normal-small", "normal-large"]
+            assert mock_logger.warning.call_count >= 1
+        finally:
+            temp_path.unlink()
 
     def test_cluster_specification_via_clusters(
         self, multicluster_partition_config, temp_yaml_file, mock_job, mock_logger
@@ -596,11 +610,11 @@ class TestPartitionSelection:
 
         try:
             partitions = read_partition_file(temp_path)
-            
+
             # Job targeting 'deviating' cluster via 'clusters' resource
             job = mock_job(threads=48, mem_mb=64000, clusters="deviating")
             selected_partition = get_best_partition(partitions, job, mock_logger)
-            
+
             # Should select deviating-small partition
             assert selected_partition == "deviating-small"
             assert mock_logger.warning.call_count >= 1
@@ -615,11 +629,11 @@ class TestPartitionSelection:
 
         try:
             partitions = read_partition_file(temp_path)
-            
+
             # Job targeting 'normal' cluster via 'cluster' resource
             job = mock_job(threads=64, mem_mb=128000, cluster="normal")
             selected_partition = get_best_partition(partitions, job, mock_logger)
-            
+
             # Should select normal-large partition
             assert selected_partition == "normal-large"
             assert mock_logger.warning.call_count >= 1
@@ -634,11 +648,11 @@ class TestPartitionSelection:
 
         try:
             partitions = read_partition_file(temp_path)
-            
+
             # Job requesting GPU on 'normal' cluster (only deviating has GPU)
             job = mock_job(threads=16, gpu=2, gpu_model="a100", slurm_cluster="normal")
             selected_partition = get_best_partition(partitions, job, mock_logger)
-            
+
             # Should return None as normal cluster has no GPU partitions
             assert selected_partition is None
             assert mock_logger.warning.call_count >= 1
@@ -653,11 +667,11 @@ class TestPartitionSelection:
 
         try:
             partitions = read_partition_file(temp_path)
-            
+
             # Job without cluster specification
             job = mock_job(threads=16, mem_mb=32000)
             selected_partition = get_best_partition(partitions, job, mock_logger)
-            
+
             # Should select a partition (any cluster is acceptable)
             assert selected_partition is not None
             assert mock_logger.warning.call_count >= 1
@@ -672,24 +686,24 @@ class TestPartitionSelection:
 
         try:
             partitions = read_partition_file(temp_path)
-            
+
             # Job with 4 threads - should prefer tiny partition
             job = mock_job(threads=4, mem_mb=16000)
             selected_partition = get_best_partition(partitions, job, mock_logger)
             assert selected_partition == "tiny"
-            
+
             # Job with 16 threads - should prefer small partition
             mock_logger.reset_mock()
             job = mock_job(threads=16, mem_mb=32000)
             selected_partition = get_best_partition(partitions, job, mock_logger)
             assert selected_partition == "small"
-            
+
             # Job with 64 threads - should use medium partition
             mock_logger.reset_mock()
             job = mock_job(threads=64, mem_mb=64000)
             selected_partition = get_best_partition(partitions, job, mock_logger)
             assert selected_partition == "medium"
-            
+
         finally:
             temp_path.unlink()
 
@@ -701,18 +715,18 @@ class TestPartitionSelection:
 
         try:
             partitions = read_partition_file(temp_path)
-            
+
             # Job with cpus_per_task=128 - exceeds medium (127), needs large
             job = mock_job(threads=None, cpus_per_task=128, mem_mb=128000)
             selected_partition = get_best_partition(partitions, job, mock_logger)
             assert selected_partition == "large"
-            
+
             # Job with cpus_per_task=127 - exactly matches medium
             mock_logger.reset_mock()
             job = mock_job(threads=None, cpus_per_task=127, mem_mb=64000)
             selected_partition = get_best_partition(partitions, job, mock_logger)
             assert selected_partition == "medium"
-            
+
         finally:
             temp_path.unlink()
 
@@ -724,15 +738,15 @@ class TestPartitionSelection:
 
         try:
             partitions = read_partition_file(temp_path)
-            
+
             # Job with 128 threads - tiny, small, medium cannot accommodate
             job = mock_job(threads=128, mem_mb=256000)
             selected_partition = get_best_partition(partitions, job, mock_logger)
-            
+
             # Only large partition should be selected
             assert selected_partition == "large"
             assert mock_logger.warning.call_count >= 1
-            
+
         finally:
             temp_path.unlink()
 
@@ -744,22 +758,23 @@ class TestPartitionSelection:
 
         try:
             partitions = read_partition_file(temp_path)
-            
+
             # Job with 512 threads - exceeds all partitions
             job = mock_job(threads=512, mem_mb=128000)
             selected_partition = get_best_partition(partitions, job, mock_logger)
-            
+
             # Should return None
             assert selected_partition is None
             assert mock_logger.warning.call_count >= 1
-            assert "No suitable partition found" in mock_logger.warning.call_args_list[-1][0][0]
-            
+            assert (
+                "No suitable partition found"
+                in mock_logger.warning.call_args_list[-1][0][0]
+            )
+
         finally:
             temp_path.unlink()
 
-    def test_multicluster_with_max_threads(
-        self, temp_yaml_file, mock_job, mock_logger
-    ):
+    def test_multicluster_with_max_threads(self, temp_yaml_file, mock_job, mock_logger):
         """Test combined cluster and max_threads constraints."""
         config = {
             "partitions": {
@@ -784,23 +799,23 @@ class TestPartitionSelection:
 
         try:
             partitions = read_partition_file(temp_path)
-            
+
             # Job targeting normal cluster with 128 threads
             # normal-small (64) is too small, should use normal-large (256)
             job = mock_job(threads=128, mem_mb=256000, slurm_cluster="normal")
             selected_partition = get_best_partition(partitions, job, mock_logger)
-            
+
             assert selected_partition == "normal-large"
             assert mock_logger.warning.call_count >= 1
-            
+
             # Job targeting deviating cluster with 128 threads
             # Should exactly match deviating-medium
             mock_logger.reset_mock()
             job = mock_job(threads=128, mem_mb=128000, slurm_cluster="deviating")
             selected_partition = get_best_partition(partitions, job, mock_logger)
-            
+
             assert selected_partition == "deviating-medium"
             assert mock_logger.warning.call_count >= 1
-            
+
         finally:
             temp_path.unlink()

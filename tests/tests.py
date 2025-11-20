@@ -792,6 +792,7 @@ class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageB
     # Verify no slashes remain in the wildcard string
     assert "/" not in wildcard_str
 
+
 class TestSlurmExtraValidation:
     """Test cases for the validate_slurm_extra function."""
 

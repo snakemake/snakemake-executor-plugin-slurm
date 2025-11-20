@@ -58,9 +58,7 @@ def get_best_partition(
     scored_partitions = []
     for p in candidate_partitions:
         score = p.score_job_fit(job)
-        logger.debug(
-            f"Partition '{p.name}' score for job {job.name}: {score}"
-        )
+        logger.debug(f"Partition '{p.name}' score for job {job.name}: {score}")
         if score is not None:
             scored_partitions.append((p, score))
 
@@ -285,7 +283,10 @@ class Partition:
         # Check thread requirements (check both job.threads and resources.threads)
         effective_threads = get_effective_threads(job)
         if effective_threads is not None and effective_threads > 0:
-            if not isinf(self.limits.max_threads) and effective_threads > self.limits.max_threads:
+            if (
+                not isinf(self.limits.max_threads)
+                and effective_threads > self.limits.max_threads
+            ):
                 # Debug: partition cannot accommodate threads
                 return None
             if not isinf(self.limits.max_threads):
