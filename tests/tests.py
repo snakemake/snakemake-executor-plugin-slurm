@@ -1,13 +1,11 @@
 import os
 import re
-
 from pathlib import Path
 from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
 from unittest.mock import MagicMock, patch
 import pytest
-
 from snakemake_executor_plugin_slurm import ExecutorSettings
 from snakemake_executor_plugin_slurm.efficiency_report import (
     parse_sacct_data,
@@ -15,6 +13,7 @@ from snakemake_executor_plugin_slurm.efficiency_report import (
 )
 from snakemake_executor_plugin_slurm.utils import set_gres_string
 from snakemake_executor_plugin_slurm.submit_string import get_submit_command
+
 from snakemake_executor_plugin_slurm.validation import validate_slurm_extra
 from snakemake_interface_common.exceptions import WorkflowError
 import pandas as pd
