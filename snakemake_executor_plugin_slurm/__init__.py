@@ -267,7 +267,7 @@ class Executor(RemoteExecutor):
             return
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
-        self.logger.info(f"Cleaning up log files older than {age_cutoff} day(s).")
+        self.logger.info(f"Cleaning up SLURM log files older than {age_cutoff} day(s).")
 
         for path in self.slurm_logdir.rglob("*.log"):
             if path.is_file():
@@ -563,7 +563,7 @@ class Executor(RemoteExecutor):
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
                     if not self.workflow.executor_settings.keep_successful_logs:
                         self.logger.debug(
-                            "removing log for successful job "
+                            "removing SLURM log for successful job "
                             f"with SLURM ID '{j.external_jobid}'"
                         )
                         try:
@@ -571,7 +571,7 @@ class Executor(RemoteExecutor):
                                 j.aux["slurm_logfile"].unlink()
                         except (OSError, FileNotFoundError) as e:
                             self.logger.warning(
-                                "Could not remove log file"
+                                "Could not remove SLURM log file"
                                 f" {j.aux['slurm_logfile']}: {e}"
                             )
                 elif status == "PREEMPTED" and not self._preemption_warning:
