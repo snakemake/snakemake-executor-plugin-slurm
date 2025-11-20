@@ -130,7 +130,7 @@ def get_effective_threads(job: JobExecutorInterface) -> int:
             except ValueError:
                 resource_threads = threads
             threads = resource_threads if resource_threads > 1 else threads
-    
+
     # ensuring a valid thread count
     if threads is None or threads < 1:
         threads = 1
