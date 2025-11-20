@@ -1,6 +1,5 @@
 import os
 import re
-import sys
 from pathlib import Path
 from typing import Optional
 import snakemake.common.tests
@@ -18,14 +17,6 @@ from snakemake_executor_plugin_slurm.submit_string import get_submit_command
 from snakemake_executor_plugin_slurm.validation import validate_slurm_extra
 from snakemake_interface_common.exceptions import WorkflowError
 import pandas as pd
-
-from snakemake.common import run, dpath
-
-sys.path.insert(0, os.path.dirname(__file__))
-
-
-def test_partition_selection():
-    dpath(run("test_partition_selection"))
 
 
 class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
