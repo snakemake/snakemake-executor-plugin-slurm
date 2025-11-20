@@ -286,11 +286,8 @@ class Partition:
 
         # Check thread requirements (check both job.threads and resources.threads)
         effective_threads = get_effective_threads(job)
-        if effective_threads > 0:
-            if (
-                not isinf(self.limits.max_threads)
-                and effective_threads > self.limits.max_threads
-            ):
+        if effective_threads is not None and effective_threads > 0:
+            if not isinf(self.limits.max_threads) and effective_threads > self.limits.max_threads:
                 # Debug: partition cannot accommodate threads
                 return None
             if not isinf(self.limits.max_threads):
