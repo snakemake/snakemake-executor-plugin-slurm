@@ -11,20 +11,37 @@ from snakemake_interface_executor_plugins.logging import LoggerExecutorInterface
 
 
 def read_partition_file(partition_file: Path) -> List["Partition"]:
-    with open(partition_file, "r") as f:
-        out = []
-        partitions_dict = yaml.safe_load(f)["partitions"]
-        for partition_name, partition_config in partitions_dict.items():
-            if not partition_name or not partition_name.strip():
-                raise KeyError("Partition name cannot be empty")
+    """Read partition definitions from a YAML file"""
+    try:
+        with open(partition_file, "r") as f:
+            config = yaml.safe_load(f)
+    except FileNotFoundError:
+        raise WorkflowError(f"Partition file not found: {partition_file}")
+    except yaml.YAMLError as e:
+        raise WorkflowError(f"Error parsing partition file {partition_file}: {e}")
+    except Exception as e:
+        raise WorkflowError(f"Unexpected error reading partition file {partition_file}: {e}")
+    if not isinstance(config, dict) or "partitions" not in config:
+        raise WorkflowError(
+            f"Partition file {partition_file} is missing 'partitions' section"
+        )
+    partitions_dict = config["partitions"]
+    if not isinstance(partitions_dict, dict):
+        raise WorkflowError(
+            f"'partitions' section in {partition_file} must be a mapping"
+        )
+    out = []
+    for partition_name, partition_config in partitions_dict.items():
+        if not partition_name or not partition_name.strip():
+            raise KeyError("Partition name cannot be empty")
 
-            out.append(
-                Partition(
-                    name=partition_name,
-                    limits=PartitionLimits(**partition_config),
-                )
+        out.append(
+            Partition(
+                name=partition_name,
+                limits=PartitionLimits(**partition_config),
             )
-        return out
+        )
+    return out
 
 
 def get_best_partition(
@@ -32,11 +49,14 @@ def get_best_partition(
     job: JobExecutorInterface,
     logger: LoggerExecutorInterface,
 ) -> Optional[str]:
-    scored_partitions = [
-        (p, score)
-        for p in candidate_partitions
-        if (score := p.score_job_fit(job)) is not None
-    ]
+    scored_partitions = []
+    for p in candidate_partitions:
+        score = p.score_job_fit(job)
+        logger.warning(
+            f"Partition '{p.name}' score for job {job.name} (threads={job.resources.get('threads')}): {score}"
+        )
+        if score is not None:
+            scored_partitions.append((p, score))
 
     if scored_partitions:
         best_partition, best_score = max(scored_partitions, key=lambda x: x[1])
@@ -88,6 +108,26 @@ def parse_gpu_requirements(job: JobExecutorInterface) -> tuple[int, Optional[str
                 return int(gpu_spec[2]), gpu_spec[1]
 
     return 0, None
+
+
+def get_effective_threads(job: JobExecutorInterface) -> int:
+    """
+    Get the effective thread count for a job.
+    First checks job.threads, then falls back to job.resources["threads"].
+    This handles cases where threads is specified in the resources block.
+    """
+    threads = job.threads
+    # If threads is default (1) or not set, check resources
+    if threads == 1 or threads is None:
+        resource_threads = job.resources.get("threads")
+        if resource_threads is not None:
+            if isinstance(resource_threads, str):
+                try:
+                    resource_threads = int(resource_threads)
+                except ValueError:
+                    resource_threads = threads
+            threads = resource_threads if resource_threads > 1 else threads
+    return threads
 
 
 def get_job_cpu_requirement(job: JobExecutorInterface) -> tuple[int, str]:
@@ -143,7 +183,8 @@ def get_job_cpu_requirement(job: JobExecutorInterface) -> tuple[int, str]:
                 return (0, "none")
             return (cpus_per_gpu, "gpu")
 
-    return (job.threads, "task")
+    # Fall back to effective threads (checks both job.threads and resources.threads)
+    return (get_effective_threads(job), "task")
 
 
 @dataclass
@@ -155,6 +196,7 @@ class PartitionLimits:
     max_mem_mb: float = inf
     max_mem_mb_per_cpu: float = inf
     max_cpus_per_task: float = inf
+    max_threads: float = inf
 
     # SLURM-specific resources
     max_nodes: float = inf
@@ -221,8 +263,24 @@ class Partition:
                 if not isinf(limit):
                     score += job_requirement / limit
 
+        # Check thread requirements (check both job.threads and resources.threads)
+        effective_threads = get_effective_threads(job)
+        if effective_threads > 0:
+            if not isinf(self.limits.max_threads) and effective_threads > self.limits.max_threads:
+                # Debug: partition cannot accommodate threads
+                return None
+            if not isinf(self.limits.max_threads):
+                score += effective_threads / self.limits.max_threads
+
         cpu_count, cpu_type = get_job_cpu_requirement(job)
         if cpu_type == "task" and cpu_count > 0:
+            # Check cpu_count against max_threads
+            if not isinf(self.limits.max_threads) and cpu_count > self.limits.max_threads:
+                return None
+            if not isinf(self.limits.max_threads):
+                score += cpu_count / self.limits.max_threads
+            
+            # Also check against max_cpus_per_task
             if (
                 not isinf(self.limits.max_cpus_per_task)
                 and cpu_count > self.limits.max_cpus_per_task
