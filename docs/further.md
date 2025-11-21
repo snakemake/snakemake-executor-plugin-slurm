@@ -689,9 +689,7 @@ The corresponding command line flag is not needed anymore.
 
 Using the [file system storage plugin](https://github.com/snakemake/snakemake-storage-plugin-fs) will automatically stage-in and -out in- and output files.
 
-
-==This is ongoing development.
-Eventually, you will be able to annotate different file access patterns.==
+> This is ongoing development. Eventually, you will be able to annotate different file access patterns.
 
 ### Log Files - Getting Information on Failures
 
