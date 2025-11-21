@@ -365,7 +365,7 @@ class Executor(RemoteExecutor):
                             f"This may cause 'squeue' to report inaccurate "
                             "job states and the status_command option may "
                             "be unreliable. "
-                            "(Threshold is 3x status check interval: 3 × "
+                            "(Threshold is 3x status check interval: 3 x "
                             f"{initial_interval}s = "
                             f"{dynamic_check_threshold}s)"
                         )
@@ -378,7 +378,7 @@ class Executor(RemoteExecutor):
                             f"{dynamic_check_threshold}s). "
                             f"The 'squeue' command should work reliably for "
                             "status queries. "
-                            "(Threshold is 3x status check interval: 3 × "
+                            "(Threshold is 3x status check interval: 3 x "
                             f"{initial_interval}s = "
                             f"{dynamic_check_threshold}s)"
                         )
@@ -653,14 +653,14 @@ class Executor(RemoteExecutor):
 
         # decide which status command to use
         status_command = self.get_status_command()
-        # getting the actual command with parameters
+        # Getting the actual command with parameters.
+        # Here, the commad will be a list generated with
+        # shlex.split().
         if status_command == "sacct":
             status_command = query_job_status_sacct(self.run_uuid)
         elif status_command == "squeue":
             status_command = query_job_status_squeue(self.run_uuid)
 
-        # for better redability in verbose output
-        status_command = " ".join(shlex.split(status_command))
         # this code is inspired by the snakemake profile:
         # https://github.com/Snakemake-Profiles/slurm
         for i in range(status_attempts):
