@@ -17,7 +17,11 @@ def get_min_job_age():
         output = subprocess.check_output(
             cmd, text=True, stderr=subprocess.PIPE, timeout=10
         )
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+    except (
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+        subprocess.TimeoutExpired,
+    ):
         return None
 
     for line in output.splitlines():
