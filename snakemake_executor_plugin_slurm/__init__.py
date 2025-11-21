@@ -3,6 +3,7 @@ __copyright__ = "Copyright 2023, David Lähnemann, Johannes Köster, Christian M
 __email__ = "johannes.koester@uni-due.de"
 __license__ = "MIT"
 
+import atexit
 import csv
 from io import StringIO
 import os
@@ -43,6 +44,8 @@ from .job_status_query import (
 )
 from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
+from .partitions import read_partition_file, get_best_partition
+from .validation import validate_slurm_extra
 
 
 def _get_status_command_default():
@@ -171,7 +174,20 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
-
+    partition_config: Optional[Path] = field(
+        default=None,
+        metadata={
+            "help": "Path to YAML file defining partition limits for dynamic "
+            "partition selection. When provided, jobs will be dynamically "
+            "assigned to the best-fitting partition based on their resource "
+            "requirements. See documentation for complete list of available limits. "
+            "Alternatively, the environment variable SNAKEMAKE_SLURM_PARTITIONS "
+            "can be set to point to such a file. "
+            "If both are set, this flag takes precedence.",
+            "env_var": False,
+            "required": False,
+        },
+    )
     efficiency_report: bool = field(
         default=False,
         metadata={
@@ -294,6 +310,26 @@ class Executor(RemoteExecutor):
             if self.workflow.executor_settings.logdir
             else Path(".snakemake/slurm_logs").resolve()
         )
+        # Check the environment variable "SNAKEMAKE_SLURM_PARTITIONS",
+        # if set, read the partitions from the given file. Let the CLI
+        # option override this behavior.
+        if (
+            os.getenv("SNAKEMAKE_SLURM_PARTITIONS")
+            and not self.workflow.executor_settings.partition_config
+        ):
+            partition_file = Path(os.getenv("SNAKEMAKE_SLURM_PARTITIONS"))
+            self.logger.info(
+                f"Reading SLURM partition configuration from "
+                f"environment variable file: {partition_file}"
+            )
+            self._partitions = read_partition_file(partition_file)
+        else:
+            self._partitions = (
+                read_partition_file(self.workflow.executor_settings.partition_config)
+                if self.workflow.executor_settings.partition_config
+                else None
+            )
+        atexit.register(self.clean_old_logs)
 
         # Validate status_command configuration if the field exists
         self._validate_status_command_settings()
@@ -393,7 +429,7 @@ class Executor(RemoteExecutor):
             return
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
-        self.logger.info(f"Cleaning up log files older than {age_cutoff} day(s).")
+        self.logger.info(f"Cleaning up SLURM log files older than {age_cutoff} day(s).")
 
         for path in self.slurm_logdir.rglob("*.log"):
             if path.is_file():
@@ -472,6 +508,8 @@ class Executor(RemoteExecutor):
         if job.resources.get("slurm_extra"):
             self.check_slurm_extra(job)
 
+        # NOTE removed partition from below, such that partition
+        # selection can benefit from resource checking as the call is built up.
         job_params = {
             "run_uuid": self.run_uuid,
             "slurm_logfile": slurm_logfile,
@@ -508,17 +546,6 @@ class Executor(RemoteExecutor):
                 "given - submitting without. This might or might not work on "
                 "your cluster."
             )
-
-        # MPI job
-        if job.resources.get("mpi", False):
-            if not job.resources.get("tasks_per_node") and not job.resources.get(
-                "nodes"
-            ):
-                self.logger.warning(
-                    "MPI job detected, but no 'tasks_per_node' or 'nodes' "
-                    "specified. Assuming 'tasks_per_node=1'."
-                    "Probably not what you want."
-                )
 
         exec_job = self.format_job_exec(job)
 
@@ -707,7 +734,7 @@ class Executor(RemoteExecutor):
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
                     if not self.workflow.executor_settings.keep_successful_logs:
                         self.logger.debug(
-                            "removing log for successful job "
+                            "removing SLURM log for successful job "
                             f"with SLURM ID '{j.external_jobid}'"
                         )
                         try:
@@ -715,7 +742,7 @@ class Executor(RemoteExecutor):
                                 j.aux["slurm_logfile"].unlink()
                         except (OSError, FileNotFoundError) as e:
                             self.logger.warning(
-                                "Could not remove log file"
+                                "Could not remove SLURM log file"
                                 f" {j.aux['slurm_logfile']}: {e}"
                             )
                 elif status == "PREEMPTED" and not self._preemption_warning:
@@ -856,6 +883,7 @@ We leave it to SLURM to resume your job(s)"""
             # we have to quote the account, because it might
             # contain build-in shell commands - see issue #354
             for account in accounts:
+                self.test_account(account)
                 yield f" -A {shlex.quote(account)}"
         else:
             if self._fallback_account_arg is None:
@@ -880,9 +908,13 @@ We leave it to SLURM to resume your job(s)"""
         returns a default partition, if applicable
         else raises an error - implicetly.
         """
+        partition = None
         if job.resources.get("slurm_partition"):
             partition = job.resources.slurm_partition
-        else:
+        elif self._partitions:
+            partition = get_best_partition(self._partitions, job, self.logger)
+        # we didnt get a partition yet so try fallback.
+        if not partition:
             if self._fallback_partition is None:
                 self._fallback_partition = self.get_default_partition(job)
             partition = self._fallback_partition
@@ -994,13 +1026,5 @@ We leave it to SLURM to resume your job(s)"""
         return ""
 
     def check_slurm_extra(self, job):
-        jobname = re.compile(r"--job-name[=?|\s+]|-J\s?")
-        if re.search(jobname, job.resources.slurm_extra):
-            raise WorkflowError(
-                "The --job-name option is not allowed in the 'slurm_extra' "
-                "parameter. The job name is set by snakemake and must not be "
-                "overwritten. It is internally used to check the stati of the "
-                "all submitted jobs by this workflow. Please consult the "
-                "documentation if you are unsure how to query the status of "
-                "your jobs."
-            )
+        """Validate that slurm_extra doesn't contain executor-managed options."""
+        validate_slurm_extra(job)

@@ -64,6 +64,108 @@ See the [snakemake documentation on profiles](https://snakemake.readthedocs.io/e
 How and where you set configurations on factors like file size or increasing the runtime with every `attempt` of running a job (if [`--retries` is greater than `0`](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-behavior)).
 [There are detailed examples for these in the snakemake documentation.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources)
 
+#### Automatic Partition Selection
+
+The SLURM executor plugin supports automatic partition selection based on job resource requirements, via the command line option `--slurm-partition-config`. This feature allows the plugin to choose the most appropriate partition for each job, without the need to manually specify partitions for different job types. This also enables variable partition selection as a job's resource requirements change based on [dynamic resources](#dynamic-resource-specification), ensuring that jobs are always scheduled to an appropriate partition.
+
+*Jobs that explicitly specify a `slurm_partition` resource will bypass automatic selection and use the specified partition directly.*
+
+##### Partition Limits Specification
+
+To enable automatic partition selection, create a YAML configuration file that defines the available partitions and their resource limits. This file should be structured as follows:
+
+```yaml
+partitions:
+  some_partition:
+    max_runtime: 100
+  another_partition:
+    ...
+```
+Where `some_partition` and `another_partition` are the names of the partition on your cluster, according to `sinfo`.
+
+The following limits can be defined for each partition:
+
+| Parameter               | Type      | Description                        | Default   |
+| ----------------------- | --------- | ---------------------------------- | --------- |
+| `max_runtime`           | int       | Maximum walltime in minutes        | unlimited |
+| `max_mem_mb`            | int       | Maximum total memory in MB         | unlimited |
+| `max_mem_mb_per_cpu`    | int       | Maximum memory per CPU in MB       | unlimited |
+| `max_cpus_per_task`     | int       | Maximum CPUs per task              | unlimited |
+| `max_nodes`             | int       | Maximum number of nodes            | unlimited |
+| `max_tasks`             | int       | Maximum number of tasks            | unlimited |
+| `max_tasks_per_node`    | int       | Maximum tasks per node             | unlimited |
+| `max_threads` | int       | Maximum threads per node | unlimited |
+| `max_gpu`               | int       | Maximum number of GPUs             | 0         |
+| `available_gpu_models`  | list[str] | List of available GPU models       | none      |
+| `max_cpus_per_gpu`      | int       | Maximum CPUs per GPU               | unlimited |
+| `supports_mpi`          | bool      | Whether MPI jobs are supported     | true      |
+| `max_mpi_tasks`         | int       | Maximum MPI tasks                  | unlimited |
+| `available_constraints` | list[str] | List of available node constraints | none      |
+| `cluster` | str       | Cluster name in multi-cluster setup | none |
+
+##### Example Partition Configuration
+
+```yaml
+partitions:
+  standard:
+    max_runtime: 720  # 12 hours
+    max_mem_mb: 64000  # 64 GB
+    max_cpus_per_task: 24
+    max_nodes: 1
+    
+  highmem:
+    max_runtime: 1440  # 24 hours
+    max_mem_mb: 512000  # 512 GB
+    max_mem_mb_per_cpu: 16000
+    max_cpus_per_task: 48
+    max_nodes: 1
+    
+  gpu:
+    max_runtime: 2880  # 48 hours
+    max_mem_mb: 128000  # 128 GB
+    max_cpus_per_task: 32
+    max_gpu: 8
+    available_gpu_models: ["a100", "v100", "rtx3090"]
+    max_cpus_per_gpu: 8
+```
+
+The plugin supports automatic partition selection on clusters with SLURM multi-cluster setup. You can specify which cluster each partition belongs to in your partition configuration file:
+
+```yaml
+partitions:
+  d-standard:
+    cluster: "deviating"
+    max_runtime: "6d"
+    max_nodes: 1
+    max_threads: 127
+  d-parallel:
+    cluster: "deviating"
+    supports_mpi: true
+    max_threads: 128
+    max_runtime: "6d"
+  standard:
+    cluster: "other"
+    max_runtime: "6d"
+    max_nodes: 1
+    max_threads: 127
+  parallel:
+    cluster: "other"
+    supports_mpi: true
+    max_threads: 128
+    max_runtime: "6d"
+```
+
+
+##### How Partition Selection Works
+
+When automatic partition selection is enabled, the plugin evaluates each job's resource requirements against the defined partition limits to ensure the job is placed on a partition that can accommodate all of its requirements. When multiple partitions are compatible, the plugin uses a scoring algorithm that favors partitions with limits closer to the job's needs, preventing jobs from being assigned to partitions with excessively high resource limits.
+
+The scoring algorithm calculates a score by summing the ratios of requested resources to partition limits (e.g., if a job requests 8 CPUs and a partition allows 16, this contributes 0.5 to the score). Higher scores indicate better resource utilization, so a job requesting 8 CPUs would prefer a 16-CPU partition (score 0.5) over a 64-CPU partition (score 0.125).
+
+##### Fallback Behavior
+
+If no suitable partition is found based on the job's resource requirements, the plugin falls back to the default SLURM behavior, which typically uses the cluster's default partition or any partition specified explicitly in the job's resources.
+
 
 #### Standard Resources
 
@@ -486,8 +588,10 @@ rule myrule:
     input: ...
     output: ...
     resources:
-        slurm_extra="--qos=long --mail-type=ALL --mail-user=<your email>"
+        slurm_extra="--mail-type=ALL --mail-user=<your email>"
 ```
+
+.. note:: We prevent you from overwriting all flags, which are used or configurable internally. This prevents conflicts and breaking job submission.
 
 Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles) to specify such resources.
 

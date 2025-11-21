@@ -18,12 +18,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
+      - name: Verify logo file exists
+        run: |
+          ls -la ${{ github.workspace }}/pr_logo/
+          if [ ! -f "${{ github.workspace }}/pr_logo/long_logo_hpc.png" ]; then
+            echo "ERROR: Logo file not found!"
+            exit 1
+          fi
+          echo "Logo file found at: ${{ github.workspace }}/pr_logo/long_logo_hpc.png"
+      
       - name: Post to Mastodon
         uses: snakemake/mastodon-release-post-action@main # == latest
         with:
           access-token: ${{ secrets.MASTODONBOT }}
           pr-title: ${{ github.event.head_commit.message }}
-          image: "${{ github.workspace }}/pr_logo/long_logo_hpc.png"
+          image: "long_logo_hpc.png"
           image-description: "Snakemake HPC logo for Mastodon"
           message: |
             Beep, Beep - I am your friendly #Snakemake release announcement bot.
