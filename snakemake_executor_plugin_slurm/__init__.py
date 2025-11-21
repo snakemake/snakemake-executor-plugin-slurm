@@ -342,16 +342,13 @@ class Executor(RemoteExecutor):
                 min_job_age = get_min_job_age()
                 sacct_available = is_query_tool_available("sacct")
 
-                # Calculate dynamic threshold: 3 times the initial
-                # status check interval.
-                # The plugin starts with 40 seconds and increases,
-                # so we use (3 * 10) + 40 = 70 seconds as minimum
-                between_status_check_seconds = getattr(
+                # Threshold: 3x initial status check interval (default 40s)
+                initial_interval = getattr(
                     self.workflow.executor_settings,
-                    "seconds_between_status_checks",
-                    70,
+                    "init_seconds_before_status_checks",
+                    40,
                 )
-                dynamic_check_threshold = 3 * between_status_check_seconds
+                dynamic_check_threshold = 3 * initial_interval
 
                 if not sacct_available and status_command == "sacct":
                     self.logger.warning(
@@ -361,21 +358,21 @@ class Executor(RemoteExecutor):
                 elif sacct_available and min_job_age is not None:
                     if (
                         min_job_age < dynamic_check_threshold
-                        and status_command == "sacct"
+                        and status_command == "squeue"
                     ):
                         self.logger.warning(
                             f"MinJobAge is {min_job_age} seconds "
                             f"(< {dynamic_check_threshold}s). "
-                            f"This may cause 'sacct' to report inaccurate "
+                            f"This may cause 'squeue' to report inaccurate "
                             "job states and the status_command option may "
                             "be unreliable. "
                             "(Threshold is 3x status check interval: 3 × "
-                            f"{between_status_check_seconds}s = "
+                            f"{initial_interval}s = "
                             f"{dynamic_check_threshold}s)"
                         )
                     elif (
                         min_job_age >= dynamic_check_threshold
-                        and status_command == "squeue"
+                        and status_command == "sacct"
                     ):
                         self.logger.warning(
                             f"MinJobAge is {min_job_age} seconds (>= "
@@ -383,7 +380,7 @@ class Executor(RemoteExecutor):
                             f"The 'squeue' command should work reliably for "
                             "status queries. "
                             "(Threshold is 3x status check interval: 3 × "
-                            f"{between_status_check_seconds}s = "
+                            f"{initial_interval}s = "
                             f"{dynamic_check_threshold}s)"
                         )
 
