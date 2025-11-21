@@ -41,6 +41,8 @@ from .job_status_query import (
     get_min_job_age,
     is_query_tool_available,
     should_recommend_squeue_status_command,
+    query_job_status_squeue,
+    query_job_status_sacct,
 )
 from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
@@ -650,30 +652,22 @@ class Executor(RemoteExecutor):
         active_jobs_seen_by_sacct = set()
         missing_sacct_status = set()
 
-        # We use this sacct syntax for argument 'starttime' to keep it
-        # compatible with slurm < 20.11
-        sacct_starttime = f"{datetime.now() - timedelta(days=2):%Y-%m-%dT%H:00}"
-        # previously we had
-        # f"--starttime now-2days --endtime now --name {self.run_uuid}"
-        # in line 218 - once v20.11 is definitively not in use any more,
-        # the more readable version ought to be re-adapted
-
-        # -X: only show main job, no substeps
-        sacct_command = f"""sacct -X --parsable2 \
-                        --clusters all \
-                        --noheader --format=JobIdRaw,State \
-                        --starttime {sacct_starttime} \
-                        --endtime now --name {self.run_uuid}"""
+        # decide which status command to use
+        status_command = self.get_status_command()
+        # getting the actual command with parameters
+        if status_command == "sacct":
+            status_command = query_job_status_sacct(self.run_uuid)
+        elif status_command == "squeue":
+            status_command = query_job_status_squeue(self.run_uuid)
 
         # for better redability in verbose output
-        sacct_command = " ".join(shlex.split(sacct_command))
-
+        status_command = " ".join(shlex.split(status_command))
         # this code is inspired by the snakemake profile:
         # https://github.com/Snakemake-Profiles/slurm
         for i in range(status_attempts):
             async with self.status_rate_limiter:
                 (status_of_jobs, sacct_query_duration) = await self.job_stati(
-                    sacct_command
+                    status_command
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
                     self.logger.debug(f"could not check status of job {self.run_uuid}")
