@@ -80,7 +80,7 @@ def parse_time_to_minutes(time_value: Union[str, int, float]) -> int:
                 if days > 0:
                     hours = int(time_parts[0])
                 else:
-                    minutes = int(time_parts[1])
+                    minutes = int(time_parts[0])
             elif len(time_parts) == 2:
                 # was: days-hours:minutes
                 hours = int(time_parts[0])
