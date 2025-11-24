@@ -1,5 +1,6 @@
 # utility functions for the SLURM executor plugin
 
+import math
 import os
 import re
 from pathlib import Path
@@ -9,6 +10,10 @@ from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
 from snakemake_interface_common.exceptions import WorkflowError
+
+
+def round_half_up(n):
+    return int(math.floor(n + 0.5))
 
 
 def parse_time_to_minutes(time_value: Union[str, int, float]) -> int:
@@ -39,14 +44,14 @@ def parse_time_to_minutes(time_value: Union[str, int, float]) -> int:
     """
     # If already numeric, return as integer minutes (rounded)
     if isinstance(time_value, (int, float)):
-        return int(round(time_value))
+        return round_half_up(time_value)  # implicit conversion to int
 
     # Convert to string and strip whitespace
     time_str = str(time_value).strip()
 
     # Try to parse as plain number first
     try:
-        return int(round(float(time_str)))
+        return round_half_up(float(time_str))  # implicit conversion to int
     except ValueError:
         pass
 
@@ -75,15 +80,13 @@ def parse_time_to_minutes(time_value: Union[str, int, float]) -> int:
                 if days > 0:
                     hours = int(time_parts[0])
                 else:
-                    minutes = float(time_parts[0])
+                    minutes = int(time_parts[1])
             elif len(time_parts) == 2:
-                # minutes:seconds
-                if days > 0:
-                    # days-hours:minutes
-                    minutes = int(time_parts[0])
-                    seconds = int(time_parts[1])
+                # was: days-hours:minutes
+                hours = int(time_parts[0])
+                minutes = int(time_parts[1])
             elif len(time_parts) == 3:
-                # hours:minutes:seconds
+                # was: hours:minutes:seconds
                 hours = int(time_parts[0])
                 minutes = int(time_parts[1])
                 seconds = int(time_parts[2])
@@ -92,7 +95,7 @@ def parse_time_to_minutes(time_value: Union[str, int, float]) -> int:
 
             # Convert everything to minutes
             total_minutes = days * 24 * 60 + hours * 60 + minutes + seconds / 60.0
-            return int(round(total_minutes))
+            return round_half_up(total_minutes)  # implicit conversion to int
 
         except (ValueError, IndexError):
             # If SLURM format parsing fails, try Snakemake style below
@@ -125,7 +128,7 @@ def parse_time_to_minutes(time_value: Union[str, int, float]) -> int:
         elif unit == "s":
             total_minutes += num / 60
 
-    return int(round(total_minutes))
+    return round_half_up(total_minutes)
 
 
 def delete_slurm_environment():
