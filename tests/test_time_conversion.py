@@ -145,7 +145,8 @@ class TestTimeConversion:
             parse_time_to_minutes("0-1:30:30") == 91
         )  # 1h 30m 30s = 90.5, rounded to 91
         # 7 days + 23 hours + 59 minutes + 59 seconds
-        # = 7*24*60 + 23*60 + 59 + 59/60 = 10080 + 1380 + 59 + 0.98333 = 11519.98333, rounded to 11520
+        # = 7*24*60 + 23*60 + 59 + 59/60 = 10080 + 1380 + 59 + 0.98333 = 11519.98333,
+        # rounded to 11520
         assert parse_time_to_minutes("7-23:59:59") == 11520
 
 
