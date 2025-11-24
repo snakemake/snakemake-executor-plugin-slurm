@@ -101,13 +101,12 @@ def should_recommend_squeue_status_command(min_threshold_seconds=120):
     return False
 
 
-def query_job_status_sacct(jobuid) -> list:
+def query_job_status_sacct(runid) -> list:
     """
     Query job status using sacct command
 
     Args:
-        job_ids: List of SLURM job IDs
-        timeout: Timeout in seconds for subprocess call
+        runid: workflow run ID
 
     Returns:
         Dictionary mapping job ID to JobStatus object
@@ -125,7 +124,7 @@ def query_job_status_sacct(jobuid) -> list:
                         --clusters all \
                         --noheader --format=JobIdRaw,State \
                         --starttime {sacct_starttime} \
-                        --endtime now --name {jobuid}"""
+                        --endtime now --name {runid}"""
 
     # for better redability in verbose output
     query_command = " ".join(shlex.split(query_command))
@@ -133,25 +132,23 @@ def query_job_status_sacct(jobuid) -> list:
     return query_command
 
 
-def query_job_status_squeue(jobuid) -> list:
+def query_job_status_squeue(runid) -> list:
     """
     Query job status using squeue command (newer SLURM functionality)
 
     Args:
-        job_ids: List of SLURM job IDs
-        timeout: Timeout in seconds for subprocess call
+        runid: workflow run ID
 
     Returns:
         Dictionary mapping job ID to JobStatus object
     """
     # Build squeue command
-    query_command = [
-        "squeue",
-        "--format=%i|%T",
-        "--states=all",
-        "--noheader",
-        "--name",
-        f"{jobuid}",
-    ]
+    query_command = f"""squeue
+                       --format=%i|%T
+                       --states=all
+                       --noheader
+                       --name {runid}"""
+    # for better redability in verbose output
+    query_command = " ".join(shlex.split(query_command))
 
     return query_command
