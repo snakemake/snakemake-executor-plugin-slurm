@@ -54,8 +54,12 @@ class TestTimeConversion:
     def test_parse_time_seconds(self):
         """Test parsing of second notation"""
         assert parse_time_to_minutes("60s") == 1  # 60 seconds = 1 minute
-        assert parse_time_to_minutes("90s") == 2  # 90 seconds = 1.5 minutes, rounded to 2
-        assert parse_time_to_minutes("30s") == 1  # 30 seconds = 0.5 minutes, rounded to 1
+        assert (
+            parse_time_to_minutes("90s") == 2
+        )  # 90 seconds = 1.5 minutes, rounded to 2
+        assert (
+            parse_time_to_minutes("30s") == 1
+        )  # 30 seconds = 0.5 minutes, rounded to 1
 
     def test_parse_time_combined(self):
         """Test parsing of combined time notations"""
@@ -82,10 +86,10 @@ class TestTimeConversion:
         """Test that invalid formats raise WorkflowError"""
         with pytest.raises(WorkflowError, match="Invalid time format"):
             parse_time_to_minutes("invalid")
-        
+
         with pytest.raises(WorkflowError, match="Invalid time format"):
             parse_time_to_minutes("6x")
-        
+
         with pytest.raises(WorkflowError, match="Invalid time format"):
             parse_time_to_minutes("abc123")
 
@@ -109,9 +113,13 @@ class TestTimeConversion:
     def test_parse_time_slurm_hours_minutes_seconds(self):
         """Test SLURM format: hours:minutes:seconds"""
         assert parse_time_to_minutes("1:30:00") == 90  # 1 hour 30 minutes
-        assert parse_time_to_minutes("2:15:30") == 136  # 2h 15m 30s = 135.5 min, rounded to 136
+        assert (
+            parse_time_to_minutes("2:15:30") == 136
+        )  # 2h 15m 30s = 135.5 min, rounded to 136
         assert parse_time_to_minutes("12:00:00") == 720  # 12 hours
-        assert parse_time_to_minutes("0:45:30") == 46  # 45 minutes 30 seconds = 45.5, rounded to 46
+        assert (
+            parse_time_to_minutes("0:45:30") == 46
+        )  # 45 minutes 30 seconds = 45.5, rounded to 46
 
     def test_parse_time_slurm_days_hours(self):
         """Test SLURM format: days-hours"""
@@ -122,14 +130,20 @@ class TestTimeConversion:
     def test_parse_time_slurm_days_hours_minutes(self):
         """Test SLURM format: days-hours:minutes"""
         assert parse_time_to_minutes("1-0:30") == 1470  # 1 day + 30 minutes
-        assert parse_time_to_minutes("2-12:30") == 3630  # 2 days + 12 hours + 30 minutes
+        assert (
+            parse_time_to_minutes("2-12:30") == 3630
+        )  # 2 days + 12 hours + 30 minutes
         assert parse_time_to_minutes("0-6:15") == 375  # 6 hours + 15 minutes
 
     def test_parse_time_slurm_days_hours_minutes_seconds(self):
         """Test SLURM format: days-hours:minutes:seconds"""
         assert parse_time_to_minutes("1-0:0:0") == 1440  # 1 day exactly
-        assert parse_time_to_minutes("2-12:30:45") == 3631  # 2d 12h 30m 45s = 3630.75, rounded to 3631
-        assert parse_time_to_minutes("0-1:30:30") == 91  # 1h 30m 30s = 90.5, rounded to 91
+        assert (
+            parse_time_to_minutes("2-12:30:45") == 3631
+        )  # 2d 12h 30m 45s = 3630.75, rounded to 3631
+        assert (
+            parse_time_to_minutes("0-1:30:30") == 91
+        )  # 1h 30m 30s = 90.5, rounded to 91
         # 7 days + 23 hours + 59 minutes + 59 seconds
         # = 7*24*60 + 23*60 + 59 + 59/60 = 10080 + 1380 + 59 + 0.98333 = 11519.98333, rounded to 11520
         assert parse_time_to_minutes("7-23:59:59") == 11520
@@ -192,17 +206,17 @@ class TestPartitionFileTimeConversion:
 
         try:
             partitions = read_partition_file(temp_path)
-            
+
             # Check that partitions were created
             assert len(partitions) == 3
-            
+
             # Check that time strings were converted correctly
             short_partition = next(p for p in partitions if p.name == "short")
             assert short_partition.limits.max_runtime == 720  # 12h = 720 minutes
-            
+
             medium_partition = next(p for p in partitions if p.name == "medium")
             assert medium_partition.limits.max_runtime == 2880  # 2d = 2880 minutes
-            
+
             long_partition = next(p for p in partitions if p.name == "long")
             assert long_partition.limits.max_runtime == 8640  # 6d = 8640 minutes
         finally:
@@ -303,21 +317,23 @@ class TestPartitionFileTimeConversion:
 
         try:
             partitions = read_partition_file(temp_path)
-            
+
             # Check that partitions were created
             assert len(partitions) == 4
-            
+
             # Check that SLURM time formats were converted correctly
             short_partition = next(p for p in partitions if p.name == "short_minutes")
             assert short_partition.limits.max_runtime == 60
-            
+
             medium_partition = next(p for p in partitions if p.name == "medium_hms")
             assert medium_partition.limits.max_runtime == 720  # 12 hours
-            
+
             long_partition = next(p for p in partitions if p.name == "long_dh")
             assert long_partition.limits.max_runtime == 8640  # 6 days
-            
-            very_long_partition = next(p for p in partitions if p.name == "very_long_dhms")
+
+            very_long_partition = next(
+                p for p in partitions if p.name == "very_long_dhms"
+            )
             # 7 days + 12 hours + 30 minutes = 7*24*60 + 12*60 + 30 = 10830 minutes
             assert very_long_partition.limits.max_runtime == 10830
         finally:
@@ -349,7 +365,7 @@ class TestPartitionFileTimeConversion:
         try:
             partitions = read_partition_file(temp_path)
             assert len(partitions) == 3
-            
+
             # All three should result in the same runtime (6 days = 8640 minutes)
             for partition in partitions:
                 assert partition.limits.max_runtime == 8640

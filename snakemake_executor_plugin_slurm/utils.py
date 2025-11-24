@@ -16,7 +16,7 @@ def parse_time_to_minutes(time_value: Union[str, int, float]) -> int:
     Convert a time specification to minutes (integer). This function
     is intended to handle the partition definitions for the max_runtime
     value in a partition config file.
-    
+
     Supports:
     - Numeric values (assumed to be in minutes): 120, 120.5
     - Snakemake-style time strings: "6d", "12h", "30m", "90s", "2d12h30m"
@@ -27,49 +27,49 @@ def parse_time_to_minutes(time_value: Union[str, int, float]) -> int:
         - "days-hours" (e.g., "2-12")
         - "days-hours:minutes" (e.g., "2-12:30")
         - "days-hours:minutes:seconds" (e.g., "2-12:30:45")
-    
+
     Args:
         time_value: Time specification as string, int, or float
-        
+
     Returns:
         Time in minutes as integer (fractional minutes are rounded)
-        
+
     Raises:
         WorkflowError: If the time format is invalid
     """
     # If already numeric, return as integer minutes (rounded)
     if isinstance(time_value, (int, float)):
         return int(round(time_value))
-    
+
     # Convert to string and strip whitespace
     time_str = str(time_value).strip()
-    
+
     # Try to parse as plain number first
     try:
         return int(round(float(time_str)))
     except ValueError:
         pass
-    
+
     # Try SLURM time formats first (with colons and dashes)
     # Format: days-hours:minutes:seconds or variations
-    if '-' in time_str or ':' in time_str:
+    if "-" in time_str or ":" in time_str:
         try:
             days = 0
             hours = 0
             minutes = 0
             seconds = 0
-            
+
             # Split by dash first (days separator)
-            if '-' in time_str:
-                parts = time_str.split('-')
+            if "-" in time_str:
+                parts = time_str.split("-")
                 if len(parts) != 2:
                     raise ValueError("Invalid format with dash")
                 days = int(parts[0])
                 time_str = parts[1]
-            
+
             # Split by colon (time separator)
-            time_parts = time_str.split(':')
-            
+            time_parts = time_str.split(":")
+
             if len(time_parts) == 1:
                 # Just hours (after dash) or just minutes
                 if days > 0:
@@ -77,7 +77,7 @@ def parse_time_to_minutes(time_value: Union[str, int, float]) -> int:
                 else:
                     minutes = float(time_parts[0])
             elif len(time_parts) == 2:
-                # minutes:seconds 
+                # minutes:seconds
                 if days > 0:
                     # days-hours:minutes
                     minutes = int(time_parts[0])
@@ -89,25 +89,20 @@ def parse_time_to_minutes(time_value: Union[str, int, float]) -> int:
                 seconds = int(time_parts[2])
             else:
                 raise ValueError("Too many colons in time format")
-            
+
             # Convert everything to minutes
-            total_minutes = (
-                days * 24 * 60 +
-                hours * 60 +
-                minutes +
-                seconds / 60.0
-            )
+            total_minutes = days * 24 * 60 + hours * 60 + minutes + seconds / 60.0
             return int(round(total_minutes))
-            
+
         except (ValueError, IndexError):
             # If SLURM format parsing fails, try Snakemake style below
             pass
-    
+
     # Parse Snakemake-style time strings (e.g., "6d", "12h", "30m", "90s", "2d12h30m")
     # Pattern matches: optional number followed by unit (d, h, m, s)
-    pattern = r'(\d+(?:\.\d+)?)\s*([dhms])'
+    pattern = r"(\d+(?:\.\d+)?)\s*([dhms])"
     matches = re.findall(pattern, time_str.lower())
-    
+
     if not matches:
         raise WorkflowError(
             f"Invalid time format: '{time_value}'. "
@@ -117,19 +112,19 @@ def parse_time_to_minutes(time_value: Union[str, int, float]) -> int:
             f"  - SLURM style: 'minutes', 'minutes:seconds', 'hours:minutes:seconds',\n"
             f"    'days-hours', 'days-hours:minutes', 'days-hours:minutes:seconds'"
         )
-    
+
     total_minutes = 0.0
     for value, unit in matches:
         num = float(value)
-        if unit == 'd':
+        if unit == "d":
             total_minutes += num * 24 * 60
-        elif unit == 'h':
+        elif unit == "h":
             total_minutes += num * 60
-        elif unit == 'm':
+        elif unit == "m":
             total_minutes += num
-        elif unit == 's':
+        elif unit == "s":
             total_minutes += num / 60
-    
+
     return int(round(total_minutes))
 
 
