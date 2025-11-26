@@ -381,19 +381,21 @@ class Executor(RemoteExecutor):
 
         exec_job = self.format_job_exec(job)
 
-        # and finally the job to execute with all the snakemake parameters
-        call += f' --wrap="{exec_job}"'
+        # format the job to execute with all the snakemake parameters into a bash script
+        sbatch_script = "\n".join(["#!/bin/sh", exec_job + " --verbose"])
 
         self.logger.debug(f"sbatch call: {call}")
+        self.logger.debug(f"sbatch script:\n{sbatch_script}")
         try:
             process = subprocess.Popen(
-                call,
+                f"{call} /dev/stdin",  # tell sbatch to read the sbatch script from stdin
                 shell=True,
                 text=True,
+                stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
-            out, err = process.communicate()
+            out, err = process.communicate(input=sbatch_script)  # pass the sbatch bash script via stdin
             if process.returncode != 0:
                 raise subprocess.CalledProcessError(
                     process.returncode, call, output=err
@@ -405,6 +407,7 @@ class Executor(RemoteExecutor):
                     "SLURM sbatch failed. "
                     f"The error message was '{e.output.strip()}'.\n"
                     f"    sbatch call:\n        {call}\n"
+                    f"    sbatch script:\n{sbatch_script}\n"
                 ),
             )
             return
