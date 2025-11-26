@@ -8,6 +8,7 @@ from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
 from snakemake_interface_executor_plugins.logging import LoggerExecutorInterface
+from .utils import parse_time_to_minutes
 
 
 def read_partition_file(partition_file: Path) -> List["Partition"]:
@@ -221,6 +222,15 @@ class PartitionLimits:
 
     # Node features/constraints
     available_constraints: Optional[List[str]] = None
+
+    def __post_init__(self):
+        """Convert max_runtime to minutes if specified as a time string"""
+        # Check if max_runtime is a string or needs conversion
+        # isinf() only works on numeric types, so check type first
+        if isinstance(self.max_runtime, str) or (
+            isinstance(self.max_runtime, (int, float)) and not isinf(self.max_runtime)
+        ):
+            self.max_runtime = parse_time_to_minutes(self.max_runtime)
 
 
 @dataclass

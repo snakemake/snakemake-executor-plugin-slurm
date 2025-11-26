@@ -87,14 +87,14 @@ The following limits can be defined for each partition:
 
 | Parameter               | Type      | Description                        | Default   |
 | ----------------------- | --------- | ---------------------------------- | --------- |
-| `max_runtime`           | int       | Maximum walltime in minutes        | unlimited |
+| `max_runtime`           | int/str   | Maximum walltime                   | unlimited |
 | `max_mem_mb`            | int       | Maximum total memory in MB         | unlimited |
 | `max_mem_mb_per_cpu`    | int       | Maximum memory per CPU in MB       | unlimited |
 | `max_cpus_per_task`     | int       | Maximum CPUs per task              | unlimited |
 | `max_nodes`             | int       | Maximum number of nodes            | unlimited |
 | `max_tasks`             | int       | Maximum number of tasks            | unlimited |
 | `max_tasks_per_node`    | int       | Maximum tasks per node             | unlimited |
-| `max_threads` | int       | Maximum threads per node | unlimited |
+| `max_threads`           | int       | Maximum threads per node           | unlimited |
 | `max_gpu`               | int       | Maximum number of GPUs             | 0         |
 | `available_gpu_models`  | list[str] | List of available GPU models       | none      |
 | `max_cpus_per_gpu`      | int       | Maximum CPUs per GPU               | unlimited |
@@ -102,6 +102,19 @@ The following limits can be defined for each partition:
 | `max_mpi_tasks`         | int       | Maximum MPI tasks                  | unlimited |
 | `available_constraints` | list[str] | List of available node constraints | none      |
 | `cluster` | str       | Cluster name in multi-cluster setup | none |
+
+Note: the `max_runtime` definition may contain 
+  - Numeric values (assumed to be in minutes): 120, 120.5
+  - Snakemake-style time strings: "6d", "12h", "30m", "90s", "2d12h30m"
+  - SLURM time formats:
+    - "minutes" (e.g., "60")
+    - "minutes:seconds" (interpreted as hours:minutes, e.g., "60:30")
+    - "hours:minutes:seconds" (e.g., "1:30:45")
+    - "days-hours" (e.g., "2-12")
+    - "days-hours:minutes" (e.g., "2-12:30")
+    - "days-hours:minutes:seconds" (e.g., "2-12:30:45")
+
+They are all auto-converted to minutes. Seconds are rounded to the nearest value in minutes.
 
 ##### Example Partition Configuration
 
@@ -689,9 +702,7 @@ The corresponding command line flag is not needed anymore.
 
 Using the [file system storage plugin](https://github.com/snakemake/snakemake-storage-plugin-fs) will automatically stage-in and -out in- and output files.
 
-
-==This is ongoing development.
-Eventually, you will be able to annotate different file access patterns.==
+> This is ongoing development. Eventually, you will be able to annotate different file access patterns.
 
 ### Log Files - Getting Information on Failures
 
