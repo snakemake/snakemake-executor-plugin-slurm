@@ -46,7 +46,11 @@ from .job_status_query import (
 from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
 from .partitions import read_partition_file, get_best_partition
-from .validation import validate_slurm_extra, validate_executor_settings
+from .validation import (
+    validate_slurm_extra,
+    validate_executor_settings,
+    validate_status_command_settings,
+)
 
 
 def _get_status_command_default():
@@ -266,8 +270,7 @@ class ExecutorSettings(ExecutorSettingsBase):
 
     def __post_init__(self):
         """Validate settings after initialization."""
-        # Run all validation checks
-        validate_executor_settins(self)
+        validate_executor_settings(self)
 
 
 # Required:
@@ -329,61 +332,10 @@ class Executor(RemoteExecutor):
                 else None
             )
         atexit.register(self.clean_old_logs)
-
-        # Validate status_command configuration if the field exists
-        self._validate_status_command_settings()
-
-    def _validate_status_command_settings(self):
-        """Validate and provide feedback about status_command configuration."""
-        if hasattr(self.workflow.executor_settings, "status_command"):
-            status_command = self.workflow.executor_settings.status_command
-            if status_command:
-                min_job_age = get_min_job_age()
-                sacct_available = is_query_tool_available("sacct")
-
-                # Threshold: 3x initial status check interval (default 40s)
-                initial_interval = getattr(
-                    self.workflow.executor_settings,
-                    "init_seconds_before_status_checks",
-                    40,
-                )
-                dynamic_check_threshold = 3 * initial_interval
-
-                if not sacct_available and status_command == "sacct":
-                    self.logger.warning(
-                        "The 'sacct' command is not available on this system. "
-                        "Using 'squeue' instead for job status queries."
-                    )
-                elif sacct_available and min_job_age is not None:
-                    if (
-                        min_job_age < dynamic_check_threshold
-                        and status_command == "squeue"
-                    ):
-                        self.logger.warning(
-                            f"MinJobAge is {min_job_age} seconds "
-                            f"(< {dynamic_check_threshold}s). "
-                            f"This may cause 'squeue' to miss recently finished jobs "
-                            "that have been purged from slurmctld, leading to job "
-                            "status queries being impossible with 'squeue'. "
-                            "Consider using 'sacct' instead or let your admini- "
-                            "strator increase MinJobAge. "
-                            "(Threshold is 3x status check interval: 3 x "
-                            f"{initial_interval}s = "
-                            f"{dynamic_check_threshold}s)"
-                        )
-                    elif (
-                        min_job_age >= dynamic_check_threshold
-                        and status_command == "sacct"
-                    ):
-                        self.logger.warning(
-                            f"MinJobAge is {min_job_age} seconds (>= "
-                            f"{dynamic_check_threshold}s). "
-                            f"The 'squeue' command should work reliably for "
-                            "status queries. "
-                            "(Threshold is 3x status check interval: 3 x "
-                            f"{initial_interval}s = "
-                            f"{dynamic_check_threshold}s)"
-                        )
+        # moved validation to validation.py
+        validate_status_command_settings(
+            self.workflow.executor_settings, self.logger
+        )
 
     def get_status_command(self):
         """Get the status command to use, with fallback logic."""
@@ -654,13 +606,32 @@ class Executor(RemoteExecutor):
         missing_sacct_status = set()
 
         # decide which status command to use
-        status_command = self.get_status_command()
-        # Getting the actual command with parameters.
-        # Here, the command will be a list generated with
-        # shlex.split().
-        if status_command == "sacct":
+        status_command_name = self.get_status_command()
+        min_job_age = get_min_job_age()
+        initial_interval = getattr(
+            self.workflow.executor_settings,
+            "init_seconds_before_status_checks",
+            40,
+        )
+        dynamic_check_threshold = 3 * initial_interval
+        if status_command_name == "squeue":
+            if (
+                min_job_age is None
+                or min_job_age < dynamic_check_threshold
+            ) and is_query_tool_available("sacct"):
+                self.logger.info(
+                    "Falling back to 'sacct' for status queries "
+                    f"(MinJobAge={min_job_age}; threshold={dynamic_check_threshold}s)."
+                )
+                status_command_name = "sacct"
+        if status_command_name == "sacct" and not is_query_tool_available("sacct"):
+            self.logger.info(
+                "'sacct' unavailable, using 'squeue' for status queries."
+            )
+            status_command_name = "squeue"
+        if status_command_name == "sacct":
             status_command = query_job_status_sacct(self.run_uuid)
-        elif status_command == "squeue":
+        else:
             status_command = query_job_status_squeue(self.run_uuid)
 
         # this code is inspired by the snakemake profile:
