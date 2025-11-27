@@ -46,7 +46,7 @@ from .job_status_query import (
 from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
 from .partitions import read_partition_file, get_best_partition
-from .validation import validate_slurm_extra
+from .validation import validate_slurm_extra, validate_executor_settings
 
 
 def _get_status_command_default():
@@ -266,8 +266,8 @@ class ExecutorSettings(ExecutorSettingsBase):
 
     def __post_init__(self):
         """Validate settings after initialization."""
-        # Add any validation logic here if needed in the future
-        pass
+        # Run all validation checks
+        validate_executor_settins(self)
 
 
 # Required:
