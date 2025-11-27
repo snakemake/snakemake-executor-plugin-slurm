@@ -154,7 +154,8 @@ class ExecutorSettings(ExecutorSettingsBase):
         default=40,
         metadata={
             "help": "Defines the time in seconds before the first status "
-            "check is performed on submitted jobs.",
+            "check is performed on submitted jobs. Must be a positive "
+            "integer",
         },
     )
 
