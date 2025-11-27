@@ -57,7 +57,10 @@ def validate_or_get_slurm_job_id(job_id, output):
         elif not matches:
             raise WorkflowError(
                 f"No valid SLURM job ID found in: {output}. "
-                "Was looking for exactly one positive integer."
+                "Was looking for exactly one positive integer. "
+                "We tried our best to parse the sbatch output, but it appears "
+                "too convoluted. Please run 'sbatch' manually and report the output "
+                "to us. If the output is garbled, inform your cluster administrators."
             )
 
 
