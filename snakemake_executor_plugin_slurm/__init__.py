@@ -656,7 +656,7 @@ class Executor(RemoteExecutor):
         # decide which status command to use
         status_command = self.get_status_command()
         # Getting the actual command with parameters.
-        # Here, the commad will be a list generated with
+        # Here, the command will be a list generated with
         # shlex.split().
         if status_command == "sacct":
             status_command = query_job_status_sacct(self.run_uuid)
