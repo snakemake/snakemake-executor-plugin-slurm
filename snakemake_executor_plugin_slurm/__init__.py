@@ -333,9 +333,7 @@ class Executor(RemoteExecutor):
             )
         atexit.register(self.clean_old_logs)
         # moved validation to validation.py
-        validate_status_command_settings(
-            self.workflow.executor_settings, self.logger
-        )
+        validate_status_command_settings(self.workflow.executor_settings, self.logger)
 
     def get_status_command(self):
         """Get the status command to use, with fallback logic."""
@@ -616,8 +614,7 @@ class Executor(RemoteExecutor):
         dynamic_check_threshold = 3 * initial_interval
         if status_command_name == "squeue":
             if (
-                min_job_age is None
-                or min_job_age < dynamic_check_threshold
+                min_job_age is None or min_job_age < dynamic_check_threshold
             ) and is_query_tool_available("sacct"):
                 self.logger.info(
                     "Falling back to 'sacct' for status queries "
@@ -625,9 +622,7 @@ class Executor(RemoteExecutor):
                 )
                 status_command_name = "sacct"
         if status_command_name == "sacct" and not is_query_tool_available("sacct"):
-            self.logger.info(
-                "'sacct' unavailable, using 'squeue' for status queries."
-            )
+            self.logger.info("'sacct' unavailable, using 'squeue' for status queries.")
             status_command_name = "squeue"
         if status_command_name == "sacct":
             status_command = query_job_status_sacct(self.run_uuid)
