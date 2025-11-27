@@ -104,7 +104,9 @@ def parse_gpu_requirements(job: JobExecutorInterface) -> tuple[int, Optional[str
         return int(gpu_required), job.resources.get("gpu_model")
     elif "gpu" in gres:
         # Parse gres string format: gpu:<number> or gpu:<model>:<number>
-        gpu_parts = [part for part in gres.split(",") if part.strip().startswith("gpu")]
+        gpu_parts = [
+            part for part in gres.split(",") if part.strip().startswith("gpu")
+        ]
         if gpu_parts:
             gpu_spec = gpu_parts[0].strip().split(":")
             if len(gpu_spec) == 2:  # gpu:<number>
@@ -355,7 +357,8 @@ class Partition:
                 c.strip() for c in constraint.split(",") if c.strip()
             ]
             if not all(
-                req in self.limits.available_constraints for req in required_constraints
+                req in self.limits.available_constraints
+                for req in required_constraints
             ):
                 return None
 

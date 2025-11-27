@@ -33,6 +33,10 @@ pandas = "^2.2.3"
 [tool.coverage.run]
 omit = [".*", "*/site-packages/*", "Snakefile"]
 
+[tool.black]
+line-length = 87
+target-version = ['py311']
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
