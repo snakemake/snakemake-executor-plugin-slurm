@@ -382,7 +382,7 @@ class Executor(RemoteExecutor):
         exec_job = self.format_job_exec(job)
 
         # format the job to execute with all the snakemake parameters into a bash script
-        sbatch_script = "\n".join(["#!/bin/sh", exec_job + " --verbose"])
+        sbatch_script = "\n".join(["#!/bin/sh", exec_job])
 
         self.logger.debug(f"sbatch call: {call}")
         self.logger.debug(f"sbatch script:\n{sbatch_script}")
