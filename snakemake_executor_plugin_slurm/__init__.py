@@ -381,7 +381,7 @@ class Executor(RemoteExecutor):
 
         exec_job = self.format_job_exec(job)
 
-        # format the job to execute with all the snakemake parameters into a bash script
+        # format the job to execute with all the snakemake parameters into a shell script
         sbatch_script = "\n".join(["#!/bin/sh", exec_job])
 
         self.logger.debug(f"sbatch call: {call}")
@@ -395,7 +395,7 @@ class Executor(RemoteExecutor):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
-            out, err = process.communicate(input=sbatch_script)  # pass the sbatch bash script via stdin
+            out, err = process.communicate(input=sbatch_script)  # feed the sbatch shell script through stdin
             if process.returncode != 0:
                 raise subprocess.CalledProcessError(
                     process.returncode, call, output=err
