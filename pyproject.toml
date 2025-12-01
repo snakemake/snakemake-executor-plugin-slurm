@@ -34,8 +34,7 @@ pandas = "^2.2.3"
 omit = [".*", "*/site-packages/*", "Snakefile"]
 
 [tool.black]
-line-length = 87
-target-version = ['py311']
+line-length = 88
 
 [build-system]
 requires = ["poetry-core"]
