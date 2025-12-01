@@ -132,7 +132,7 @@ def validate_executor_settings(settings, logger=None):
     if settings.init_seconds_before_status_checks is not None:
         if (
             not isinstance(settings.init_seconds_before_status_checks, int)
-            or settings.init_seconds_before_status_checks > 0
+            or settings.init_seconds_before_status_checks < 1
         ):
             raise WorkflowError(
                 "init-seconds-before-status-checks must be a positive integer."
