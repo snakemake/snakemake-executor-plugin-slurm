@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.0.0...v2.0.1) (2025-12-01)
+
+
+### Bug Fixes
+
+* validator check for integers was broken. ([#381](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/381)) ([7daf301](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/7daf30154dd686a39cf1b5f99068f06d9601fa71))
+
 ## [2.0.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.9.2...v2.0.0) (2025-11-24)
 
 
