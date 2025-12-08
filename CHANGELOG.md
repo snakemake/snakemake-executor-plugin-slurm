@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.0.1...v2.0.2) (2025-12-08)
+
+
+### Bug Fixes
+
+* partition cluster selection ([#385](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/385)) ([2863f78](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/2863f78a991b9efec0e738bf192923426fe1c284))
+
 ## [2.0.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.0.0...v2.0.1) (2025-12-01)
 
 
