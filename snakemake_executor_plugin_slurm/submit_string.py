@@ -43,7 +43,8 @@ def get_submit_command(job, params):
     call += f" {params.partition}"
 
     # Add cluster specification if provided
-    # Check for cluster first (singular), then fall back to clusters (plural) for backwards compatibility
+    # Check for cluster first (singular), then fall back to clusters (plural)
+    # for backwards compatibility
     cluster_val = (
         job.resources.get("cluster")
         or job.resources.get("clusters")

@@ -894,7 +894,8 @@ We leave it to SLURM to resume your job(s)"""
                     and partition_obj.partition_cluster
                     and partition_obj.partition_cluster != job_cluster
                 ):
-                    # Partition exists but is for a different cluster - use auto-selection
+                    # Partition exists but is for a different cluster:
+                    # use auto-selection
                     partition = get_best_partition(self._partitions, job, self.logger)
                 else:
                     partition = job.resources.slurm_partition

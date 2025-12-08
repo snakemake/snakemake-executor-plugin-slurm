@@ -668,7 +668,8 @@ class TestPartitionSelection:
         self, multicluster_partition_config, temp_yaml_file, mock_job, mock_logger
     ):
         """
-        Test that jobs with a cluster requirement do not select partitions without a cluster.
+        Test that jobs with a cluster requirement do not select partitions
+        without a cluster.
         """
         config = dict(multicluster_partition_config)
         config["partitions"]["no-cluster"] = {
@@ -690,7 +691,8 @@ class TestPartitionSelection:
         self, multicluster_partition_config, temp_yaml_file, mock_job, mock_logger
     ):
         """
-        Test that jobs without cluster requirement can select partitions without a cluster.
+        Test that jobs without cluster requirement can select partitions
+        without a cluster.
         """
         config = dict(multicluster_partition_config)
         config["partitions"]["no-cluster"] = {
@@ -711,7 +713,10 @@ class TestPartitionSelection:
     def test_job_without_cluster_uses_any_partition(
         self, multicluster_partition_config, temp_yaml_file, mock_job, mock_logger
     ):
-        """Test that jobs without cluster specification can use any partition without a cluster assignment."""
+        """
+        Test that jobs without cluster specification can use any partition
+        without a cluster assignment.
+        """
         temp_path = temp_yaml_file(multicluster_partition_config)
 
         try:

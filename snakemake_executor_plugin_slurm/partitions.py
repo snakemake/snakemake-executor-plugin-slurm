@@ -278,8 +278,10 @@ class Partition:
         )
 
         # Enforce strict cluster eligibility:
-        # - If the job specifies a cluster, only partitions with a matching cluster are eligible
-        # - If the job does not specify a cluster, only partitions without a cluster are eligible
+        # - If the job specifies a cluster, only partitions with a matching cluster
+        #   are eligible
+        # - If the job does not specify a cluster, only partitions without a cluster
+        #   are eligible
         if job_cluster is not None:
             if self.partition_cluster != job_cluster:
                 return None  # Not eligible
