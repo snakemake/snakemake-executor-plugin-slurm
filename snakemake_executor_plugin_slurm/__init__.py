@@ -868,7 +868,7 @@ We leave it to SLURM to resume your job(s)"""
         else raises an error - implicetly.
         """
         partition = None
-        
+
         # Check if a specific partition is requested
         if job.resources.get("slurm_partition"):
             # But also check if there's a cluster requirement that might override it
@@ -877,26 +877,34 @@ We leave it to SLURM to resume your job(s)"""
                 or job.resources.get("cluster")
                 or job.resources.get("clusters")
             )
-            
+
             if job_cluster and self._partitions:
                 # If a cluster is specified, verify the partition exists and matches
                 # Otherwise, use auto-selection to find a partition for that cluster
                 partition_obj = next(
-                    (p for p in self._partitions if p.name == job.resources.slurm_partition),
-                    None
+                    (
+                        p
+                        for p in self._partitions
+                        if p.name == job.resources.slurm_partition
+                    ),
+                    None,
                 )
-                if partition_obj and partition_obj.partition_cluster and partition_obj.partition_cluster != job_cluster:
+                if (
+                    partition_obj
+                    and partition_obj.partition_cluster
+                    and partition_obj.partition_cluster != job_cluster
+                ):
                     # Partition exists but is for a different cluster - use auto-selection
                     partition = get_best_partition(self._partitions, job, self.logger)
                 else:
                     partition = job.resources.slurm_partition
             else:
                 partition = job.resources.slurm_partition
-        
+
         # If no partition was selected yet, try auto-selection
         if not partition and self._partitions:
             partition = get_best_partition(self._partitions, job, self.logger)
-        
+
         # we didnt get a partition yet so try fallback.
         if not partition:
             if self._fallback_partition is None:
