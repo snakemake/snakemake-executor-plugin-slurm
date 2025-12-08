@@ -39,12 +39,16 @@ def read_partition_file(partition_file: Path) -> List["Partition"]:
             raise KeyError("Partition name cannot be empty")
 
         # Extract optional cluster name from partition config
-        cluster = partition_config.pop("cluster", None)
+        cluster = None
+        for key in ("slurm_cluster", "cluster", "clusters"):
+            if key in partition_config:
+                cluster = partition_config.pop(key)
+                break
 
         out.append(
             Partition(
                 name=partition_name,
-                cluster=cluster,
+                partition_cluster=cluster,
                 limits=PartitionLimits(**partition_config),
             )
         )
@@ -241,7 +245,7 @@ class Partition:
 
     name: str
     limits: PartitionLimits
-    cluster: Optional[str] = None
+    partition_cluster: Optional[str] = None
 
     def score_job_fit(self, job: JobExecutorInterface) -> Optional[float]:
         """
@@ -269,14 +273,14 @@ class Partition:
         # Accept multiple possible resource names for cluster specification
         job_cluster = (
             job.resources.get("slurm_cluster")
-            or job.resources.get("clusters")
             or job.resources.get("cluster")
+            or job.resources.get("clusters")
         )
 
-        if job_cluster is not None:
-            # Job specifies a cluster - partition must match
-            if self.cluster is not None and self.cluster != job_cluster:
-                return None  # Partition is for a different cluster
+        # If either partition or job specifies a cluster, they must match for scoring
+        if self.partition_cluster is not None or job_cluster is not None:
+            if self.partition_cluster != job_cluster:
+                return 0  # Cluster mismatch: score is 0
 
         for resource_key, limit in numerical_resources.items():
             job_requirement = job.resources.get(resource_key, 0)
