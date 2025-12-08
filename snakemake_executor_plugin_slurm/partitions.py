@@ -64,7 +64,7 @@ def get_best_partition(
     for p in candidate_partitions:
         score = p.score_job_fit(job)
         logger.debug(f"Partition '{p.name}' score for job {job.name}: {score}")
-        if score is not None:
+        if score is not None and score > 0:
             scored_partitions.append((p, score))
 
     if scored_partitions:
@@ -277,10 +277,15 @@ class Partition:
             or job.resources.get("clusters")
         )
 
-        # If either partition or job specifies a cluster, they must match for scoring
-        if self.partition_cluster is not None or job_cluster is not None:
+        # Enforce strict cluster eligibility:
+        # - If the job specifies a cluster, only partitions with a matching cluster are eligible
+        # - If the job does not specify a cluster, only partitions without a cluster are eligible
+        if job_cluster is not None:
             if self.partition_cluster != job_cluster:
-                return 0  # Cluster mismatch: score is 0
+                return None  # Not eligible
+        else:
+            if self.partition_cluster is not None:
+                return None  # Not eligible
 
         for resource_key, limit in numerical_resources.items():
             job_requirement = job.resources.get(resource_key, 0)

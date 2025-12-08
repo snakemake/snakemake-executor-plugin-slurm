@@ -591,8 +591,8 @@ class TestPartitionSelection:
             # Verify cluster field is read correctly
             # Find partitions by name instead of assuming order
             partition_map = {p.name: p for p in partitions}
-            assert partition_map["normal-small"].cluster == "normal"
-            assert partition_map["deviating-small"].cluster == "deviating"
+            assert partition_map["normal-small"].partition_cluster == "normal"
+            assert partition_map["deviating-small"].partition_cluster == "deviating"
 
             # Job targeting 'normal' cluster
             job = mock_job(threads=16, mem_mb=32000, slurm_cluster="normal")
@@ -664,10 +664,54 @@ class TestPartitionSelection:
         finally:
             temp_path.unlink()
 
+    def test_job_with_cluster_does_not_select_partition_without_cluster(
+        self, multicluster_partition_config, temp_yaml_file, mock_job, mock_logger
+    ):
+        """
+        Test that jobs with a cluster requirement do not select partitions without a cluster.
+        """
+        config = dict(multicluster_partition_config)
+        config["partitions"]["no-cluster"] = {
+            "max_runtime": 360,
+            "max_threads": 32,
+            "max_mem_mb": 64000,
+        }
+        temp_path = temp_yaml_file(config)
+        try:
+            partitions = read_partition_file(temp_path)
+            job = mock_job(threads=16, mem_mb=32000, slurm_cluster="normal")
+            selected_partition = get_best_partition(partitions, job, mock_logger)
+            # Should select a partition with cluster 'normal', not 'no-cluster'
+            assert selected_partition in ["normal-small", "normal-large"]
+        finally:
+            temp_path.unlink()
+
+    def test_job_without_cluster_can_select_partition_without_cluster(
+        self, multicluster_partition_config, temp_yaml_file, mock_job, mock_logger
+    ):
+        """
+        Test that jobs without cluster requirement can select partitions without a cluster.
+        """
+        config = dict(multicluster_partition_config)
+        config["partitions"]["no-cluster"] = {
+            "max_runtime": 360,
+            "max_threads": 32,
+            "max_mem_mb": 64000,
+        }
+        temp_path = temp_yaml_file(config)
+        try:
+            partitions = read_partition_file(temp_path)
+            job = mock_job(threads=16, mem_mb=32000)
+            selected_partition = get_best_partition(partitions, job, mock_logger)
+            # Should be able to select 'no-cluster' partition
+            assert selected_partition in ["normal-small", "normal-large", "no-cluster"]
+        finally:
+            temp_path.unlink()
+
     def test_job_without_cluster_uses_any_partition(
         self, multicluster_partition_config, temp_yaml_file, mock_job, mock_logger
     ):
-        """Test that jobs without cluster specification can use any partition."""
+        """Test that jobs without cluster specification can use any partition without a cluster assignment."""
         temp_path = temp_yaml_file(multicluster_partition_config)
 
         try:
@@ -677,9 +721,8 @@ class TestPartitionSelection:
             job = mock_job(threads=16, mem_mb=32000)
             selected_partition = get_best_partition(partitions, job, mock_logger)
 
-            # Should select a partition (any cluster is acceptable)
-            assert selected_partition is not None
-            assert mock_logger.info.call_count >= 1
+            # Should return None since all partitions have a cluster assignment
+            assert selected_partition is None
         finally:
             temp_path.unlink()
 
