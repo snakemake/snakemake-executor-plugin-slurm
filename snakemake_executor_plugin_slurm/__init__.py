@@ -79,6 +79,15 @@ def _get_status_command_default():
 def _get_status_command_help():
     """Get help text with computed default."""
     default_cmd = _get_status_command_default()
+
+    # if SLURM is not available (should not occur, only
+    # in 3rd party CI tests)
+    if default_cmd is None:
+        return (
+            "Command to query job status. Options: 'sacct', 'squeue'. "
+            "SLURM not detected on this system, so no status command can be used."
+        )
+
     sacct_available = is_query_tool_available("sacct")
     squeue_recommended = should_recommend_squeue_status_command()
 
