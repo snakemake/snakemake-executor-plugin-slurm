@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import re
 import shlex
+import shutil
 import subprocess
 import time
 from dataclasses import dataclass, field
@@ -58,6 +59,10 @@ def _get_status_command_default():
     sacct_available = is_query_tool_available("sacct")
     squeue_available = is_query_tool_available("squeue")
     # squeue is assumed to always be available on SLURM clusters
+
+    is_slurm_available = shutil.which("sinfo") is not None
+    if not is_slurm_available:
+        return None
 
     if not squeue_available and not sacct_available:
         raise WorkflowError(
