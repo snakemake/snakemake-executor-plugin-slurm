@@ -13,6 +13,7 @@ from snakemake_executor_plugin_slurm.submit_string import get_submit_command
 from snakemake_executor_plugin_slurm.validation import validate_slurm_extra
 from snakemake_interface_common.exceptions import WorkflowError
 
+
 class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
     __test__ = True
 
