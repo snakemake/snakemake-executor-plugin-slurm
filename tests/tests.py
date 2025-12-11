@@ -26,6 +26,7 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
             # seconds_between_status_checks=5,
         )
 
+
 class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase):
     __test__ = True
 
