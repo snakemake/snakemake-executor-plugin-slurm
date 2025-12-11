@@ -176,9 +176,11 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     """
     # generic resources (GRES) arguments can be of type
     # "string:int" or "string:string:int"
-    gres_re = re.compile(r"^[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?:\d+$")
+    gres_re = re.compile(r"^[a-zA-Z0-9_]+(:[a-zA-Z0-9_\.]+)?:\d+$")
     # gpu model arguments can be of type "string"
-    gpu_model_re = re.compile(r"^[a-zA-Z0-9_]+$")
+    # The model string may contain a dot for variants, see
+    # https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/387
+    gpu_model_re = re.compile(r"^[a-zA-Z0-9_\.]+$")
     # any arguments should not start and end with ticks or
     # quotation marks:
     string_check = re.compile(r"^[^'\"].*[^'\"]$")
