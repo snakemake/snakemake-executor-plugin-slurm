@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.4](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.0.3...v2.0.4) (2025-12-11)
+
+
+### Bug Fixes
+
+* updated gpu model string - may contain a period, now ([#390](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/390)) ([27607e5](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/27607e59c5cbe60356fe5823f9b23898adb1bf98))
+
 ## [2.0.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.0.2...v2.0.3) (2025-12-11)
 
 
