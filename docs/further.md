@@ -70,6 +70,8 @@ The SLURM executor plugin supports automatic partition selection based on job re
 
 *Jobs that explicitly specify a `slurm_partition` resource will bypass automatic selection and use the specified partition directly.*
 
+> **Note:** Partition selection supports specifying the target cluster using any of the resource keys `cluster`, `clusters`, or `slurm_cluster` in your workflow profile or the partition configuration file. All three are treated equivalently by the plugin.
+
 ##### Partition Limits Specification
 
 To enable automatic partition selection, create a YAML configuration file that defines the available partitions and their resource limits. This file should be structured as follows:

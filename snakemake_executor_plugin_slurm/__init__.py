@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import re
 import shlex
+import shutil
 import subprocess
 import time
 from dataclasses import dataclass, field
@@ -59,6 +60,10 @@ def _get_status_command_default():
     squeue_available = is_query_tool_available("squeue")
     # squeue is assumed to always be available on SLURM clusters
 
+    is_slurm_available = shutil.which("sinfo") is not None
+    if not is_slurm_available:
+        return None
+
     if not squeue_available and not sacct_available:
         raise WorkflowError(
             "Neither 'sacct' nor 'squeue' commands are available on this "
@@ -74,6 +79,15 @@ def _get_status_command_default():
 def _get_status_command_help():
     """Get help text with computed default."""
     default_cmd = _get_status_command_default()
+
+    # if SLURM is not available (should not occur, only
+    # in 3rd party CI tests)
+    if default_cmd is None:
+        return (
+            "Command to query job status. Options: 'sacct', 'squeue'. "
+            "SLURM not detected on this system, so no status command can be used."
+        )
+
     sacct_available = is_query_tool_available("sacct")
     squeue_recommended = should_recommend_squeue_status_command()
 
@@ -902,10 +916,44 @@ We leave it to SLURM to resume your job(s)"""
         else raises an error - implicetly.
         """
         partition = None
+
+        # Check if a specific partition is requested
         if job.resources.get("slurm_partition"):
-            partition = job.resources.slurm_partition
-        elif self._partitions:
+            # But also check if there's a cluster requirement that might override it
+            job_cluster = (
+                job.resources.get("slurm_cluster")
+                or job.resources.get("cluster")
+                or job.resources.get("clusters")
+            )
+
+            if job_cluster and self._partitions:
+                # If a cluster is specified, verify the partition exists and matches
+                # Otherwise, use auto-selection to find a partition for that cluster
+                partition_obj = next(
+                    (
+                        p
+                        for p in self._partitions
+                        if p.name == job.resources.slurm_partition
+                    ),
+                    None,
+                )
+                if (
+                    partition_obj
+                    and partition_obj.partition_cluster
+                    and partition_obj.partition_cluster != job_cluster
+                ):
+                    # Partition exists but is for a different cluster:
+                    # use auto-selection
+                    partition = get_best_partition(self._partitions, job, self.logger)
+                else:
+                    partition = job.resources.slurm_partition
+            else:
+                partition = job.resources.slurm_partition
+
+        # If no partition was selected yet, try auto-selection
+        if not partition and self._partitions:
             partition = get_best_partition(self._partitions, job, self.logger)
+
         # we didnt get a partition yet so try fallback.
         if not partition:
             if self._fallback_partition is None:

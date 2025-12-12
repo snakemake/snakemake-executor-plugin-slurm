@@ -42,8 +42,16 @@ def get_submit_command(job, params):
     # "- p '{partition_name}'"
     call += f" {params.partition}"
 
-    if job.resources.get("clusters"):
-        call += f" --clusters {safe_quote(job.resources.clusters)}"
+    # Add cluster specification if provided
+    # Check for cluster first (singular), then fall back to clusters (plural)
+    # for backwards compatibility
+    cluster_val = (
+        job.resources.get("cluster")
+        or job.resources.get("clusters")
+        or job.resources.get("slurm_cluster")
+    )
+    if cluster_val:
+        call += f" --cluster {safe_quote(cluster_val)}"
 
     if job.resources.get("runtime"):
         call += f" -t {safe_quote(job.resources.runtime)}"

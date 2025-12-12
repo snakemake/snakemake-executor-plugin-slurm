@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.0.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.0.2...v2.0.3) (2025-12-11)
+
+
+### Bug Fixes
+
+* ci slurm check ([#388](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/388)) ([e18eb34](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/e18eb34d6df36330b8de8505cc2e84efeb5822a4))
+
+## [2.0.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.0.1...v2.0.2) (2025-12-08)
+
+
+### Bug Fixes
+
+* partition cluster selection ([#385](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/385)) ([2863f78](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/2863f78a991b9efec0e738bf192923426fe1c284))
+
 ## [2.0.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.0.0...v2.0.1) (2025-12-01)
 
 
