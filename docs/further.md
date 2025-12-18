@@ -254,6 +254,12 @@ If you do not deliberately set the snakemake resource `slurm_account`, the plugi
 By contrast, some clusters _do not_ allow users to set their account or partition; for example, because they have a pre-defined default per user.
 In such cases, where the plugin's default behavior would interfere with your setup or requirements, you can use the `--slurm-no-account` flag to turn it off.
 
+##### Passing Commands as Scripts: `--slurm-pass-command-as-script`
+
+When this flag is enabled, the command that Snakemake would normally pass directly to `sbatch` via the `--wrap` option is instead written into a small temporary shell script which is submitted with `sbatch <script>`.
+
+Why this exists: Some SLURM installations or cluster configurations impose limits on the length or characters allowed in the `--wrap` argument or inlined command strings. This happens when administrators deliberately set the `slurm_max_submit_line_size` in their SLURM configuration to a low value. Passing the job command as a script avoids those limitations.
+
 ##### Wait Times and Frequencies
 
 There are a number of wait times and frequencies that users can tune to their local cluster setup.
