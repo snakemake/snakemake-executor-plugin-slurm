@@ -17,7 +17,7 @@ keywords = ["snakemake", "plugin", "executor", "cluster", "slurm"]
 python = "^3.11"
 snakemake-interface-common = "^1.21.0"
 snakemake-interface-executor-plugins = "^9.3.9"
-snakemake-executor-plugin-slurm-jobstep = "^0.3.0"
+snakemake-executor-plugin-slurm-jobstep = "^0.4.0"
 pandas = "^2.2.3"
 numpy = ">=1.26.4, <3"
 throttler = "^1.2.2"
