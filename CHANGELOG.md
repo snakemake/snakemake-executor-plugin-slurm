@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.1.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.0.3...v2.1.0) (2025-12-18)
+
+
+### Features
+
+* pass a shell script to sbatch rather than the command directly ([#380](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/380)) ([ccde8ca](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/ccde8caf68c77b685733f87f2a39b57995d3ab74))
+
+
+### Bug Fixes
+
+* updated gpu model string - may contain a period, now ([#390](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/390)) ([27607e5](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/27607e59c5cbe60356fe5823f9b23898adb1bf98))
+
+
+### Documentation
+
+* updated for passing commands as script ([#392](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/392)) ([66d9825](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/66d98252f28d5a095518eb50370c48ab0a5ca754))
+
 ## [2.0.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.0.2...v2.0.3) (2025-12-11)
 
 
