@@ -666,11 +666,6 @@ class Executor(RemoteExecutor):
         # decide which status command to use
         status_command_name = self.get_status_command()
         min_job_age = get_min_job_age()
-        initial_interval = getattr(
-            self.workflow.executor_settings,
-            "init_seconds_before_status_checks",
-            40,
-        )
         dynamic_check_threshold = 3 * initial_interval
         if status_command_name == "squeue":
             if (
@@ -800,7 +795,7 @@ We leave it to SLURM to resume your job(s)"""
                     max_sleep_time,
                 )
             else:
-                self.next_seconds_between_status_checks = 40
+                self.next_seconds_between_status_checks = initial_interval
 
     def cancel_jobs(self, active_jobs: List[SubmittedJobInfo]):
         # Cancel all active jobs.
