@@ -642,6 +642,17 @@ class Executor(RemoteExecutor):
 
         sacct_query_durations = []
 
+        initial_interval = getattr(
+            self.workflow.executor_settings,
+            "init_seconds_before_status_checks",
+            40,
+        )
+        # Fast path: if there are no active jobs, skip querying
+        if not active_jobs:
+            self.next_seconds_between_status_checks = initial_interval
+            self.logger.debug("No active jobs; skipping status query.")
+            return
+
         status_attempts = self.workflow.executor_settings.status_attempts
         self.logger.debug(
             f"Checking the status of {len(active_jobs)} active jobs "
