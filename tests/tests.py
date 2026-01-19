@@ -26,6 +26,7 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
             # seconds_between_status_checks=5,
         )
 
+
 class TestPassCommandAsScript(snakemake.common.tests.TestWorkflowsLocalStorageBase):
     """Integration-style test that runs the real workflow on the Slurm test cluster
     and verifies the plugin can submit the job by passing the command as a script
