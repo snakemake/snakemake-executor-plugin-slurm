@@ -968,6 +968,7 @@ We leave it to SLURM to resume your job(s)"""
         if partition:
             # we have to quote the partition, because it might
             # contain build-in shell commands
+            # string conversion needed for partition if partition is an integer
             return f" -p {shlex.quote(str(partition))}"
         else:
             return ""
