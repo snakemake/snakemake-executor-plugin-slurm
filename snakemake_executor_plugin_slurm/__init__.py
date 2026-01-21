@@ -812,14 +812,14 @@ We leave it to SLURM to resume your job(s)"""
         if active_jobs:
             # TODO chunk jobids in order to avoid too long command lines
             jobids = " ".join([job_info.external_jobid for job_info in active_jobs])
-            
+
             try:
                 # timeout set to 60, because a scheduler cycle usually is
                 # about 30 sec, but can be longer in extreme cases.
                 # Under 'normal' circumstances, 'scancel' is executed in
                 # virtually no time.
                 scancel_command = f"scancel {jobids}"
-                
+
                 # Add cluster specification if any clusters were found during submission
                 if self._submitted_job_clusters:
                     clusters_str = ",".join(sorted(self._submitted_job_clusters))
@@ -838,6 +838,16 @@ We leave it to SLURM to resume your job(s)"""
                 msg = e.stderr.strip()
                 if msg:
                     msg = f": {msg}"
+                # If we were using --clusters and it failed, provide additional context
+                if self._submitted_job_clusters:
+                    msg += (
+                        "\nWARNING: Job cancellation failed while using "
+                        "--clusters flag. Your multicluster SLURM setup may not "
+                        "support this feature, or the SLURM database may not be "
+                        "properly configured for multicluster operations. "
+                        "Please verify your SLURM configuration with your "
+                        "HPC administrator."
+                    )
                 raise WorkflowError(
                     "Unable to cancel jobs with scancel "
                     f"(exit code {e.returncode}){msg}"
