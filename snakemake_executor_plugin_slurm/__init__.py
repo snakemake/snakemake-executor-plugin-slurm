@@ -336,6 +336,7 @@ class Executor(RemoteExecutor):
         self._fallback_account_arg = None
         self._fallback_partition = None
         self._preemption_warning = False  # no preemption warning has been issued
+        self._submitted_job_clusters = set()  # track clusters of submitted jobs
         self.slurm_logdir = (
             Path(self.workflow.executor_settings.logdir)
             if self.workflow.executor_settings.logdir
@@ -596,6 +597,14 @@ class Executor(RemoteExecutor):
             f"Job {job.jobid} has been submitted with SLURM jobid "
             f"{slurm_jobid} (log: {slurm_logfile})."
         )
+        # Track cluster specification for later use in cancel_jobs
+        cluster_val = (
+            job.resources.get("cluster")
+            or job.resources.get("clusters")
+            or job.resources.get("slurm_cluster")
+        )
+        if cluster_val:
+            self._submitted_job_clusters.add(cluster_val)
         self.report_job_submission(
             SubmittedJobInfo(
                 job,
@@ -804,21 +813,6 @@ We leave it to SLURM to resume your job(s)"""
             # TODO chunk jobids in order to avoid too long command lines
             jobids = " ".join([job_info.external_jobid for job_info in active_jobs])
             
-            # Collect unique cluster specifications from active jobs
-            clusters = set()
-            for job_info in active_jobs:
-                # Get the job object from the submitted job info
-                # Note: SubmittedJobInfo wraps the job, so we need to access it
-                if hasattr(job_info, "job") and job_info.job:
-                    job = job_info.job
-                    cluster_val = (
-                        job.resources.get("cluster")
-                        or job.resources.get("clusters")
-                        or job.resources.get("slurm_cluster")
-                    )
-                    if cluster_val:
-                        clusters.add(cluster_val)
-            
             try:
                 # timeout set to 60, because a scheduler cycle usually is
                 # about 30 sec, but can be longer in extreme cases.
@@ -826,9 +820,9 @@ We leave it to SLURM to resume your job(s)"""
                 # virtually no time.
                 scancel_command = f"scancel {jobids}"
                 
-                # Add cluster specification if any clusters were found
-                if clusters:
-                    clusters_str = ",".join(sorted(clusters))
+                # Add cluster specification if any clusters were found during submission
+                if self._submitted_job_clusters:
+                    clusters_str = ",".join(sorted(self._submitted_job_clusters))
                     scancel_command += f" --clusters={clusters_str}"
 
                 subprocess.check_output(
