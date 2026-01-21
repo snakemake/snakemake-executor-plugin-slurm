@@ -803,12 +803,33 @@ We leave it to SLURM to resume your job(s)"""
         if active_jobs:
             # TODO chunk jobids in order to avoid too long command lines
             jobids = " ".join([job_info.external_jobid for job_info in active_jobs])
+            
+            # Collect unique cluster specifications from active jobs
+            clusters = set()
+            for job_info in active_jobs:
+                # Get the job object from the submitted job info
+                # Note: SubmittedJobInfo wraps the job, so we need to access it
+                if hasattr(job_info, "job") and job_info.job:
+                    job = job_info.job
+                    cluster_val = (
+                        job.resources.get("cluster")
+                        or job.resources.get("clusters")
+                        or job.resources.get("slurm_cluster")
+                    )
+                    if cluster_val:
+                        clusters.add(cluster_val)
+            
             try:
                 # timeout set to 60, because a scheduler cycle usually is
                 # about 30 sec, but can be longer in extreme cases.
                 # Under 'normal' circumstances, 'scancel' is executed in
                 # virtually no time.
-                scancel_command = f"scancel {jobids} --clusters=all"
+                scancel_command = f"scancel {jobids}"
+                
+                # Add cluster specification if any clusters were found
+                if clusters:
+                    clusters_str = ",".join(sorted(clusters))
+                    scancel_command += f" --clusters={clusters_str}"
 
                 subprocess.check_output(
                     scancel_command,
