@@ -820,10 +820,10 @@ We leave it to SLURM to resume your job(s)"""
                 # virtually no time.
                 scancel_command = f"scancel {jobids}"
 
-                # adding the --clusters=all flag, if we submitted to more than one cluster
-                # issue #397 mentions that this flag is not available in older SLURM versions,
-                # but we assume that multicluster setups will usually run on a recent version
-                # of SLURM.
+                # Adding the --clusters=all flag, if we submitted to more than one 
+                # cluster. Issue #397 mentions that this flag is not available in 
+                # older SLURM versions, but we assume that multicluster setups will
+                # usually run on a recent version of SLURM.
                 if self._submitted_job_clusters:
                     scancel_command += f" --clusters=all"
 
