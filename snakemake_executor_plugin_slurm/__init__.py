@@ -825,7 +825,7 @@ We leave it to SLURM to resume your job(s)"""
                 # older SLURM versions, but we assume that multicluster setups will
                 # usually run on a recent version of SLURM.
                 if self._submitted_job_clusters:
-                    scancel_command += f" --clusters=all"
+                    scancel_command += " --clusters=all"
 
                 subprocess.check_output(
                     scancel_command,
