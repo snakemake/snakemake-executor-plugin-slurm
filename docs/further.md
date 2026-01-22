@@ -207,7 +207,7 @@ These are the available options, and the SLURM `sbatch` command line arguments t
 
 | Snakemake plugin     | Description                         | SLURM               |
 |----------------------|-------------------------------------|---------------------|
-| `clusters` (or `cluster`)           | list of clusters that (a) job(s)    | `--clusters`        |
+| `clusters` (or `cluster` or `slurm_cluster`)           | list of clusters that (a) job(s)    | `--clusters`        |
 |                      | can run on                          |                     |
 | `constraint`         | requiring particular node features  | `--constraint`/`-C` |
 |                      | for job execution                   |                     |
@@ -235,6 +235,8 @@ For details on the constraint syntax, see the [documentation of the SLURM `sbatc
 With SLURM, it is possible to [federate multiple clusters](https://slurm.schedmd.com/multi_cluster.html).
 This can allow users to submit jobs to a cluster different from the one they run their job submission commands.
 If this is available on your cluster, this resource accepts a string with a comma separated list of cluster names, which is passed on to the [SLURM `sbatch` command-line argument `--clusters`](https://slurm.schedmd.com/sbatch.html#SECTION_OPTIONS).
+
+We allow `clusters` or `cluster` or `slurm_cluster` as there are multiple conventions.
 
 .. note:: While it is possible to submit to more than one cluster in prinicple, not all SLURM multicluster setups will support this.
 
