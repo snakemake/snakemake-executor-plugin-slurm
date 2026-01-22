@@ -238,7 +238,7 @@ If this is available on your cluster, this resource accepts a string with a comm
 
 We allow `clusters` or `cluster` or `slurm_cluster` as there are multiple conventions.
 
-.. note:: While it is possible to submit to more than one cluster in prinicple, not all SLURM multicluster setups will support this.
+.. note:: While it is possible to submit to more than one cluster in principle, not all SLURM multicluster setups will support this.
 
 
 ##### `slurm_partition`
