@@ -143,8 +143,11 @@ def query_job_status_squeue(runid) -> list:
         Dictionary mapping job ID to JobStatus object
     """
     # Build squeue command
+    # Note: The format string contains a pipe '|' which must be quoted to
+    # prevent shell interpretation when passing to subprocess with shell=True
+    format_arg = shlex.quote("%i|%T")
     query_command = f"""squeue
-                       --format=%i|%T
+                       --format={format_arg}
                        --states=all
                        --noheader
                        --name {runid}"""
