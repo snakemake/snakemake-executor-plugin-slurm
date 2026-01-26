@@ -5,10 +5,7 @@ from pathlib import Path
 from math import inf
 
 from snakemake_interface_common.exceptions import WorkflowError
-from snakemake_executor_plugin_slurm.utils import (
-    time_to_seconds,
-    parse_time_to_minutes
-)
+from snakemake_executor_plugin_slurm.utils import time_to_seconds, parse_time_to_minutes
 from snakemake_executor_plugin_slurm.partitions import (
     PartitionLimits,
     read_partition_file,
@@ -186,6 +183,7 @@ class TestTimeConversion:
         # rounded to 11520
         assert parse_time_to_minutes("7-23:59:59") == 11520
 
+
 class TestTimeToSeconds:
     """Test the time_to_seconds function with SLURM sacct time formats."""
 
@@ -223,6 +221,7 @@ class TestTimeToSeconds:
         assert (
             time_to_seconds("10-01:02:03.123") == 10 * 86400 + 1 * 3600 + 2 * 60 + 3.123
         )
+
 
 class TestPartitionLimitsTimeConversion:
     """Test that PartitionLimits correctly converts max_runtime"""
