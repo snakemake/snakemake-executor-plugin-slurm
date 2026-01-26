@@ -3,6 +3,7 @@ from typing import Optional, List
 import yaml
 from pathlib import Path
 from math import inf, isinf
+from snakemake.common import tbdstring
 from snakemake_interface_common.exceptions import WorkflowError
 from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
@@ -291,6 +292,9 @@ class Partition:
 
         for resource_key, limit in numerical_resources.items():
             job_requirement = job.resources.get(resource_key, 0)
+            # return 0 if dealing with a tbdstring (resource not specified)
+            if isinstance(job_requirement, tbdstring.TBDString):
+                return 0
             # Convert to numeric value if it's a string
             if isinstance(job_requirement, str):
                 try:
