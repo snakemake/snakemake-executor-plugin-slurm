@@ -97,6 +97,8 @@ class TestTimeToSeconds:
         assert (
             time_to_seconds("10-01:02:03.123") == 10 * 86400 + 1 * 3600 + 2 * 60 + 3.123
         )
+
+
 class TestPassCommandAsScript(snakemake.common.tests.TestWorkflowsLocalStorageBase):
     """Integration-style test that runs the real workflow on the Slurm test cluster
     and verifies the plugin can submit the job by passing the command as a script
