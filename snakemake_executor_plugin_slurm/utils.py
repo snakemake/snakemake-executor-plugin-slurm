@@ -162,7 +162,7 @@ def time_to_seconds(time_str):
         pass
 
     time_str = str(time_str).strip()
-    if time_str == "" or time_str == "invalid":
+    if time_str == "" or time_str == "invalid" or time_str.startswith("-"):
         return 0
 
     # Parse SLURM time formats manually to avoid deprecation warnings
