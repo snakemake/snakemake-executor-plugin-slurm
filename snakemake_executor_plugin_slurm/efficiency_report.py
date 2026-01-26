@@ -3,76 +3,10 @@ import pandas as pd
 from pathlib import Path
 import subprocess
 import shlex
-from datetime import datetime
 import numpy as np
 import os
 
-# NOTE: The time_to_seconds function has been re-implemented below to avoid
-# deprecation warnings from pandas.to_timedelta when parsing SLURM time formats
-
-def time_to_seconds(time_str):
-    """
-    Convert SLURM sacct time format to seconds.
-
-    Handles sacct output formats:
-    - Elapsed: [D-]HH:MM:SS or [DD-]HH:MM:SS (no fractional seconds)
-    - TotalCPU: [D-][HH:]MM:SS or [DD-][HH:]MM:SS (with fractional seconds)
-
-    Examples:
-    - "1-12:30:45" -> 131445 seconds (1 day + 12h 30m 45s)
-    - "23:59:59" -> 86399 seconds
-    - "45:30" -> 2730 seconds (45 minutes 30 seconds)
-    - "30.5" -> 30.5 seconds (fractional seconds for TotalCPU)
-    """
-    if (
-        pd.isna(time_str)
-        or str(time_str).strip() == ""
-        or str(time_str).strip() == "invalid"
-    ):
-        return 0
-
-    time_str = str(time_str).strip()
-
-    # Parse SLURM time formats manually to avoid deprecation warnings
-    total_seconds = 0.0
-    
-    # Check for days-hours:minutes:seconds format (D-HH:MM:SS or D-HH:MM:SS.fff)
-    if "-" in time_str:
-        parts = time_str.split("-", 1)
-        try:
-            days = int(parts[0])
-            total_seconds += days * 86400
-            time_str = parts[1]  # Continue parsing the rest as HH:MM:SS or similar
-        except ValueError:
-            pass  # Not a valid day format, continue with other parsing
-    
-    # Now parse the time portion (HH:MM:SS, MM:SS, or SS format)
-    if ":" in time_str:
-        time_parts = time_str.split(":")
-        try:
-            if len(time_parts) == 3:  # HH:MM:SS or HH:MM:SS.fff
-                hours = int(time_parts[0])
-                minutes = int(time_parts[1])
-                seconds = float(time_parts[2])
-                total_seconds += hours * 3600 + minutes * 60 + seconds
-                return total_seconds
-            elif len(time_parts) == 2:  # MM:SS or MM:SS.fff
-                minutes = int(time_parts[0])
-                seconds = float(time_parts[1])
-                total_seconds += minutes * 60 + seconds
-                return total_seconds
-        except ValueError:
-            pass  # Continue to next format attempt
-    
-    # Try parsing as pure seconds (with possible fractional part)
-    try:
-        seconds = float(time_str)
-        total_seconds += seconds
-        return total_seconds
-    except ValueError:
-        pass
-    
-    return 0  # If all parsing attempts fail, return 0
+from snakemake_executor_plugin_slurm.utils import time_to_seconds
 
 
 def parse_maxrss(maxrss):
