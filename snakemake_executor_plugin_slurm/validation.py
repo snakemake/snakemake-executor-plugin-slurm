@@ -217,9 +217,7 @@ def validate_executor_settings(settings, logger=None):
     # delete_logfiles_older_than
     if settings.delete_logfiles_older_than is not None:
         if not isinstance(settings.delete_logfiles_older_than, int):
-            raise WorkflowError(
-                "delete-logfiles-older-than must be an integer (days)."
-            )
+            raise WorkflowError("delete-logfiles-older-than must be an integer (days).")
     # status_command warnings (optional logger)
     if logger:
         validate_status_command_settings(settings, logger)

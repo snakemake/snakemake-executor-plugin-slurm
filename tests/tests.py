@@ -100,8 +100,7 @@ class TestTimeToSeconds:
         # With days and hours
         assert time_to_seconds("1-12:30:45.5") == 86400 + 12 * 3600 + 30 * 60 + 45.5
         assert (
-            time_to_seconds("10-01:02:03.123")
-            == 10 * 86400 + 1 * 3600 + 2 * 60 + 3.123
+            time_to_seconds("10-01:02:03.123") == 10 * 86400 + 1 * 3600 + 2 * 60 + 3.123
         )
 
         # With days, no hours (MM:SS format)

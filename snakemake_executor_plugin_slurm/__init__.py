@@ -379,9 +379,7 @@ class Executor(RemoteExecutor):
             return
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
-        self.logger.info(
-            f"Cleaning up SLURM log files older than {age_cutoff} day(s)."
-        )
+        self.logger.info(f"Cleaning up SLURM log files older than {age_cutoff} day(s).")
 
         for path in self.slurm_logdir.rglob("*.log"):
             if path.is_file():
