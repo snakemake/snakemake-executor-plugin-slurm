@@ -8,6 +8,64 @@ from snakemake_interface_common.exceptions import WorkflowError
 from .job_status_query import get_min_job_age, is_query_tool_available
 
 
+def validate_or_get_slurm_job_id(job_id, output):
+    """
+    Validate that the SLURM job ID is a positive integer.
+
+    Args:
+        job_id (str): The SLURM job ID to validate.
+        output (str): The full sbatch output to parse if job_id is invalid.
+
+    Raises:
+        WorkflowError: If the job ID is not a positive integer or we cannot
+                       determine a valid job ID from the given input string.
+    """
+    # this regex just matches a positive integer
+    # strict validation would require to check for a JOBID with either
+    # the SLURM database or control daemon. This is too much overhead.
+    if re.match(r"^\d+$", job_id):
+        return job_id
+    else:
+        # Try matching a positive integer, raise an error if more than one match or
+        # no match found. Match standalone integers, excluding those followed by %,
+        # letters, or digits (units/percentages/floats). Allows format: "1234" or
+        # "1234; clustername" (SLURM multi-cluster format).
+
+        # If the first attempt to validate the job fails, try parsing the sbatch output
+        # a bit more sophisticatedly.
+        # The regex below matches standalone positive integers with a word boundary
+        # before the number. The number must NOT be:
+        # - Part of a decimal number (neither before nor after the dot)
+        # - Followed by a percent sign with optional space (23% or 23 %)
+        # - Followed by units/counts with optional space:
+        #   * Memory units: k, K, m, M, g, G, kiB, KiB, miB, MiB, giB, GiB
+        #   * Resource counts: files, cores, hours, cpus/CPUs (case-insensitive)
+        #   * minutes are excluded, because of the match to 'm' for Megabytes
+        #   Units must be followed by whitespace, hyphen, period, or end of string
+        # Use negative lookbehind to exclude digits after a dot, and negative lookahead
+        # to exclude digits before a dot or followed by units/percent
+        matches = re.findall(
+            r"(?<![.\d])\d+(?![.\d]|\s*%|\s*(?:[kKmMgG](?:iB)?|files|cores|"
+            r"hours|[cC][pP][uU][sS]?)(?:\s|[-.]|$))",
+            output,
+        )
+        if len(matches) == 1:
+            return matches[0]
+        elif len(matches) > 1:
+            raise WorkflowError(
+                f"Multiple possible SLURM job IDs found in: {output}. "
+                "Was looking for exactly one positive integer."
+            )
+        elif not matches:
+            raise WorkflowError(
+                f"No valid SLURM job ID found in: {output}. "
+                "Was looking for exactly one positive integer. "
+                "We tried our best to parse the sbatch output, but it appears "
+                "too convoluted. Please run 'sbatch' manually and report the output "
+                "to us. If the output is garbled, inform your cluster administrators."
+            )
+
+
 def get_forbidden_slurm_options():
     """
     Return a dictionary of forbidden SLURM options that the executor manages.
@@ -159,9 +217,7 @@ def validate_executor_settings(settings, logger=None):
     # delete_logfiles_older_than
     if settings.delete_logfiles_older_than is not None:
         if not isinstance(settings.delete_logfiles_older_than, int):
-            raise WorkflowError(
-                "delete-logfiles-older-than must be an integer (days)."
-            )
+            raise WorkflowError("delete-logfiles-older-than must be an integer (days).")
     # status_command warnings (optional logger)
     if logger:
         validate_status_command_settings(settings, logger)
