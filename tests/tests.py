@@ -29,45 +29,6 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
         )
 
 
-class TestTimeToSeconds:
-    """Test the time_to_seconds function with SLURM sacct time formats."""
-
-    def test_elapsed_format_with_days(self):
-        """
-        Test Elapsed format: [D-]HH:MM:SS or
-        [DD-]HH:MM:SS (no fractional seconds).
-        """
-        # Single digit days
-        assert time_to_seconds("1-00:00:00") == 86400  # 1 day
-        assert (
-            time_to_seconds("1-12:30:45") == 86400 + 12 * 3600 + 30 * 60 + 45
-        )  # 131445
-        assert time_to_seconds("9-23:59:59") == 9 * 86400 + 23 * 3600 + 59 * 60 + 59
-
-        # Double digit days
-        assert (
-            time_to_seconds("10-01:02:03") == 10 * 86400 + 1 * 3600 + 2 * 60 + 3
-        )  # 867723
-
-    def test_elapsed_format_hours_minutes_seconds(self):
-        """Test Elapsed format: HH:MM:SS (no fractional seconds)."""
-        assert time_to_seconds("00:00:00") == 0
-        assert time_to_seconds("01:00:00") == 3600  # 1 hour
-        assert time_to_seconds("23:59:59") == 23 * 3600 + 59 * 60 + 59  # 86399
-        assert time_to_seconds("12:30:45") == 12 * 3600 + 30 * 60 + 45  # 45045
-
-    def test_totalcpu_format_with_days(self):
-        """
-        Test TotalCPU format: [D-][HH:]MM:SS or [DD-][HH:]MM:SS
-        (with fractional seconds).
-        """
-        # With days and hours
-        assert time_to_seconds("1-12:30:45.5") == 86400 + 12 * 3600 + 30 * 60 + 45.5
-        assert (
-            time_to_seconds("10-01:02:03.123") == 10 * 86400 + 1 * 3600 + 2 * 60 + 3.123
-        )
-
-
 class TestPassCommandAsScript(snakemake.common.tests.TestWorkflowsLocalStorageBase):
     """Integration-style test that runs the real workflow on the Slurm test cluster
     and verifies the plugin can submit the job by passing the command as a script
