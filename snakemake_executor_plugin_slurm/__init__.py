@@ -336,6 +336,7 @@ class Executor(RemoteExecutor):
         self._fallback_account_arg = None
         self._fallback_partition = None
         self._preemption_warning = False  # no preemption warning has been issued
+        self._submitted_job_clusters = set()  # track clusters of submitted jobs
         self.slurm_logdir = (
             Path(self.workflow.executor_settings.logdir)
             if self.workflow.executor_settings.logdir
@@ -596,6 +597,14 @@ class Executor(RemoteExecutor):
             f"Job {job.jobid} has been submitted with SLURM jobid "
             f"{slurm_jobid} (log: {slurm_logfile})."
         )
+        # Track cluster specification for later use in cancel_jobs
+        cluster_val = (
+            job.resources.get("cluster")
+            or job.resources.get("clusters")
+            or job.resources.get("slurm_cluster")
+        )
+        if cluster_val:
+            self._submitted_job_clusters.add(cluster_val)
         self.report_job_submission(
             SubmittedJobInfo(
                 job,
@@ -803,12 +812,21 @@ We leave it to SLURM to resume your job(s)"""
         if active_jobs:
             # TODO chunk jobids in order to avoid too long command lines
             jobids = " ".join([job_info.external_jobid for job_info in active_jobs])
+
             try:
                 # timeout set to 60, because a scheduler cycle usually is
                 # about 30 sec, but can be longer in extreme cases.
                 # Under 'normal' circumstances, 'scancel' is executed in
                 # virtually no time.
-                scancel_command = f"scancel {jobids} --clusters=all"
+                scancel_command = f"scancel {jobids}"
+
+                # Adding the --clusters=all flag, if we submitted to more than one
+                # cluster (assuming that choosing _a_ cluster is enough to fullfil
+                # this criterion). Issue #397 mentions that this flag is not available
+                # in older SLURM versions, but we assume that multicluster setups will
+                # usually run on a recent version of SLURM.
+                if self._submitted_job_clusters:
+                    scancel_command += " --clusters=all"
 
                 subprocess.check_output(
                     scancel_command,
@@ -823,6 +841,16 @@ We leave it to SLURM to resume your job(s)"""
                 msg = e.stderr.strip()
                 if msg:
                     msg = f": {msg}"
+                # If we were using --clusters and it failed, provide additional context
+                if self._submitted_job_clusters:
+                    msg += (
+                        "\nWARNING: Job cancellation failed while using "
+                        "--clusters flag. Your multicluster SLURM setup may not "
+                        "support this feature, or the SLURM database may not be "
+                        "properly configured for multicluster operations. "
+                        "Please verify your SLURM configuration with your "
+                        "HPC administrator."
+                    )
                 raise WorkflowError(
                     "Unable to cancel jobs with scancel "
                     f"(exit code {e.returncode}){msg}"
