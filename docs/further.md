@@ -70,6 +70,8 @@ The SLURM executor plugin supports automatic partition selection based on job re
 
 *Jobs that explicitly specify a `slurm_partition` resource will bypass automatic selection and use the specified partition directly.*
 
+> **Note:** Partition selection supports specifying the target cluster using any of the resource keys `cluster`, `clusters`, or `slurm_cluster` in your workflow profile or the partition configuration file. All three are treated equivalently by the plugin.
+
 ##### Partition Limits Specification
 
 To enable automatic partition selection, create a YAML configuration file that defines the available partitions and their resource limits. This file should be structured as follows:
@@ -205,7 +207,7 @@ These are the available options, and the SLURM `sbatch` command line arguments t
 
 | Snakemake plugin     | Description                         | SLURM               |
 |----------------------|-------------------------------------|---------------------|
-| `clusters`           | list of clusters that (a) job(s)    | `--clusters`        |
+| `clusters` (or `cluster` or `slurm_cluster`)           | list of clusters that (a) job(s)    | `--clusters`        |
 |                      | can run on                          |                     |
 | `constraint`         | requiring particular node features  | `--constraint`/`-C` |
 |                      | for job execution                   |                     |
@@ -234,6 +236,11 @@ With SLURM, it is possible to [federate multiple clusters](https://slurm.schedmd
 This can allow users to submit jobs to a cluster different from the one they run their job submission commands.
 If this is available on your cluster, this resource accepts a string with a comma separated list of cluster names, which is passed on to the [SLURM `sbatch` command-line argument `--clusters`](https://slurm.schedmd.com/sbatch.html#SECTION_OPTIONS).
 
+We allow `clusters` or `cluster` or `slurm_cluster` as there are multiple conventions.
+
+.. note:: While it is possible to submit to more than one cluster in principle, not all SLURM multicluster setups will support this.
+
+
 ##### `slurm_partition`
 
 In SLURM, [a `partition` designates a subset of compute nodes](https://slurm.schedmd.com/quickstart_admin.html#Config), grouped for specific purposes (such as high-memory or GPU tasks).
@@ -251,6 +258,12 @@ If you do not deliberately set the snakemake resource `slurm_account`, the plugi
 
 By contrast, some clusters _do not_ allow users to set their account or partition; for example, because they have a pre-defined default per user.
 In such cases, where the plugin's default behavior would interfere with your setup or requirements, you can use the `--slurm-no-account` flag to turn it off.
+
+##### Passing Commands as Scripts: `--slurm-pass-command-as-script`
+
+When this flag is enabled, the command that Snakemake would normally pass directly to `sbatch` via the `--wrap` option is instead written into a small temporary shell script which is submitted with `sbatch <script>`.
+
+Why this exists: Some SLURM installations or cluster configurations impose limits on the length or characters allowed in the `--wrap` argument or inlined command strings. This happens when administrators deliberately set the `slurm_max_submit_line_size` in their SLURM configuration to a low value. Passing the job command as a script avoids those limitations.
 
 ##### Wait Times and Frequencies
 

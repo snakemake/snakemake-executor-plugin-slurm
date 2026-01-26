@@ -1,5 +1,46 @@
 # Changelog
 
+## [2.1.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.0.3...v2.1.0) (2026-01-20)
+
+
+### Features
+
+* pass a shell script to sbatch rather than the command directly ([#380](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/380)) ([ccde8ca](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/ccde8caf68c77b685733f87f2a39b57995d3ab74))
+
+
+### Bug Fixes
+
+* jobstep plugin with new functionality required ([#393](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/393)) ([2f302f2](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/2f302f26621aa9ab61bc3f28840808ac33ab7624))
+* quoting for SLURM partition ([#399](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/399)) ([9e86cb2](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/9e86cb2c5e1a5ca8110f282b4a006ef48a3d3ee5))
+* status hang when no active jobs ([#396](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/396)) ([769f0a4](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/769f0a413371ee4bd45d7dd80f20f381b221da52))
+* updated gpu model string - may contain a period, now ([#390](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/390)) ([27607e5](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/27607e59c5cbe60356fe5823f9b23898adb1bf98))
+
+
+### Documentation
+
+* updated for passing commands as script ([#392](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/392)) ([66d9825](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/66d98252f28d5a095518eb50370c48ab0a5ca754))
+
+## [2.0.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.0.2...v2.0.3) (2025-12-11)
+
+
+### Bug Fixes
+
+* ci slurm check ([#388](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/388)) ([e18eb34](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/e18eb34d6df36330b8de8505cc2e84efeb5822a4))
+
+## [2.0.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.0.1...v2.0.2) (2025-12-08)
+
+
+### Bug Fixes
+
+* partition cluster selection ([#385](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/385)) ([2863f78](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/2863f78a991b9efec0e738bf192923426fe1c284))
+
+## [2.0.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.0.0...v2.0.1) (2025-12-01)
+
+
+### Bug Fixes
+
+* validator check for integers was broken. ([#381](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/381)) ([7daf301](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/7daf30154dd686a39cf1b5f99068f06d9601fa71))
+
 ## [2.0.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v1.9.2...v2.0.0) (2025-11-24)
 
 

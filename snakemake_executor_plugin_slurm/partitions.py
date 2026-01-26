@@ -39,12 +39,16 @@ def read_partition_file(partition_file: Path) -> List["Partition"]:
             raise KeyError("Partition name cannot be empty")
 
         # Extract optional cluster name from partition config
-        cluster = partition_config.pop("cluster", None)
+        cluster = None
+        for key in ("slurm_cluster", "cluster", "clusters"):
+            if key in partition_config:
+                cluster = partition_config.pop(key)
+                break
 
         out.append(
             Partition(
                 name=partition_name,
-                cluster=cluster,
+                partition_cluster=cluster,
                 limits=PartitionLimits(**partition_config),
             )
         )
@@ -60,7 +64,7 @@ def get_best_partition(
     for p in candidate_partitions:
         score = p.score_job_fit(job)
         logger.debug(f"Partition '{p.name}' score for job {job.name}: {score}")
-        if score is not None:
+        if score is not None and score > 0:
             scored_partitions.append((p, score))
 
     if scored_partitions:
@@ -239,7 +243,7 @@ class Partition:
 
     name: str
     limits: PartitionLimits
-    cluster: Optional[str] = None
+    partition_cluster: Optional[str] = None
 
     def score_job_fit(self, job: JobExecutorInterface) -> Optional[float]:
         """
@@ -267,14 +271,21 @@ class Partition:
         # Accept multiple possible resource names for cluster specification
         job_cluster = (
             job.resources.get("slurm_cluster")
-            or job.resources.get("clusters")
             or job.resources.get("cluster")
+            or job.resources.get("clusters")
         )
 
+        # Enforce strict cluster eligibility:
+        # - If the job specifies a cluster, only partitions with a matching cluster
+        #   are eligible
+        # - If the job does not specify a cluster, only partitions without a cluster
+        #   are eligible
         if job_cluster is not None:
-            # Job specifies a cluster - partition must match
-            if self.cluster is not None and self.cluster != job_cluster:
-                return None  # Partition is for a different cluster
+            if self.partition_cluster != job_cluster:
+                return None  # Not eligible
+        else:
+            if self.partition_cluster is not None:
+                return None  # Not eligible
 
         for resource_key, limit in numerical_resources.items():
             job_requirement = job.resources.get(resource_key, 0)

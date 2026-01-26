@@ -7,10 +7,6 @@ from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
 from unittest.mock import MagicMock, patch
 import pytest
 from snakemake_executor_plugin_slurm import ExecutorSettings
-from snakemake_executor_plugin_slurm.efficiency_report import (
-    parse_sacct_data,
-    time_to_seconds,
-)
 from snakemake_executor_plugin_slurm.utils import set_gres_string
 from snakemake_executor_plugin_slurm.submit_string import get_submit_command
 from snakemake_executor_plugin_slurm.validation import (
@@ -18,7 +14,6 @@ from snakemake_executor_plugin_slurm.validation import (
     validate_or_get_slurm_job_id,
 )
 from snakemake_interface_common.exceptions import WorkflowError
-import pandas as pd
 
 
 class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
@@ -102,76 +97,23 @@ class TestTimeToSeconds:
         assert (
             time_to_seconds("10-01:02:03.123") == 10 * 86400 + 1 * 3600 + 2 * 60 + 3.123
         )
+class TestPassCommandAsScript(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+    """Integration-style test that runs the real workflow on the Slurm test cluster
+    and verifies the plugin can submit the job by passing the command as a script
+    via stdin (pass_command_as_script=True).
+    """
 
-        # With days, no hours (MM:SS format)
-        assert time_to_seconds("1-30:45") == 86400 + 30 * 60 + 45
-        assert time_to_seconds("1-30:45.5") == 86400 + 30 * 60 + 45.5
+    __test__ = True
 
-    def test_totalcpu_format_minutes_seconds(self):
-        """Test TotalCPU format: MM:SS with fractional seconds."""
-        assert time_to_seconds("00:00") == 0
-        assert time_to_seconds("01:00") == 60  # 1 minute
-        assert time_to_seconds("59:59") == 59 * 60 + 59  # 3599
-        assert time_to_seconds("30:45") == 30 * 60 + 45  # 1845
-        assert time_to_seconds("30:45.5") == 30 * 60 + 45.5  # 1845.5
+    def get_executor(self) -> str:
+        return "slurm"
 
-    def test_totalcpu_format_seconds_only(self):
-        """Test TotalCPU format: SS or SS.sss (seconds only with fractional)."""
-        assert time_to_seconds("0") == 0
-        assert time_to_seconds("1") == 1
-        assert time_to_seconds("30") == 30
-        assert time_to_seconds("59") == 59
-
-        # Fractional seconds
-        assert time_to_seconds("30.5") == 30.5
-        assert time_to_seconds("0.5") == 0.5
-
-    def test_real_world_sacct_examples(self):
-        """Test with realistic sacct time values from actual output."""
-        # From your test data
-        assert time_to_seconds("00:01:31") == 91  # 1 minute 31 seconds
-        assert time_to_seconds("00:24.041") == 24.041  # 24.041 seconds
-        assert time_to_seconds("00:03.292") == 3.292  # 3.292 seconds
-        assert time_to_seconds("00:20.749") == 20.749  # 20.749 seconds
-
-        # Longer running jobs
-        assert time_to_seconds("02:15:30") == 2 * 3600 + 15 * 60 + 30  # 2h 15m 30s
-        assert time_to_seconds("1-12:00:00") == 86400 + 12 * 3600  # 1 day 12 hours
-        assert time_to_seconds("7-00:00:00") == 7 * 86400  # 1 week
-
-    def test_empty_and_invalid_inputs(self):
-        """Test empty, None, and invalid inputs."""
-        assert time_to_seconds("") == 0
-        assert time_to_seconds("   ") == 0
-        assert time_to_seconds(None) == 0
-        assert time_to_seconds(pd.NA) == 0
-        assert time_to_seconds("invalid") == 0
-        assert time_to_seconds("1:2:3:4") == 0  # Too many colons
-        assert time_to_seconds("abc:def") == 0
-        assert time_to_seconds("-1:00:00") == 0  # Negative values
-
-    def test_whitespace_handling(self):
-        """Test that whitespace is properly handled."""
-        assert time_to_seconds(" 30 ") == 30
-        assert time_to_seconds("  1-02:30:45  ") == 86400 + 2 * 3600 + 30 * 60 + 45
-        assert time_to_seconds("\t12:30:45\n") == 12 * 3600 + 30 * 60 + 45
-
-    def test_pandas_na_values(self):
-        """Test pandas NA and NaN values."""
-        assert time_to_seconds(pd.NA) == 0
-        assert (
-            time_to_seconds(pd.NaType()) == 0 if hasattr(pd, "NaType") else True
-        )  # Skip if not available
-
-    def test_edge_case_values(self):
-        """Test edge case values that might appear in SLURM output."""
-        # Zero padding variations (should work with datetime parsing)
-        assert time_to_seconds("01:02:03") == 1 * 3600 + 2 * 60 + 3
-        assert time_to_seconds("1:2:3") == 1 * 3600 + 2 * 60 + 3
-
-        # Single digit values
-        assert time_to_seconds("5") == 5
-        assert time_to_seconds("1:5") == 1 * 60 + 5
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        # Use the real ExecutorSettings and enable the flag under test.
+        return ExecutorSettings(
+            pass_command_as_script=True,
+            init_seconds_before_status_checks=2,
+        )
 
 
 class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase):

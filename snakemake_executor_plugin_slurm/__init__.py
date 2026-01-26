@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import re
 import shlex
+import shutil
 import subprocess
 import time
 from dataclasses import dataclass, field
@@ -60,6 +61,10 @@ def _get_status_command_default():
     squeue_available = is_query_tool_available("squeue")
     # squeue is assumed to always be available on SLURM clusters
 
+    is_slurm_available = shutil.which("sinfo") is not None
+    if not is_slurm_available:
+        return None
+
     if not squeue_available and not sacct_available:
         raise WorkflowError(
             "Neither 'sacct' nor 'squeue' commands are available on this "
@@ -75,6 +80,15 @@ def _get_status_command_default():
 def _get_status_command_help():
     """Get help text with computed default."""
     default_cmd = _get_status_command_default()
+
+    # if SLURM is not available (should not occur, only
+    # in 3rd party CI tests)
+    if default_cmd is None:
+        return (
+            "Command to query job status. Options: 'sacct', 'squeue'. "
+            "SLURM not detected on this system, so no status command can be used."
+        )
+
     sacct_available = is_query_tool_available("sacct")
     squeue_recommended = should_recommend_squeue_status_command()
 
@@ -270,6 +284,20 @@ class ExecutorSettings(ExecutorSettingsBase):
         },
     )
 
+    pass_command_as_script: bool = field(
+        default=False,
+        metadata={
+            "help": (
+                "Pass to sbatch and srun the command to be executed as a shell script"
+                " (fed through stdin) instead of wrapping it in the command line "
+                "call. Useful when a limit exists on SLURM command line length (ie. "
+                "max_submit_line_size)."
+            ),
+            "env_var": False,
+            "required": False,
+        },
+    )
+
     def __post_init__(self):
         """Validate settings after initialization."""
         validate_executor_settings(self)
@@ -309,6 +337,7 @@ class Executor(RemoteExecutor):
         self._fallback_account_arg = None
         self._fallback_partition = None
         self._preemption_warning = False  # no preemption warning has been issued
+        self._submitted_job_clusters = set()  # track clusters of submitted jobs
         self.slurm_logdir = (
             Path(self.workflow.executor_settings.logdir)
             if self.workflow.executor_settings.logdir
@@ -412,7 +441,10 @@ class Executor(RemoteExecutor):
         done = True
 
     def additional_general_args(self):
-        return "--executor slurm-jobstep --jobs 1"
+        general_args = "--executor slurm-jobstep --jobs 1"
+        if self.workflow.executor_settings.pass_command_as_script:
+            general_args += " --slurm-jobstep-pass-command-as-script"
+        return general_args
 
     def run_job(self, job: JobExecutorInterface):
         # Implement here how to run a job.
@@ -499,8 +531,17 @@ class Executor(RemoteExecutor):
 
         exec_job = self.format_job_exec(job)
 
-        # and finally the job to execute with all the snakemake parameters
-        call += f' --wrap="{exec_job}"'
+        if not self.workflow.executor_settings.pass_command_as_script:
+            # and finally wrap the job to execute with all the snakemake parameters
+            call += f' --wrap="{exec_job}"'
+            subprocess_stdin = None
+        else:
+            # format the job to execute with all the snakemake parameters into a script
+            sbatch_script = "\n".join(["#!/bin/sh", exec_job])
+            self.logger.debug(f"sbatch script:\n{sbatch_script}")
+            # feed the shell script to sbatch via stdin
+            call += " /dev/stdin"
+            subprocess_stdin = sbatch_script
 
         self.logger.debug(f"sbatch call: {call}")
         try:
@@ -508,10 +549,13 @@ class Executor(RemoteExecutor):
                 call,
                 shell=True,
                 text=True,
+                stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
-            out, err = process.communicate()
+            out, err = process.communicate(
+                input=subprocess_stdin  # feed the sbatch shell script through stdin
+            )
             if process.returncode != 0:
                 raise subprocess.CalledProcessError(
                     process.returncode, call, output=err
@@ -523,6 +567,11 @@ class Executor(RemoteExecutor):
                     "SLURM sbatch failed. "
                     f"The error message was '{e.output.strip()}'.\n"
                     f"    sbatch call:\n        {call}\n"
+                    + (
+                        f"    sbatch script:\n{sbatch_script}\n"
+                        if subprocess_stdin is not None
+                        else ""
+                    )
                 ),
             )
             return
@@ -549,6 +598,14 @@ class Executor(RemoteExecutor):
             f"Job {job.jobid} has been submitted with SLURM jobid "
             f"{slurm_jobid} (log: {slurm_logfile})."
         )
+        # Track cluster specification for later use in cancel_jobs
+        cluster_val = (
+            job.resources.get("cluster")
+            or job.resources.get("clusters")
+            or job.resources.get("slurm_cluster")
+        )
+        if cluster_val:
+            self._submitted_job_clusters.add(cluster_val)
         self.report_job_submission(
             SubmittedJobInfo(
                 job,
@@ -595,6 +652,17 @@ class Executor(RemoteExecutor):
 
         sacct_query_durations = []
 
+        initial_interval = getattr(
+            self.workflow.executor_settings,
+            "init_seconds_before_status_checks",
+            40,
+        )
+        # Fast path: if there are no active jobs, skip querying
+        if not active_jobs:
+            self.next_seconds_between_status_checks = initial_interval
+            self.logger.debug("No active jobs; skipping status query.")
+            return
+
         status_attempts = self.workflow.executor_settings.status_attempts
         self.logger.debug(
             f"Checking the status of {len(active_jobs)} active jobs "
@@ -608,11 +676,6 @@ class Executor(RemoteExecutor):
         # decide which status command to use
         status_command_name = self.get_status_command()
         min_job_age = get_min_job_age()
-        initial_interval = getattr(
-            self.workflow.executor_settings,
-            "init_seconds_before_status_checks",
-            40,
-        )
         dynamic_check_threshold = 3 * initial_interval
         if status_command_name == "squeue":
             if (
@@ -742,7 +805,7 @@ We leave it to SLURM to resume your job(s)"""
                     max_sleep_time,
                 )
             else:
-                self.next_seconds_between_status_checks = 40
+                self.next_seconds_between_status_checks = initial_interval
 
     def cancel_jobs(self, active_jobs: List[SubmittedJobInfo]):
         # Cancel all active jobs.
@@ -750,12 +813,21 @@ We leave it to SLURM to resume your job(s)"""
         if active_jobs:
             # TODO chunk jobids in order to avoid too long command lines
             jobids = " ".join([job_info.external_jobid for job_info in active_jobs])
+
             try:
                 # timeout set to 60, because a scheduler cycle usually is
                 # about 30 sec, but can be longer in extreme cases.
                 # Under 'normal' circumstances, 'scancel' is executed in
                 # virtually no time.
-                scancel_command = f"scancel {jobids} --clusters=all"
+                scancel_command = f"scancel {jobids}"
+
+                # Adding the --clusters=all flag, if we submitted to more than one
+                # cluster (assuming that choosing _a_ cluster is enough to fullfil
+                # this criterion). Issue #397 mentions that this flag is not available
+                # in older SLURM versions, but we assume that multicluster setups will
+                # usually run on a recent version of SLURM.
+                if self._submitted_job_clusters:
+                    scancel_command += " --clusters=all"
 
                 subprocess.check_output(
                     scancel_command,
@@ -770,6 +842,16 @@ We leave it to SLURM to resume your job(s)"""
                 msg = e.stderr.strip()
                 if msg:
                     msg = f": {msg}"
+                # If we were using --clusters and it failed, provide additional context
+                if self._submitted_job_clusters:
+                    msg += (
+                        "\nWARNING: Job cancellation failed while using "
+                        "--clusters flag. Your multicluster SLURM setup may not "
+                        "support this feature, or the SLURM database may not be "
+                        "properly configured for multicluster operations. "
+                        "Please verify your SLURM configuration with your "
+                        "HPC administrator."
+                    )
                 raise WorkflowError(
                     "Unable to cancel jobs with scancel "
                     f"(exit code {e.returncode}){msg}"
@@ -869,10 +951,44 @@ We leave it to SLURM to resume your job(s)"""
         else raises an error - implicetly.
         """
         partition = None
+
+        # Check if a specific partition is requested
         if job.resources.get("slurm_partition"):
-            partition = job.resources.slurm_partition
-        elif self._partitions:
+            # But also check if there's a cluster requirement that might override it
+            job_cluster = (
+                job.resources.get("slurm_cluster")
+                or job.resources.get("cluster")
+                or job.resources.get("clusters")
+            )
+
+            if job_cluster and self._partitions:
+                # If a cluster is specified, verify the partition exists and matches
+                # Otherwise, use auto-selection to find a partition for that cluster
+                partition_obj = next(
+                    (
+                        p
+                        for p in self._partitions
+                        if p.name == job.resources.slurm_partition
+                    ),
+                    None,
+                )
+                if (
+                    partition_obj
+                    and partition_obj.partition_cluster
+                    and partition_obj.partition_cluster != job_cluster
+                ):
+                    # Partition exists but is for a different cluster:
+                    # use auto-selection
+                    partition = get_best_partition(self._partitions, job, self.logger)
+                else:
+                    partition = job.resources.slurm_partition
+            else:
+                partition = job.resources.slurm_partition
+
+        # If no partition was selected yet, try auto-selection
+        if not partition and self._partitions:
             partition = get_best_partition(self._partitions, job, self.logger)
+
         # we didnt get a partition yet so try fallback.
         if not partition:
             if self._fallback_partition is None:
@@ -881,7 +997,8 @@ We leave it to SLURM to resume your job(s)"""
         if partition:
             # we have to quote the partition, because it might
             # contain build-in shell commands
-            return f" -p {shlex.quote(partition)}"
+            # string conversion needed for partition if partition is an integer
+            return f" -p {shlex.quote(str(partition))}"
         else:
             return ""
 
