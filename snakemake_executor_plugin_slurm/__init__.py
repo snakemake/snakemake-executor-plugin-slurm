@@ -47,7 +47,7 @@ from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
 from .partitions import read_partition_file, get_best_partition
 from .validation import (
-    validate_or_get_slurm_job_id
+    validate_or_get_slurm_job_id,
     validate_slurm_extra,
     validate_executor_settings,
     validate_status_command_settings,
