@@ -7,6 +7,8 @@ from datetime import datetime
 import numpy as np
 import os
 
+# NOTE: The time_to_seconds function has been re-implemented below to avoid
+# deprecation warnings from pandas.to_timedelta when parsing SLURM time formats
 
 def time_to_seconds(time_str):
     """
@@ -31,38 +33,45 @@ def time_to_seconds(time_str):
 
     time_str = str(time_str).strip()
 
-    # Try different SLURM time formats with datetime parsing
-    time_formats = [
-        "%d-%H:%M:%S.%f",  # D-HH:MM:SS.ffffff (with fractional seconds)
-        "%d-%H:%M:%S",  # D-HH:MM:SS
-        "%d-%M:%S",  # D-MM:SS
-        "%d-%M:%S.%f",  # D-MM:SS.ffffff (with fractional seconds)
-        "%H:%M:%S.%f",  # HH:MM:SS.ffffff (with fractional seconds)
-        "%H:%M:%S",  # HH:MM:SS
-        "%M:%S.%f",  # MM:SS.ffffff (with fractional seconds)
-        "%M:%S",  # MM:SS
-        "%S.%f",  # SS.ffffff (with fractional seconds)
-        "%S",  # SS
-    ]
-
-    for fmt in time_formats:
+    # Parse SLURM time formats manually to avoid deprecation warnings
+    total_seconds = 0.0
+    
+    # Check for days-hours:minutes:seconds format (D-HH:MM:SS or D-HH:MM:SS.fff)
+    if "-" in time_str:
+        parts = time_str.split("-", 1)
         try:
-            time_obj = datetime.strptime(time_str, fmt)
-
-            total_seconds = (
-                time_obj.hour * 3600
-                + time_obj.minute * 60
-                + time_obj.second
-                + time_obj.microsecond / 1000000
-            )
-
-            # Add days if present (datetime treats day 1 as the first day)
-            if fmt.startswith("%d-"):
-                total_seconds += time_obj.day * 86400
-
-            return total_seconds
+            days = int(parts[0])
+            total_seconds += days * 86400
+            time_str = parts[1]  # Continue parsing the rest as HH:MM:SS or similar
         except ValueError:
-            continue
+            pass  # Not a valid day format, continue with other parsing
+    
+    # Now parse the time portion (HH:MM:SS, MM:SS, or SS format)
+    if ":" in time_str:
+        time_parts = time_str.split(":")
+        try:
+            if len(time_parts) == 3:  # HH:MM:SS or HH:MM:SS.fff
+                hours = int(time_parts[0])
+                minutes = int(time_parts[1])
+                seconds = float(time_parts[2])
+                total_seconds += hours * 3600 + minutes * 60 + seconds
+                return total_seconds
+            elif len(time_parts) == 2:  # MM:SS or MM:SS.fff
+                minutes = int(time_parts[0])
+                seconds = float(time_parts[1])
+                total_seconds += minutes * 60 + seconds
+                return total_seconds
+        except ValueError:
+            pass  # Continue to next format attempt
+    
+    # Try parsing as pure seconds (with possible fractional part)
+    try:
+        seconds = float(time_str)
+        total_seconds += seconds
+        return total_seconds
+    except ValueError:
+        pass
+    
     return 0  # If all parsing attempts fail, return 0
 
 
