@@ -41,10 +41,7 @@ def test_jobname_prefix_applied():
         ):
             executor.__post_init__(test_mode=True)
 
-    assert (
-        executor.run_uuid
-        == "testprefix_00000000-0000-0000-0000-000000000000"
-    )
+    assert executor.run_uuid == "testprefix_00000000-0000-0000-0000-000000000000"
 
 
 def test_jobname_prefix_validation():
