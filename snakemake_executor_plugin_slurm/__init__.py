@@ -701,30 +701,39 @@ class Executor(RemoteExecutor):
                     status_command
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
-                    self.logger.debug(f"could not check status of job {self.run_uuid}")
+                    is_final_attempt = i + 1 == status_attempts
+                    self.logger.debug(
+                        f"could not check status of job {self.run_uuid}"
+                        + (" (final attempt)" if is_final_attempt else "")
+                    )
                     continue
                 sacct_query_durations.append(sacct_query_duration)
-                self.logger.debug(f"status_of_jobs after sacct is: {status_of_jobs}")
                 # only take jobs that are still active
                 active_jobs_ids_with_current_sacct_status = (
                     set(status_of_jobs.keys()) & active_jobs_ids
-                )
-                self.logger.debug(
-                    f"active_jobs_ids_with_current_sacct_status are: "
-                    f"{active_jobs_ids_with_current_sacct_status}"
-                )
-                active_jobs_seen_by_sacct = (
-                    active_jobs_seen_by_sacct
-                    | active_jobs_ids_with_current_sacct_status
-                )
-                self.logger.debug(
-                    "active_jobs_seen_by_sacct are: " f"{active_jobs_seen_by_sacct}"
                 )
                 missing_sacct_status = (
                     active_jobs_seen_by_sacct
                     - active_jobs_ids_with_current_sacct_status
                 )
-                self.logger.debug(f"missing_sacct_status are: {missing_sacct_status}")
+                active_jobs_seen_by_sacct = (
+                    active_jobs_seen_by_sacct
+                    | active_jobs_ids_with_current_sacct_status
+                )
+                # Only log detailed debug info on final attempt or when complete.
+                # This avoids log flooding in verbose mode.
+                if not missing_sacct_status or i + 1 == status_attempts:
+                    self.logger.debug(
+                        f"active_jobs_ids_with_current_sacct_status are: "
+                        f"{active_jobs_ids_with_current_sacct_status}"
+                    )
+                    self.logger.debug(
+                        "active_jobs_seen_by_sacct are: "
+                        f"{active_jobs_seen_by_sacct}"
+                    )
+                    self.logger.debug(
+                        f"missing_sacct_status are: {missing_sacct_status}"
+                    )
                 if not missing_sacct_status:
                     break
 
