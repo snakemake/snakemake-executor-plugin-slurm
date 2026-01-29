@@ -245,7 +245,10 @@ class ExecutorSettings(ExecutorSettingsBase):
     prefix: Optional[str] = field(
         default="",
         metadata={
-            "help": "Prefix that is added to the job names",
+            "help": "Prefix that is added to the job names"
+            "Must contain only alphanumeric characters,
+            " underscores or hyphens. Maximum length should"
+            " not exceed 50 characters.",
             "env_var": False,
             "required": False
         }
