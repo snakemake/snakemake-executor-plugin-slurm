@@ -794,12 +794,43 @@ We leave it to SLURM to resume your job(s)"""
                     any_finished = True
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
                 elif status in fail_stati:
-                    msg = (
-                        f"SLURM-job '{j.external_jobid}' failed, SLURM status is: "
-                        # message ends with '. ', because it is proceeded
-                        # with a new sentence
-                        f"'{status}'. "
-                    )
+                    reasons = []
+                    for step in range(10):  # Iterate over up to 10 job steps
+                        reason_command = (
+                            f"sacct -j {j.external_jobid}.{step} "
+                            "--format=Reason --noheader"
+                        )
+                        try:
+                            reason_output = subprocess.check_output(
+                                reason_command,
+                                shell=True,
+                                text=True,
+                                stderr=subprocess.PIPE,
+                            ).strip()
+                            if reason_output:
+                                reasons.append(f"Step {step}: {reason_output}")
+                        except subprocess.CalledProcessError as e:
+                            self.logger.warning(
+                                f"Failed to retrieve jobstep reason for SLURM job "
+                                f"'{j.external_jobid}.{step}': {e.stderr.strip()}"
+                            )
+                            reasons.append(f"Step {step}: Unable to retrieve reason")
+
+                    if not reasons:
+                        reasons.append("Unknown")
+
+                    if len(reasons) == 1:
+                        msg = (
+                            f"SLURM-job '{j.external_jobid}' failed, "
+                            f"SLURM status is: '{status}'. "
+                            f"Reason: {reasons[0]}."
+                        )
+                    else:
+                        msg = (
+                            f"SLURM-job '{j.external_jobid}' failed, "
+                            f"SLURM status is: '{status}'. "
+                            f"Reasons: {', '.join(reasons)}."
+                        )
                     self.report_job_error(
                         j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
                     )
