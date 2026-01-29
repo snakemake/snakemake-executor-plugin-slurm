@@ -242,6 +242,17 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
+    jobname_prefix: Optional[str] = field(
+        default="",
+        metadata={
+            "help": "Prefix that is added to the job names. "
+            "Must contain only alphanumeric characters, "
+            "underscores or hyphens. Maximum length should "
+            "not exceed 50 characters.",
+            "env_var": False,
+            "required": False,
+        },
+    )
 
     status_command: Optional[str] = field(
         default_factory=_get_status_command_default,
@@ -331,7 +342,21 @@ class Executor(RemoteExecutor):
         # run check whether we are running in a SLURM job context
         self.warn_on_jobcontext()
         self.test_mode = test_mode
-        self.run_uuid = str(uuid.uuid4())
+        # validate prefix: only allow alphanumeric, underscore, hyphen
+        # cap length:
+        if self.workflow.executor_settings.jobname_prefix:
+            if not re.match(
+                r"^[A-Za-z0-9_-]{1,50}$",
+                self.workflow.executor_settings.jobname_prefix,
+            ):
+                raise WorkflowError(
+                    "The jobname_prefix may only contain alphanumeric "
+                    "characters, underscores or hyphens, and must not "
+                    "exceed 50 characters in length."
+                )
+            self.run_uuid = "_".join(
+                [self.workflow.executor_settings.jobname_prefix, str(uuid.uuid4())]
+            )
         self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
         self._fallback_partition = None
