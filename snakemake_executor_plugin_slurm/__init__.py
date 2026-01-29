@@ -716,16 +716,16 @@ class Executor(RemoteExecutor):
                     active_jobs_seen_by_sacct
                     - active_jobs_ids_with_current_sacct_status
                 )
+                active_jobs_seen_by_sacct = (
+                    active_jobs_seen_by_sacct
+                    | active_jobs_ids_with_current_sacct_status
+                )
                 # Only log detailed debug info on final attempt or when complete.
                 # This avoids log flooding in verbose mode.
                 if not missing_sacct_status or i + 1 == status_attempts:
                     self.logger.debug(
                         f"active_jobs_ids_with_current_sacct_status are: "
                         f"{active_jobs_ids_with_current_sacct_status}"
-                    )
-                    active_jobs_seen_by_sacct = (
-                        active_jobs_seen_by_sacct
-                        | active_jobs_ids_with_current_sacct_status
                     )
                     self.logger.debug(
                         "active_jobs_seen_by_sacct are: "
