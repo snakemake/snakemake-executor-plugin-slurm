@@ -64,6 +64,123 @@ See the [snakemake documentation on profiles](https://snakemake.readthedocs.io/e
 How and where you set configurations on factors like file size or increasing the runtime with every `attempt` of running a job (if [`--retries` is greater than `0`](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-behavior)).
 [There are detailed examples for these in the snakemake documentation.](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#dynamic-resources)
 
+#### Automatic Partition Selection
+
+The SLURM executor plugin supports automatic partition selection based on job resource requirements, via the command line option `--slurm-partition-config`. This feature allows the plugin to choose the most appropriate partition for each job, without the need to manually specify partitions for different job types. This also enables variable partition selection as a job's resource requirements change based on [dynamic resources](#dynamic-resource-specification), ensuring that jobs are always scheduled to an appropriate partition.
+
+*Jobs that explicitly specify a `slurm_partition` resource will bypass automatic selection and use the specified partition directly.*
+
+> **Note:** Partition selection supports specifying the target cluster using any of the resource keys `cluster`, `clusters`, or `slurm_cluster` in your workflow profile or the partition configuration file. All three are treated equivalently by the plugin.
+
+##### Partition Limits Specification
+
+To enable automatic partition selection, create a YAML configuration file that defines the available partitions and their resource limits. This file should be structured as follows:
+
+```yaml
+partitions:
+  some_partition:
+    max_runtime: 100
+  another_partition:
+    ...
+```
+Where `some_partition` and `another_partition` are the names of the partition on your cluster, according to `sinfo`.
+
+The following limits can be defined for each partition:
+
+| Parameter               | Type      | Description                        | Default   |
+| ----------------------- | --------- | ---------------------------------- | --------- |
+| `max_runtime`           | int/str   | Maximum walltime                   | unlimited |
+| `max_mem_mb`            | int       | Maximum total memory in MB         | unlimited |
+| `max_mem_mb_per_cpu`    | int       | Maximum memory per CPU in MB       | unlimited |
+| `max_cpus_per_task`     | int       | Maximum CPUs per task              | unlimited |
+| `max_nodes`             | int       | Maximum number of nodes            | unlimited |
+| `max_tasks`             | int       | Maximum number of tasks            | unlimited |
+| `max_tasks_per_node`    | int       | Maximum tasks per node             | unlimited |
+| `max_threads`           | int       | Maximum threads per node           | unlimited |
+| `max_gpu`               | int       | Maximum number of GPUs             | 0         |
+| `available_gpu_models`  | list[str] | List of available GPU models       | none      |
+| `max_cpus_per_gpu`      | int       | Maximum CPUs per GPU               | unlimited |
+| `supports_mpi`          | bool      | Whether MPI jobs are supported     | true      |
+| `max_mpi_tasks`         | int       | Maximum MPI tasks                  | unlimited |
+| `available_constraints` | list[str] | List of available node constraints | none      |
+| `cluster` | str       | Cluster name in multi-cluster setup | none |
+
+Note: the `max_runtime` definition may contain 
+  - Numeric values (assumed to be in minutes): 120, 120.5
+  - Snakemake-style time strings: "6d", "12h", "30m", "90s", "2d12h30m"
+  - SLURM time formats:
+    - "minutes" (e.g., "60")
+    - "minutes:seconds" (interpreted as hours:minutes, e.g., "60:30")
+    - "hours:minutes:seconds" (e.g., "1:30:45")
+    - "days-hours" (e.g., "2-12")
+    - "days-hours:minutes" (e.g., "2-12:30")
+    - "days-hours:minutes:seconds" (e.g., "2-12:30:45")
+
+They are all auto-converted to minutes. Seconds are rounded to the nearest value in minutes.
+
+##### Example Partition Configuration
+
+```yaml
+partitions:
+  standard:
+    max_runtime: 720  # 12 hours
+    max_mem_mb: 64000  # 64 GB
+    max_cpus_per_task: 24
+    max_nodes: 1
+    
+  highmem:
+    max_runtime: 1440  # 24 hours
+    max_mem_mb: 512000  # 512 GB
+    max_mem_mb_per_cpu: 16000
+    max_cpus_per_task: 48
+    max_nodes: 1
+    
+  gpu:
+    max_runtime: 2880  # 48 hours
+    max_mem_mb: 128000  # 128 GB
+    max_cpus_per_task: 32
+    max_gpu: 8
+    available_gpu_models: ["a100", "v100", "rtx3090"]
+    max_cpus_per_gpu: 8
+```
+
+The plugin supports automatic partition selection on clusters with SLURM multi-cluster setup. You can specify which cluster each partition belongs to in your partition configuration file:
+
+```yaml
+partitions:
+  d-standard:
+    cluster: "deviating"
+    max_runtime: "6d"
+    max_nodes: 1
+    max_threads: 127
+  d-parallel:
+    cluster: "deviating"
+    supports_mpi: true
+    max_threads: 128
+    max_runtime: "6d"
+  standard:
+    cluster: "other"
+    max_runtime: "6d"
+    max_nodes: 1
+    max_threads: 127
+  parallel:
+    cluster: "other"
+    supports_mpi: true
+    max_threads: 128
+    max_runtime: "6d"
+```
+
+
+##### How Partition Selection Works
+
+When automatic partition selection is enabled, the plugin evaluates each job's resource requirements against the defined partition limits to ensure the job is placed on a partition that can accommodate all of its requirements. When multiple partitions are compatible, the plugin uses a scoring algorithm that favors partitions with limits closer to the job's needs, preventing jobs from being assigned to partitions with excessively high resource limits.
+
+The scoring algorithm calculates a score by summing the ratios of requested resources to partition limits (e.g., if a job requests 8 CPUs and a partition allows 16, this contributes 0.5 to the score). Higher scores indicate better resource utilization, so a job requesting 8 CPUs would prefer a 16-CPU partition (score 0.5) over a 64-CPU partition (score 0.125).
+
+##### Fallback Behavior
+
+If no suitable partition is found based on the job's resource requirements, the plugin falls back to the default SLURM behavior, which typically uses the cluster's default partition or any partition specified explicitly in the job's resources.
+
 
 #### Standard Resources
 
@@ -90,7 +207,7 @@ These are the available options, and the SLURM `sbatch` command line arguments t
 
 | Snakemake plugin     | Description                         | SLURM               |
 |----------------------|-------------------------------------|---------------------|
-| `clusters`           | list of clusters that (a) job(s)    | `--clusters`        |
+| `clusters` (or `cluster` or `slurm_cluster`)           | list of clusters that (a) job(s)    | `--clusters`        |
 |                      | can run on                          |                     |
 | `constraint`         | requiring particular node features  | `--constraint`/`-C` |
 |                      | for job execution                   |                     |
@@ -119,6 +236,11 @@ With SLURM, it is possible to [federate multiple clusters](https://slurm.schedmd
 This can allow users to submit jobs to a cluster different from the one they run their job submission commands.
 If this is available on your cluster, this resource accepts a string with a comma separated list of cluster names, which is passed on to the [SLURM `sbatch` command-line argument `--clusters`](https://slurm.schedmd.com/sbatch.html#SECTION_OPTIONS).
 
+We allow `clusters` or `cluster` or `slurm_cluster` as there are multiple conventions.
+
+.. note:: While it is possible to submit to more than one cluster in principle, not all SLURM multicluster setups will support this.
+
+
 ##### `slurm_partition`
 
 In SLURM, [a `partition` designates a subset of compute nodes](https://slurm.schedmd.com/quickstart_admin.html#Config), grouped for specific purposes (such as high-memory or GPU tasks).
@@ -136,6 +258,12 @@ If you do not deliberately set the snakemake resource `slurm_account`, the plugi
 
 By contrast, some clusters _do not_ allow users to set their account or partition; for example, because they have a pre-defined default per user.
 In such cases, where the plugin's default behavior would interfere with your setup or requirements, you can use the `--slurm-no-account` flag to turn it off.
+
+##### Passing Commands as Scripts: `--slurm-pass-command-as-script`
+
+When this flag is enabled, the command that Snakemake would normally pass directly to `sbatch` via the `--wrap` option is instead written into a small temporary shell script which is submitted with `sbatch <script>`.
+
+Why this exists: Some SLURM installations or cluster configurations impose limits on the length or characters allowed in the `--wrap` argument or inlined command strings. This happens when administrators deliberately set the `slurm_max_submit_line_size` in their SLURM configuration to a low value. Passing the job command as a script avoids those limitations.
 
 ##### Wait Times and Frequencies
 
@@ -342,7 +470,7 @@ rule gpu_task:
 
 In this example, `cpus_per_gpu=4` allocates four CPU cores for each GPU requested.
 
-.. note:: If `cpus_per_gpu` is set to a value less than or equal to zero, Snakemake will not include a CPU request in the SLURM submission, and the cluster's default CPU allocation policy will apply.
+.. note:: If `cpus_per_gpu` is set to a value less than or equal to zero, Snakemake will not include a CPU request in the SLURM submission, and the cluster's default CPU allocation policy will apply. The same applies to `tasks_per_gpu`. If set to zero or lower, the SLURM parameter `--ntasks-per-gpu` will not be set.
 
 ##### Sample Workflow Profile for GPU Jobs
 
@@ -486,8 +614,10 @@ rule myrule:
     input: ...
     output: ...
     resources:
-        slurm_extra="--qos=long --mail-type=ALL --mail-user=<your email>"
+        slurm_extra="--mail-type=ALL --mail-user=<your email>"
 ```
+
+.. note:: We prevent you from overwriting all flags, which are used or configurable internally. This prevents conflicts and breaking job submission.
 
 Again, rather use a [profile](https://snakemake.readthedocs.io/en/latest/executing/cli.html#profiles) to specify such resources.
 
@@ -585,9 +715,7 @@ The corresponding command line flag is not needed anymore.
 
 Using the [file system storage plugin](https://github.com/snakemake/snakemake-storage-plugin-fs) will automatically stage-in and -out in- and output files.
 
-
-==This is ongoing development.
-Eventually, you will be able to annotate different file access patterns.==
+> This is ongoing development. Eventually, you will be able to annotate different file access patterns.
 
 ### Log Files - Getting Information on Failures
 
@@ -618,10 +746,18 @@ This configuration directs SLURM logs to a centralized location, making them eas
 Running Snakemake within an active SLURM job can lead to unpredictable behavior, as the execution environment may not be properly configured for job submission.
 To mitigate potential issues, the SLURM executor plugin detects when it's operating inside a SLURM job and issues a warning, pausing for 5 seconds before proceeding.
 
+### Getting Job Efficiency Information
+
+With `--slurm-efficiency-report` you can generate a table of all efficiency data. A logfile `efficiency_report_<workflow_id>.log` will be generated in your current directory. This is equivalent to the information with `seff <jobid>` for individual jobs. It works best if "comments" are stored as a job property on your cluster as this plugin uses the "comment" parameter to store the rule name.
+
 ### Submittings Jobs into SLURM reservations
 
 The plugin allows specifying a flag `--slurm-reservation=<name>` to use a particular reservation.
 It does not validate the spelling nor eligibility to this reservation.
+
+### Using SLURM QoS
+
+To use SLURM's quality of service flags (`--qos` to `sbatch`) the plugin allows specifying `--slurm-qos=<qos-string>`, too. Both, the reservation and the qos may be particularly useful in a course setting.
 
 ### Frequently Asked Questions
 

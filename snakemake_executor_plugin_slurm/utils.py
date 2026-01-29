@@ -1,13 +1,134 @@
 # utility functions for the SLURM executor plugin
 
+import math
 import os
 import re
 from pathlib import Path
+from typing import Union
 
 from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
 from snakemake_interface_common.exceptions import WorkflowError
+
+
+def round_half_up(n):
+    return int(math.floor(n + 0.5))
+
+
+def parse_time_to_minutes(time_value: Union[str, int, float]) -> int:
+    """
+    Convert a time specification to minutes (integer). This function
+    is intended to handle the partition definitions for the max_runtime
+    value in a partition config file.
+
+    Supports:
+    - Numeric values (assumed to be in minutes): 120, 120.5
+    - Snakemake-style time strings: "6d", "12h", "30m", "90s", "2d12h30m"
+    - SLURM time formats:
+        - "minutes" (e.g., "60")
+        - "minutes:seconds" (interpreted as hours:minutes, e.g., "60:30")
+        - "hours:minutes:seconds" (e.g., "1:30:45")
+        - "days-hours" (e.g., "2-12")
+        - "days-hours:minutes" (e.g., "2-12:30")
+        - "days-hours:minutes:seconds" (e.g., "2-12:30:45")
+
+    Args:
+        time_value: Time specification as string, int, or float
+
+    Returns:
+        Time in minutes as integer (fractional minutes are rounded)
+
+    Raises:
+        WorkflowError: If the time format is invalid
+    """
+    # If already numeric, return as integer minutes (rounded)
+    if isinstance(time_value, (int, float)):
+        return round_half_up(time_value)  # implicit conversion to int
+
+    # Convert to string and strip whitespace
+    time_str = str(time_value).strip()
+
+    # Try to parse as plain number first
+    try:
+        return round_half_up(float(time_str))  # implicit conversion to int
+    except ValueError:
+        pass
+
+    # Try SLURM time formats first (with colons and dashes)
+    # Format: days-hours:minutes:seconds or variations
+    if "-" in time_str or ":" in time_str:
+        try:
+            days = 0
+            hours = 0
+            minutes = 0
+            seconds = 0
+
+            # Split by dash first (days separator)
+            if "-" in time_str:
+                parts = time_str.split("-")
+                if len(parts) != 2:
+                    raise ValueError("Invalid format with dash")
+                days = int(parts[0])
+                time_str = parts[1]
+
+            # Split by colon (time separator)
+            time_parts = time_str.split(":")
+
+            if len(time_parts) == 1:
+                # Just hours (after dash) or just minutes
+                if days > 0:
+                    hours = int(time_parts[0])
+                else:
+                    minutes = int(time_parts[0])
+            elif len(time_parts) == 2:
+                # was: days-hours:minutes
+                hours = int(time_parts[0])
+                minutes = int(time_parts[1])
+            elif len(time_parts) == 3:
+                # was: hours:minutes:seconds
+                hours = int(time_parts[0])
+                minutes = int(time_parts[1])
+                seconds = int(time_parts[2])
+            else:
+                raise ValueError("Too many colons in time format")
+
+            # Convert everything to minutes
+            total_minutes = days * 24 * 60 + hours * 60 + minutes + seconds / 60.0
+            return round_half_up(total_minutes)  # implicit conversion to int
+
+        except (ValueError, IndexError):
+            # If SLURM format parsing fails, try Snakemake style below
+            pass
+
+    # Parse Snakemake-style time strings (e.g., "6d", "12h", "30m", "90s", "2d12h30m")
+    # Pattern matches: optional number followed by unit (d, h, m, s)
+    pattern = r"(\d+(?:\.\d+)?)\s*([dhms])"
+    matches = re.findall(pattern, time_str.lower())
+
+    if not matches:
+        raise WorkflowError(
+            f"Invalid time format: '{time_value}'. "
+            f"Expected formats:\n"
+            f"  - Numeric value in minutes: 120\n"
+            f"  - Snakemake style: '6d', '12h', '30m', '90s', '2d12h30m'\n"
+            f"  - SLURM style: 'minutes', 'minutes:seconds', 'hours:minutes:seconds',\n"
+            f"    'days-hours', 'days-hours:minutes', 'days-hours:minutes:seconds'"
+        )
+
+    total_minutes = 0.0
+    for value, unit in matches:
+        num = float(value)
+        if unit == "d":
+            total_minutes += num * 24 * 60
+        elif unit == "h":
+            total_minutes += num * 60
+        elif unit == "m":
+            total_minutes += num
+        elif unit == "s":
+            total_minutes += num / 60
+
+    return round_half_up(total_minutes)
 
 
 def delete_slurm_environment():
@@ -55,9 +176,11 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     """
     # generic resources (GRES) arguments can be of type
     # "string:int" or "string:string:int"
-    gres_re = re.compile(r"^[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?:\d+$")
+    gres_re = re.compile(r"^[a-zA-Z0-9_]+(:[a-zA-Z0-9_\.]+)?:\d+$")
     # gpu model arguments can be of type "string"
-    gpu_model_re = re.compile(r"^[a-zA-Z0-9_]+$")
+    # The model string may contain a dot for variants, see
+    # https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/387
+    gpu_model_re = re.compile(r"^[a-zA-Z0-9_\.]+$")
     # any arguments should not start and end with ticks or
     # quotation marks:
     string_check = re.compile(r"^[^'\"].*[^'\"]$")

@@ -1,12 +1,16 @@
+import os
+import re
+from pathlib import Path
 from typing import Optional
 import snakemake.common.tests
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
 from unittest.mock import MagicMock, patch
 import pytest
-
 from snakemake_executor_plugin_slurm import ExecutorSettings
 from snakemake_executor_plugin_slurm.utils import set_gres_string
 from snakemake_executor_plugin_slurm.submit_string import get_submit_command
+
+from snakemake_executor_plugin_slurm.validation import validate_slurm_extra
 from snakemake_interface_common.exceptions import WorkflowError
 
 
@@ -17,7 +21,70 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
         return "slurm"
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
-        return ExecutorSettings(init_seconds_before_status_checks=1)
+        return ExecutorSettings(
+            init_seconds_before_status_checks=2,
+            # seconds_between_status_checks=5,
+        )
+
+
+class TestPassCommandAsScript(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+    """Integration-style test that runs the real workflow on the Slurm test cluster
+    and verifies the plugin can submit the job by passing the command as a script
+    via stdin (pass_command_as_script=True).
+    """
+
+    __test__ = True
+
+    def get_executor(self) -> str:
+        return "slurm"
+
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        # Use the real ExecutorSettings and enable the flag under test.
+        return ExecutorSettings(
+            pass_command_as_script=True,
+            init_seconds_before_status_checks=2,
+        )
+
+
+class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+    __test__ = True
+
+    def get_executor(self) -> str:
+        return "slurm"
+
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        self.REPORT_PATH = Path.cwd() / "efficiency_report_test"
+
+        return ExecutorSettings(
+            efficiency_report=True,
+            init_seconds_before_status_checks=5,
+            efficiency_report_path=self.REPORT_PATH,
+            # seconds_between_status_checks=5,
+        )
+
+    def test_simple_workflow(self, tmp_path):
+        self.run_workflow("simple", tmp_path)
+
+        # The efficiency report is created in the
+        # current working directory
+        pattern = re.compile(r"efficiency_report_[\w-]+\.csv")
+        report_found = False
+
+        report_path = None
+        # using a short handle for the expected path
+        expected_path = self.REPORT_PATH
+
+        # Check if the efficiency report file exists - based on the regex pattern
+        for fname in os.listdir(expected_path):
+            if pattern.match(fname):
+                report_found = True
+                report_path = os.path.join(expected_path, fname)
+                # Verify it's not empty
+                assert (
+                    os.stat(report_path).st_size > 0
+                ), f"Efficiency report {report_path} is empty"
+                break
+        assert report_found, "Efficiency report file not found"
 
 
 class TestWorkflowsRequeue(TestWorkflows):
@@ -308,7 +375,7 @@ class TestSLURMResources(TestWorkflows):
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-        assert " -C 'haswell'" in get_submit_command(job, params)
+        assert " -C haswell" in get_submit_command(job, params)
 
     def test_qos_resource(self, mock_job):
         """Test that the qos resource is correctly added to the sbatch command."""
@@ -332,7 +399,7 @@ class TestSLURMResources(TestWorkflows):
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-        assert " --qos='normal'" in get_submit_command(job, params)
+        assert " --qos=normal" in get_submit_command(job, params)
 
     def test_both_constraint_and_qos(self, mock_job):
         """Test that both constraint and qos resources can be used together."""
@@ -359,8 +426,8 @@ class TestSLURMResources(TestWorkflows):
 
             # Assert both resources are correctly included
             sbatch_command = get_submit_command(job, params)
-            assert " --qos='high'" in sbatch_command
-            assert " -C 'haswell'" in sbatch_command
+            assert " --qos=high" in sbatch_command
+            assert " -C haswell" in sbatch_command
 
     def test_no_resources(self, mock_job):
         """
@@ -437,8 +504,126 @@ class TestSLURMResources(TestWorkflows):
             process_mock.communicate.return_value = ("123", "")
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
-            # Assert the qoes is included (even if empty)
+            # Assert the qos is included (even if empty)
             assert "--qos=''" in get_submit_command(job, params)
+
+    def test_taks(self, mock_job):
+        """Test that tasks are correctly included in the sbatch command."""
+        # Create a job with tasks
+        job = mock_job(tasks=4)
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+            "tasks": 4,
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+        assert "--ntasks=4" in get_submit_command(job, params)
+
+    def test_gpu_tasks(self, mock_job):
+        """Test that GPU tasks are correctly included in the sbatch command."""
+        # Create a job with GPU tasks
+        job = mock_job(gpu=1, tasks_per_gpu=2)
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+            "tasks_per_gpu": 2,
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+        assert "--ntasks-per-gpu=2" in get_submit_command(job, params)
+
+    def test_no_gpu_task(self, mock_job):
+        """Test that no GPU tasks are included when not specified."""
+        # Create a job without GPU tasks
+        job = mock_job(gpu=1, tasks_per_gpu=-1)
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+            "tasks_per_gpu": -1,
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+        assert "--ntasks-per-gpu" not in get_submit_command(job, params)
+
+    def test_task_set_for_unset_tasks(self, mock_job):
+        """Test that tasks are set to 1 when unset."""
+        # Create a job without tasks
+        job = mock_job(tasks=None)
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+        assert "--ntasks=1" in get_submit_command(job, params)
+
+    def test_gpu_tasks_set_for_unset_tasks(self, mock_job):
+        """Test that GPU tasks are set to 1 when unset."""
+        # Create a job without GPU tasks
+        job = mock_job(gpu=1)
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+        }
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+        assert "--ntasks-per-gpu=1" in get_submit_command(job, params)
 
 
 class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageBase):
@@ -474,3 +659,80 @@ class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageB
 
     # Verify no slashes remain in the wildcard string
     assert "/" not in wildcard_str
+
+
+class TestSlurmExtraValidation:
+    """Test cases for the validate_slurm_extra function."""
+
+    @pytest.fixture
+    def mock_job(self):
+        """Create a mock job with configurable slurm_extra resource."""
+
+        def _create_job(**resources):
+            mock_resources = MagicMock()
+            # Configure get method to return values from resources dict
+            mock_resources.get.side_effect = lambda key, default=None: resources.get(
+                key, default
+            )
+            # Add direct attribute access for certain resources
+            for key, value in resources.items():
+                setattr(mock_resources, key, value)
+
+            mock_job = MagicMock()
+            mock_job.resources = mock_resources
+            mock_job.name = "test_job"
+            mock_job.wildcards = {}
+            mock_job.is_group.return_value = False
+            mock_job.jobid = 1
+            return mock_job
+
+        return _create_job
+
+    def test_valid_slurm_extra(self, mock_job):
+        """Test that validation passes with allowed SLURM options."""
+        job = mock_job(slurm_extra="--mail-type=END --mail-user=user@example.com")
+        # Should not raise any exception
+        validate_slurm_extra(job)
+
+    def test_forbidden_job_name_long_form(self, mock_job):
+        """Test that --job-name is rejected."""
+        job = mock_job(slurm_extra="--job-name=my-job --mail-type=END")
+        with pytest.raises(WorkflowError, match=r"job-name.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_forbidden_job_name_short_form(self, mock_job):
+        """Test that -J is rejected."""
+        job = mock_job(slurm_extra="-J my-job --mail-type=END")
+        with pytest.raises(WorkflowError, match=r"job-name.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_forbidden_account_long_form(self, mock_job):
+        """Test that --account is rejected."""
+        job = mock_job(slurm_extra="--account=myaccount --mail-type=END")
+        with pytest.raises(WorkflowError, match=r"account.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_forbidden_account_short_form(self, mock_job):
+        """Test that -A is rejected."""
+        job = mock_job(slurm_extra="-A myaccount --mail-type=END")
+        with pytest.raises(WorkflowError, match=r"account.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_forbidden_comment(self, mock_job):
+        """Test that --comment is rejected."""
+        job = mock_job(slurm_extra="--comment='my comment' --mail-type=END")
+        with pytest.raises(WorkflowError, match=r"job-comment.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_forbidden_gres(self, mock_job):
+        """Test that --gres is rejected."""
+        job = mock_job(slurm_extra="--gres=gpu:1 --mail-type=END")
+        with pytest.raises(WorkflowError, match=r"generic-resources.*not allowed"):
+            validate_slurm_extra(job)
+
+    def test_multiple_forbidden_options(self, mock_job):
+        """Test that the first forbidden option found is reported."""
+        job = mock_job(slurm_extra="--job-name=test --account=myaccount")
+        # Should raise error for job-name (first one encountered)
+        with pytest.raises(WorkflowError, match=r"job-name.*not allowed"):
+            validate_slurm_extra(job)
