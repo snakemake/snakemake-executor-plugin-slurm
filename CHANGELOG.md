@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.1.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.1.0...v2.1.1) (2026-01-29)
+
+
+### Bug Fixes
+
+* cancel on multicluster ([#401](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/401)) ([cb6124b](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/cb6124bd00a29a4ba03d3508359586bbc9669bf9))
+* decreasing job query verbosity ([#405](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/405)) ([6649881](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6649881544e63aea836d2c4e8ef4b3e91b7577ff))
+* quoting piped substring with shlex ([#402](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/402)) ([7aa7fc3](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/7aa7fc3616e36226be10aa0dcc1df09eb86a6e4b))
+
 ## [2.1.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.0.3...v2.1.0) (2026-01-20)
 
 
