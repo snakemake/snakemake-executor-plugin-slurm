@@ -242,7 +242,7 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
-    prefix: Optional[str] = field(
+    jobname_prefix: Optional[str] = field(
         default="",
         metadata={
             "help": "Prefix that is added to the job names"
