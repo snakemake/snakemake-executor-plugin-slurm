@@ -292,11 +292,11 @@ class Partition:
 
         for resource_key, limit in numerical_resources.items():
             job_requirement = job.resources.get(resource_key, 0)
-            # return 0 if dealing with a tbdstring (resource not specified)
+            # Skip TBD (not specified) resources entirely
             if isinstance(job_requirement, tbdstring.TBDString):
-                return 0
+                job_requirement = 0
             # Convert to numeric value if it's a string
-            if isinstance(job_requirement, str):
+            elif isinstance(job_requirement, str):
                 try:
                     job_requirement = float(job_requirement)
                 except ValueError:
