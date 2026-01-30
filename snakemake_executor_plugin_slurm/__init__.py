@@ -48,6 +48,7 @@ from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
 from .partitions import read_partition_file, get_best_partition
 from .validation import (
+    validate_or_get_slurm_job_id,
     validate_slurm_extra,
     validate_executor_settings,
     validate_status_command_settings,
@@ -407,9 +408,7 @@ class Executor(RemoteExecutor):
             return
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
-        self.logger.info(
-            f"Cleaning up SLURM log files older than {age_cutoff} day(s)."
-        )
+        self.logger.info(f"Cleaning up SLURM log files older than {age_cutoff} day(s).")
 
         for path in self.slurm_logdir.rglob("*.log"):
             if path.is_file():
@@ -588,8 +587,10 @@ class Executor(RemoteExecutor):
         # To extract the job id we split by semicolon and take the first
         # element (this also works if no cluster name was provided)
         slurm_jobid = out.strip().split(";")[0]
-        if not slurm_jobid:
-            raise WorkflowError("Failed to retrieve SLURM job ID from sbatch output.")
+        # this slurm_jobid might be wrong: some cluster admin give convoluted
+        # sbatch outputs. So we need to validate it properly (and replace it
+        # if necessary).
+        slurm_jobid = validate_or_get_slurm_job_id(slurm_jobid, out)
         slurm_logfile = slurm_logfile.with_name(
             slurm_logfile.name.replace("%j", slurm_jobid)
         )
