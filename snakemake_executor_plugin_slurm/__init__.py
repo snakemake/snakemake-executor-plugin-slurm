@@ -754,8 +754,7 @@ class Executor(RemoteExecutor):
                         f"{active_jobs_ids_with_current_sacct_status}"
                     )
                     self.logger.debug(
-                        "active_jobs_seen_by_sacct are: "
-                        f"{active_jobs_seen_by_sacct}"
+                        "active_jobs_seen_by_sacct are: " f"{active_jobs_seen_by_sacct}"
                     )
                     self.logger.debug(
                         f"missing_sacct_status are: {missing_sacct_status}"
