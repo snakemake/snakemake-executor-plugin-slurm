@@ -42,6 +42,7 @@ $ snakemake --executor slurm \
 This example assumes no limit for submitted jobs (`-j unlimited`). Any number, e.g. `-j 150`, will throttle a workflow to this number of concurrent jobs.
 Furthermore, on many clusters we must assume separation of workflows and data. Use the `--directory <path>` flag to point to a file system that contains your data.
 
+
 ### Configuration
 
 Snakemake offers great [capabilities to specify and thereby limit resources](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#resources) used by a workflow as a whole and by individual jobs.
@@ -652,7 +653,19 @@ Note, that
 ### Inquiring about Job Information and Adjusting the Rate Limiter
 
 The executor plugin for SLURM uses unique job names to inquire about job status.
-It ensures inquiring about job status for the series of jobs of a workflow does not put too much strain on the batch system's database.
+Each workflow run is assigned a UUID (Universally Unique Identifier) as its job name, ensuring that job status queries can target only the jobs belonging to that specific workflow run.
+This approach prevents conflicts between concurrent workflow runs and ensures that job status checks do not put excessive strain on the batch system's database.
+
+By default, the job name is a randomly generated UUID (e.g., `a1b2c3d4-e5f6-7890-abcd-ef1234567890`).
+You can customize this by adding a human-readable prefix using the `--slurm-jobname-prefix` flag:
+
+```console
+snakemake --executor slurm --slurm-jobname-prefix myproject ...
+```
+
+This will generate job names like `myproject_a1b2c3d4-e5f6-7890-abcd-ef1234567890`, making it easier to identify your workflow runs in SLURM job listings.
+The prefix must contain only alphanumeric characters, underscores, or hyphens, and should not exceed 50 characters.
+
 Human readable information is stored in the comment of a particular job.
 It is a combination of the rule name and wildcards.
 You can ask for it with the `sacct` or `squeue` commands, for example:
