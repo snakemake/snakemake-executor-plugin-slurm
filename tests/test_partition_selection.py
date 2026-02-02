@@ -216,9 +216,7 @@ class TestPartitionSelection:
         finally:
             temp_path.unlink()
 
-    def test_read_file_missing_partitions_key(
-        self, invalid_key_config, temp_yaml_file
-    ):
+    def test_read_file_missing_partitions_key(self, invalid_key_config, temp_yaml_file):
         """Test reading a file without 'partitions' key raises KeyError."""
 
         temp_path = temp_yaml_file(invalid_key_config)
@@ -827,9 +825,7 @@ class TestPartitionSelection:
         finally:
             temp_path.unlink()
 
-    def test_multicluster_with_max_threads(
-        self, temp_yaml_file, mock_job, mock_logger
-    ):
+    def test_multicluster_with_max_threads(self, temp_yaml_file, mock_job, mock_logger):
         """Test combined cluster and max_threads constraints."""
         config = {
             "partitions": {
