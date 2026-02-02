@@ -343,6 +343,7 @@ class Executor(RemoteExecutor):
         # run check whether we are running in a SLURM job context
         self.warn_on_jobcontext()
         self.test_mode = test_mode
+        self.run_uuid = str(uuid.uuid4())
         # validate prefix: only allow alphanumeric, underscore, hyphen
         # cap length:
         if self.workflow.executor_settings.jobname_prefix:
@@ -356,7 +357,7 @@ class Executor(RemoteExecutor):
                     "exceed 50 characters in length."
                 )
             self.run_uuid = "_".join(
-                [self.workflow.executor_settings.jobname_prefix, str(uuid.uuid4())]
+                [self.workflow.executor_settings.jobname_prefix, self.run_uuid]
             )
         self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
