@@ -36,7 +36,7 @@ def test_jobname_prefix_applied():
 
     with patch.object(Executor, "warn_on_jobcontext", return_value=None):
         with patch(
-            "snakemake_executor_plugin_slurm.__init__.uuid.uuid4",
+            "snakemake_executor_plugin_slurm.uuid.uuid4",
             return_value=uuid.UUID("00000000-0000-0000-0000-000000000000"),
         ):
             executor.__post_init__(test_mode=True)
