@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.2.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.1.0...v2.2.0) (2026-02-09)
+
+
+### Features
+
+* job name prefix ([#408](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/408)) ([5fa0d33](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/5fa0d333d390869746856af24cea0f30d3fb18f7))
+
+
+### Bug Fixes
+
+* cancel on multicluster ([#401](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/401)) ([cb6124b](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/cb6124bd00a29a4ba03d3508359586bbc9669bf9))
+* decreasing job query verbosity ([#405](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/405)) ([6649881](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6649881544e63aea836d2c4e8ef4b3e91b7577ff))
+* extracting job id from convoluted output, if necessary ([#375](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/375)) ([950c909](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/950c909df70225b32c8a7a376a074e9f4a015782))
+* quoting piped substring with shlex ([#402](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/402)) ([7aa7fc3](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/7aa7fc3616e36226be10aa0dcc1df09eb86a6e4b))
+
 ## [2.1.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.0.3...v2.1.0) (2026-01-20)
 
 
