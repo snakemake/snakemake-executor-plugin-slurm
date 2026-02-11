@@ -85,9 +85,9 @@ OR for permant use, copy the `partitions.yaml` to a location
             print(f"Partition configuration written to {args.output}", file=sys.stderr)
             # We need to issue a warning, that the file needs to be edited:
             print(
-                "\033[1mWARNING: Please review the generated partition configuration file. "
-                "You may need to adjust the limits based on your cluster's actual "
-                "capabilities. "
+                "\033[1mWARNING: Please review the generated partition configuration "
+                "file. You may need to adjust the limits based on your cluster's "
+                "actual capabilities. "
                 "For instance, enter `supports_mpi: true` for MPI partitions.\033[0m",
                 file=sys.stderr,
             )
