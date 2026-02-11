@@ -60,11 +60,11 @@ PartitionName=gpu
 def test_parse_scontrol_output():
     """Test parsing of scontrol show partition output."""
     partitions = parse_scontrol_partition_output(SCONTROL_OUTPUT)
-    
+
     assert "standard" in partitions
     assert "parallel" in partitions
     assert "gpu" in partitions
-    
+
     # Check standard partition
     standard = partitions["standard"]
     assert "MaxNodes" in standard
@@ -78,7 +78,7 @@ def test_parse_scontrol_output():
 def test_extract_partition_limits():
     """Test extraction of partition limits from scontrol data."""
     partitions = parse_scontrol_partition_output(SCONTROL_OUTPUT)
-    
+
     standard_limits = extract_partition_limits(partitions["standard"])
     assert "max_runtime" in standard_limits
     assert standard_limits["max_runtime"] == "6-00:00:00"
@@ -89,7 +89,7 @@ def test_extract_partition_limits():
     assert "max_threads" in standard_limits
     # 71808 / 561 = 128
     assert standard_limits["max_threads"] == 128
-    
+
     # Check GPU partition
     gpu_limits = extract_partition_limits(partitions["gpu"])
     assert "max_gpu" in gpu_limits
@@ -100,7 +100,7 @@ def test_extract_partition_limits_with_cluster():
     """Test that cluster is properly added to limits."""
     partitions = parse_scontrol_partition_output(SCONTROL_OUTPUT)
     limits = extract_partition_limits(partitions["standard"])
-    
+
     # Add cluster manually for this test
     limits["cluster"] = "test-cluster"
     assert limits["cluster"] == "test-cluster"
@@ -108,17 +108,18 @@ def test_extract_partition_limits_with_cluster():
 
 def test_generate_partitions_from_scontrol_mock(monkeypatch):
     """Test partition configuration generation (mocked scontrol)."""
+
     # Mock the query function to return our test data
     def mock_query(cluster=None):
         return SCONTROL_OUTPUT
-    
+
     import snakemake_executor_plugin_slurm.partitions as partitions_module
+
     monkeypatch.setattr(partitions_module, "query_scontrol_partitions", mock_query)
-    
+
     config = generate_partitions_from_scontrol(cluster="test-cluster")
-    
+
     assert "partitions" in config
     assert "standard" in config["partitions"]
     assert config["partitions"]["standard"]["cluster"] == "test-cluster"
     assert config["partitions"]["standard"]["max_nodes"] == 1
-
