@@ -820,6 +820,16 @@ We leave it to SLURM to resume your job(s)"""
                     any_finished = True
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
                 elif status in fail_stati:
+                    # we can only check for the fail status, if `sacct` is available
+                    if status_command_name != "sacct":
+                        self.logger.warning(
+                            f"Job '{j.external_jobid}' is in status '{status}', "
+                            "which indicates a failure. However, since the "
+                            "status command used was not 'sacct', we cannot "
+                            "report a detailed failure reason."
+                        )
+                        yield j
+                        continue
                     reasons = []
                     for step in range(10):  # Iterate over up to 10 job steps
                         reason_command = (
