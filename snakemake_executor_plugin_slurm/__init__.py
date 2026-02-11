@@ -356,10 +356,9 @@ class Executor(RemoteExecutor):
         self.test_mode = test_mode
         self.run_uuid = str(uuid.uuid4())
         if self.workflow.executor_settings.exclude_failed_nodes:
+            excluded_nodes = self.workflow.executor_settings.exclude_failed_nodes
             self._failed_nodes = set(
-                node.strip()
-                for node in self.workflow.executor_settings.exclude_failed_nodes.split(",")
-                if node.strip()
+                node.strip() for node in excluded_nodes.split(",") if node.strip()
             )
         else:
             self._failed_nodes = set()
