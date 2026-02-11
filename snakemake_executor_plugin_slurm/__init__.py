@@ -539,7 +539,8 @@ class Executor(RemoteExecutor):
         if self.workflow.executor_settings.reservation:
             call += f" --reservation={self.workflow.executor_settings.reservation}"
 
-        # we exclude failed nodes from further job submissions, to avoid repeated failures.
+        # we exclude failed nodes from further job submissions, to avoid
+        # repeated failures.
         if self._failed_nodes:
             call += f" --exclude={','.join(self._failed_nodes)}"
             self.logger.debug(
@@ -829,20 +830,25 @@ We leave it to SLURM to resume your job(s)"""
                     any_finished = True
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
                 elif status == "NODE_FAIL":
-                    # this is a special case: the job failed, but due to a node failure, so we might want to requeue it
+                    # this is a special case: the job failed, but due to a node failure,
+                    # so we might want to requeue it
                     if self.workflow.executor_settings.requeue:
                         self.logger.warning(
-                            f"Job '{j.external_jobid}' failed with status 'NODE_FAIL', but requeue is enabled. "
+                            f"Job '{j.external_jobid}' failed with status "
+                            f"'NODE_FAIL', but requeue is enabled. "
                             "Leaving it to SLURM to requeue the job."
                         )
                         yield j
                     else:
                         msg = (
-                            f"SLURM-job '{j.external_jobid}' failed due to a node failure, SLURM status is: "
+                            f"SLURM-job '{j.external_jobid}' failed due to a "
+                            "node failure, SLURM status is: "
                             # message ends with '. ', because it is proceeded
                             # with a new sentence
                             f"'{status}'. "
-                            "Consider enabling requeueing for such cases by setting the 'requeue' flag in the executor settings."
+                            "Consider enabling requeueing for such cases by "
+                            "setting the 'requeue' flag in the executor "
+                            "settings."
                         )
                         self.report_job_error(
                             j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
