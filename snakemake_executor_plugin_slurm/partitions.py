@@ -215,6 +215,11 @@ def generate_partitions_from_slurm_query(
     
     return {"partitions": partitions_config}
 
+# Note: this function is just a wrapper for the CI to work
+def generate_partitions_from_scontrol(cluster: Optional[str] = None) -> Dict[str, Dict]:
+    """Backward-compatible wrapper around generate_partitions_from_slurm_query."""
+    return generate_partitions_from_slurm_query(cluster)
+
 
 
 def get_best_partition(
