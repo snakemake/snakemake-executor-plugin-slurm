@@ -12,9 +12,7 @@ import re
 import shlex
 import shutil
 import subprocess
-import sys
 import time
-import yaml
 from dataclasses import dataclass, field
 from typing import List, Generator, Optional
 import uuid
