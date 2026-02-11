@@ -39,6 +39,7 @@ omit = [".*", "*/site-packages/*", "Snakefile"]
 
 [tool.black]
 line-length = 88
+extend-exclude = 'tests/test_scontrol_parsing\.py'
 
 [build-system]
 requires = ["poetry-core"]
