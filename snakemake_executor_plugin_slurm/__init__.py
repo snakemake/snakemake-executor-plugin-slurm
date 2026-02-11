@@ -830,13 +830,36 @@ We leave it to SLURM to resume your job(s)"""
                     any_finished = True
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
                 elif status == "NODE_FAIL":
-                    # this is a special case: the job failed, but due to a node failure,
-                    # so we might want to requeue it
+                    # this is a special case: the job failed, but due to a node failure.
+                    # Always track the failed node so future submissions exclude it,
+                    # regardless of whether requeue is enabled.
+                    if is_query_tool_available("sacct"):
+                        try:
+                            sacct_output = subprocess.check_output(
+                                f"sacct -j {j.external_jobid} -n -X -o nodelist",
+                                shell=True,
+                                text=True,
+                                stderr=subprocess.PIPE,
+                            )
+                            node = sacct_output.strip()
+                            if node:
+                                self._failed_nodes.add(node)
+                        except subprocess.CalledProcessError as e:
+                            self.logger.warning(
+                                f"Could not retrieve node information for job "
+                                f"{j.external_jobid}: {e.stderr}"
+                            )
+                    else:
+                        self.logger.debug(
+                            "sacct not available; cannot track failed node"
+                        )
+
                     if self.workflow.executor_settings.requeue:
                         self.logger.warning(
                             f"Job '{j.external_jobid}' failed with status "
                             f"'NODE_FAIL', but requeue is enabled. "
-                            "Leaving it to SLURM to requeue the job."
+                            "Leaving it to SLURM to requeue the job. "
+                            "Failed node will be excluded from future submissions."
                         )
                         yield j
                     else:
@@ -846,36 +869,15 @@ We leave it to SLURM to resume your job(s)"""
                             # message ends with '. ', because it is proceeded
                             # with a new sentence
                             f"'{status}'. "
-                            "Consider enabling requeueing for such cases by "
-                            "setting the 'requeue' flag in the executor "
-                            "settings."
+                            "Failed nodes will be excluded from future job "
+                            "submissions. Consider enabling requeueing for "
+                            "such cases by setting the 'requeue' flag in the "
+                            "executor settings."
                         )
                         self.report_job_error(
                             j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
                         )
                         active_jobs_seen_by_sacct.remove(j.external_jobid)
-                        # get the node from the job which failed using sacct
-                        # and add it to the list of failed nodes
-                        if is_query_tool_available("sacct"):
-                            try:
-                                sacct_output = subprocess.check_output(
-                                    f"sacct -j {j.external_jobid} -n -X -o nodelist",
-                                    shell=True,
-                                    text=True,
-                                    stderr=subprocess.PIPE,
-                                )
-                                node = sacct_output.strip()
-                                if node:
-                                    self._failed_nodes.add(node)
-                            except subprocess.CalledProcessError as e:
-                                self.logger.warning(
-                                    f"Could not retrieve node information for job "
-                                    f"{j.external_jobid}: {e.stderr}"
-                                )
-                        else:
-                            self.logger.debug(
-                                "sacct not available; skipping node exclusion"
-                            )
                 elif status in fail_stati:
                     msg = (
                         f"SLURM-job '{j.external_jobid}' failed, SLURM status is: "
