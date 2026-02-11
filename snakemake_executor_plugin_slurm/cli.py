@@ -9,11 +9,11 @@ snakemake-executor-plugin-slurm's partition_config setting.
 Usage:
     # Generate config for the current cluster
     generate-slurm-partition-config > partitions.yaml
-    
+
     # Generate config for specific cluster(s)
     generate-slurm-partition-config cluster1 > partitions.yaml
     generate-slurm-partition-config cluster1,cluster2 > partitions.yaml
-    
+
     # Save to a file
     generate-slurm-partition-config -o partitions.yaml
     generate-slurm-partition-config cluster1,cluster2 -o partitions.yaml
@@ -34,17 +34,17 @@ def main():
 Examples:
   # Query current cluster and output to stdout
   generate-slurm-partition-config
-  
+
   # Query specific cluster
   generate-slurm-partition-config cluster1
-  
+
   # Query multiple clusters
   generate-slurm-partition-config cluster1,cluster2
-  
+
   # Save to file
   generate-slurm-partition-config -o partitions.yaml
   generate-slurm-partition-config cluster1,cluster2 -o partitions.yaml
-  
+
 The generated YAML file can be used with:
   snakemake --executor slurm --slurm-partition-config partitions.yaml
 
