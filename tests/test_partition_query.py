@@ -56,21 +56,23 @@ PartitionName=a100dl
    TRESBillingWeights=cpu=1.0,mem=1.5G,GRES/gpu=9
 """
 
+
 def test_parsing():
     """Test the partition parsing logic."""
     partitions = parse_scontrol_partition_output(SCONTROL_OUTPUT)
-    
+
     print("Parsed partitions:", list(partitions.keys()))
-    
+
     output_config = {"partitions": {}}
-    
+
     for partition_name, partition_data in partitions.items():
         limits = extract_partition_limits(partition_data)
         limits["cluster"] = "mogonnhr"
         output_config["partitions"][partition_name] = limits
-    
+
     print("\nGenerated partition configuration:")
     print(yaml.dump(output_config, default_flow_style=False, sort_keys=False))
+
 
 if __name__ == "__main__":
     test_parsing()
