@@ -822,13 +822,16 @@ We leave it to SLURM to resume your job(s)"""
                 elif status in fail_stati:
                     # we can only check for the fail status, if `sacct` is available
                     if status_command_name != "sacct":
-                        self.logger.warning(
-                            f"Job '{j.external_jobid}' is in status '{status}', "
-                            "which indicates a failure. However, since the "
-                            "status command used was not 'sacct', we cannot "
-                            "report a detailed failure reason."
+                        msg = (
+                            f"SLURM-job '{j.external_jobid}' failed, "
+                            f"SLURM status is: '{status}'. "
+                            "Detailed failure reason unavailable "
+                            "(status command is not 'sacct')."
                         )
-                        yield j
+                        self.report_job_error(
+                            j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
+                        )
+                        active_jobs_seen_by_sacct.discard(j.external_jobid)
                         continue
                     reasons = []
                     for step in range(10):  # Iterate over up to 10 job steps
