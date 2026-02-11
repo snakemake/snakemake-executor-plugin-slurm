@@ -51,7 +51,6 @@ from .submit_string import get_submit_command
 from .partitions import (
     read_partition_file,
     get_best_partition,
-    generate_partitions_from_slurm_query,
 )
 from .validation import (
     validate_or_get_slurm_job_id,
@@ -215,16 +214,6 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
-    write_partition_config: Optional[str] = field(
-        default=None,
-        metadata={
-            "help": "If set, Snakemake attempts to write the current "
-            "SLURM partition configuration to a file `partitions.yaml`. "
-            "Note, in a multicluster setup, you can get your cluster's "
-            "names with `sacctmgr -np list clusters` . Then specify both "
-            " with `--slurm-write-partition-config '<cluster1>,<cluster2>'` .",
-        },
-    )
     efficiency_report: bool = field(
         default=False,
         metadata={
@@ -348,26 +337,6 @@ class Executor(RemoteExecutor):
         # run check whether we are running in a SLURM job context
         self.warn_on_jobcontext()
         self.test_mode = test_mode
-        
-        # Handle write_partition_config flag
-        if self.workflow.executor_settings.write_partition_config:
-            clusters_str = self.workflow.executor_settings.write_partition_config
-            clusters = [c.strip() for c in clusters_str.split(",")]
-            
-            all_partitions = {}
-            for cluster in clusters:
-                try:
-                    config = generate_partitions_from_scontrol(cluster=cluster)
-                    # Merge partitions from this cluster
-                    if "partitions" in config:
-                        all_partitions.update(config["partitions"])
-                except Exception as e:
-                    self.logger.error(f"Failed to query partitions for cluster {cluster}: {e}")
-            
-            # Output the complete configuration to stdout
-            output = {"partitions": all_partitions}
-            yaml.dump(output, sys.stdout, default_flow_style=False, sort_keys=False)
-            sys.exit(0)
         
         self.run_uuid = str(uuid.uuid4())
         self.logger.info(f"SLURM run ID: {self.run_uuid}")

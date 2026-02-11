@@ -193,26 +193,25 @@ def generate_partitions_from_slurm_query(
     Returns:
         Dictionary formatted for partition YAML (nested under 'partitions' key)
     """
-    partitions_data = {}
+    partitions_config = {}
+    
     if args:
         for arg in args.split(","):
             cluster = arg.strip()
             scontrol_output = query_scontrol_partitions(cluster)
-            current_partitions_data = parse_scontrol_partition_output(scontrol_output)
-            partitions_data.update(current_partitions_data)
+            partitions_data = parse_scontrol_partition_output(scontrol_output)
+            
+            for partition_name, partition_data in partitions_data.items():
+                limits = extract_partition_limits(partition_data)
+                limits["cluster"] = cluster
+                partitions_config[partition_name] = limits
     else:
         scontrol_output = query_scontrol_partitions()
         partitions_data = parse_scontrol_partition_output(scontrol_output)
-    
-    partitions_config = {}
-    for partition_name, partition_data in partitions_data.items():
-        limits = extract_partition_limits(partition_data)
         
-        # Add cluster if provided
-        if cluster:
-            limits["cluster"] = cluster
-        
-        partitions_config[partition_name] = limits
+        for partition_name, partition_data in partitions_data.items():
+            limits = extract_partition_limits(partition_data)
+            partitions_config[partition_name] = limits
     
     return {"partitions": partitions_config}
 
