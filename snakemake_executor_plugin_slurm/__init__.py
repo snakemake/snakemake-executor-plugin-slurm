@@ -337,7 +337,7 @@ class Executor(RemoteExecutor):
         # run check whether we are running in a SLURM job context
         self.warn_on_jobcontext()
         self.test_mode = test_mode
-        
+
         self.run_uuid = str(uuid.uuid4())
         self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
@@ -735,8 +735,7 @@ class Executor(RemoteExecutor):
                         f"{active_jobs_ids_with_current_sacct_status}"
                     )
                     self.logger.debug(
-                        "active_jobs_seen_by_sacct are: "
-                        f"{active_jobs_seen_by_sacct}"
+                        "active_jobs_seen_by_sacct are: " f"{active_jobs_seen_by_sacct}"
                     )
                     self.logger.debug(
                         f"missing_sacct_status are: {missing_sacct_status}"

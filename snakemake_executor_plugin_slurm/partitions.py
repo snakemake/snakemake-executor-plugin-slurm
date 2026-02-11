@@ -58,20 +58,20 @@ def read_partition_file(partition_file: Path) -> List["Partition"]:
     return out
 
 
-def query_scontrol_partitions(cluster = None) -> str:
+def query_scontrol_partitions(cluster=None) -> str:
     """
     Query SLURM partition information using scontrol.
-    
+
     Args:
         cluster: Optional cluster name for multi-cluster setups
-        
+
     Returns:
         Raw output from scontrol show partition
     """
     cmd = "scontrol show partition"
     if cluster:
         cmd += f" -M {shlex.quote(cluster)}"
-    
+
     try:
         result = subprocess.run(
             cmd, shell=True, capture_output=True, text=True, check=True
@@ -88,66 +88,66 @@ def query_scontrol_partitions(cluster = None) -> str:
 def parse_scontrol_partition_output(scontrol_output: str) -> Dict[str, Dict]:
     """
     Parse scontrol show partition output into partition configurations.
-    
+
     Args:
         scontrol_output: Raw output from scontrol show partition
-        
+
     Returns:
         Dictionary with partition names as keys and config dicts as values
     """
     partitions = {}
     current_partition = None
     current_config = {}
-    
+
     for line in scontrol_output.split("\n"):
         line = line.strip()
-        
+
         if line.startswith("PartitionName="):
             # Save previous partition if exists
             if current_partition:
                 partitions[current_partition] = current_config
-            
+
             # Start new partition
             current_partition = line.split("=", 1)[1]
             current_config = {}
-        
+
         elif current_partition and "=" in line:
             # Parse key-value pairs
             for item in line.split():
                 if "=" in item:
                     key, value = item.split("=", 1)
                     current_config[key] = value
-    
+
     # Don't forget the last partition
     if current_partition:
         partitions[current_partition] = current_config
-    
+
     return partitions
 
 
 def extract_partition_limits(partition_data: Dict[str, str]) -> Dict:
     """
     Extract partition limits from scontrol output data.
-    
+
     Args:
         partition_data: Dictionary of partition key-value pairs from scontrol
-        
+
     Returns:
         Dictionary with partition limit configuration
     """
     config = {}
-    
+
     # MaxTime -> max_runtime
     if "MaxTime" in partition_data and partition_data["MaxTime"] != "UNLIMITED":
         config["max_runtime"] = partition_data["MaxTime"]
-    
+
     # MaxNodes -> max_nodes
     if "MaxNodes" in partition_data and partition_data["MaxNodes"] != "UNLIMITED":
         try:
             config["max_nodes"] = int(partition_data["MaxNodes"])
         except ValueError:
             pass
-    
+
     # MaxCPUsPerNode -> max_threads (using total CPUs / total nodes as approx)
     # Or extract from TotalCPUs if available
     if "TotalCPUs" in partition_data and "TotalNodes" in partition_data:
@@ -159,7 +159,7 @@ def extract_partition_limits(partition_data: Dict[str, str]) -> Dict:
                 config["max_threads"] = max_cpus_per_node
         except ValueError:
             pass
-    
+
     # DefMemPerCPU -> max_mem_mb_per_cpu
     if "DefMemPerCPU" in partition_data:
         try:
@@ -168,7 +168,7 @@ def extract_partition_limits(partition_data: Dict[str, str]) -> Dict:
             config["max_mem_mb_per_cpu"] = mem_mb
         except ValueError:
             pass
-    
+
     # Check for GPU support in TRES
     if "TRES" in partition_data:
         tres = partition_data["TRES"]
@@ -177,7 +177,7 @@ def extract_partition_limits(partition_data: Dict[str, str]) -> Dict:
             gpu_match = re.search(r"gres/gpu=(\d+)", tres)
             if gpu_match:
                 config["max_gpu"] = int(gpu_match.group(1))
-    
+
     return config
 
 
@@ -186,21 +186,21 @@ def generate_partitions_from_slurm_query(
 ) -> Dict[str, Dict]:
     """
     Generate partition configuration by querying scontrol.
-    
+
     Args:
         <cluster>,<cluster>: Optional cluster names for multi-cluster setups
-        
+
     Returns:
         Dictionary formatted for partition YAML (nested under 'partitions' key)
     """
     partitions_config = {}
-    
+
     if args:
         for arg in args.split(","):
             cluster = arg.strip()
             scontrol_output = query_scontrol_partitions(cluster)
             partitions_data = parse_scontrol_partition_output(scontrol_output)
-            
+
             for partition_name, partition_data in partitions_data.items():
                 limits = extract_partition_limits(partition_data)
                 limits["cluster"] = cluster
@@ -208,18 +208,18 @@ def generate_partitions_from_slurm_query(
     else:
         scontrol_output = query_scontrol_partitions()
         partitions_data = parse_scontrol_partition_output(scontrol_output)
-        
+
         for partition_name, partition_data in partitions_data.items():
             limits = extract_partition_limits(partition_data)
             partitions_config[partition_name] = limits
-    
+
     return {"partitions": partitions_config}
+
 
 # Note: this function is just a wrapper for the CI to work
 def generate_partitions_from_scontrol(cluster: Optional[str] = None) -> Dict[str, Dict]:
     """Backward-compatible wrapper around generate_partitions_from_slurm_query."""
     return generate_partitions_from_slurm_query(cluster)
-
 
 
 def get_best_partition(
