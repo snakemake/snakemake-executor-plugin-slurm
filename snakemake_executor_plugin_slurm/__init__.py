@@ -344,6 +344,7 @@ class Executor(RemoteExecutor):
         self.warn_on_jobcontext()
         self.test_mode = test_mode
         self.run_uuid = str(uuid.uuid4())
+        self._failed_nodes = set()
         # validate prefix: only allow alphanumeric, underscore, hyphen
         # cap length:
         if self.workflow.executor_settings.jobname_prefix:
@@ -537,6 +538,14 @@ class Executor(RemoteExecutor):
 
         if self.workflow.executor_settings.reservation:
             call += f" --reservation={self.workflow.executor_settings.reservation}"
+
+        # we exclude failed nodes from further job submissions, to avoid repeated failures.
+        if self._failed_nodes:
+            call += f" --exclude={','.join(self._failed_nodes)}"
+            self.logger.debug(
+                f"Excluding the following nodes from job submission: "
+                f"{','.join(self._failed_nodes)}"
+            )
 
         call += set_gres_string(job)
 
@@ -819,6 +828,30 @@ We leave it to SLURM to resume your job(s)"""
                     self.report_job_success(j)
                     any_finished = True
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
+                elif status == "NODE_FAIL":
+                    # this is a special case: the job failed, but due to a node failure, so we might want to requeue it
+                    if self.workflow.executor_settings.requeue:
+                        self.logger.warning(
+                            f"Job '{j.external_jobid}' failed with status 'NODE_FAIL', but requeue is enabled. "
+                            "Leaving it to SLURM to requeue the job."
+                        )
+                        yield j
+                    else:
+                        msg = (
+                            f"SLURM-job '{j.external_jobid}' failed due to a node failure, SLURM status is: "
+                            # message ends with '. ', because it is proceeded
+                            # with a new sentence
+                            f"'{status}'. "
+                            "Consider enabling requeueing for such cases by setting the 'requeue' flag in the executor settings."
+                        )
+                        self.report_job_error(
+                            j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
+                        )
+                        active_jobs_seen_by_sacct.remove(j.external_jobid)
+                        # get the node from the job which failed
+                        # and add it to the list of failed nodes
+                        node = j.aux["slurm_logfile"].parent.parent.name
+                        self._failed_nodes.add(node)
                 elif status in fail_stati:
                     msg = (
                         f"SLURM-job '{j.external_jobid}' failed, SLURM status is: "
