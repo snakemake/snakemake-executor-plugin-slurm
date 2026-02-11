@@ -861,7 +861,7 @@ We leave it to SLURM to resume your job(s)"""
                     if is_query_tool_available("sacct"):
                         try:
                             sacct_output = subprocess.check_output(
-                                f"sacct -j {j.external_jobid} -n -X -o nodelist",
+                                f"sacct -j {j.external_jobid} -n -X -o nodelist%-256",
                                 shell=True,
                                 text=True,
                                 stderr=subprocess.PIPE,
