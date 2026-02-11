@@ -2,7 +2,6 @@
 Tests for scontrol partition query and parsing functionality.
 """
 
-import pytest
 from snakemake_executor_plugin_slurm.partitions import (
     parse_scontrol_partition_output,
     extract_partition_limits,
