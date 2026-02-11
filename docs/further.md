@@ -68,6 +68,9 @@ How and where you set configurations on factors like file size or increasing the
 
 The SLURM executor plugin supports automatic partition selection based on job resource requirements, via the command line option `--slurm-partition-config`. This feature allows the plugin to choose the most appropriate partition for each job, without the need to manually specify partitions for different job types. This also enables variable partition selection as a job's resource requirements change based on [dynamic resources](#dynamic-resource-specification), ensuring that jobs are always scheduled to an appropriate partition.
 
+To get a template for a partition configuration file you can run the `generate-slurm-partition-config` script. It will write an editable `partitions.yaml` file. That files ought to be edited as not every information can be deduced from SLURM's partition configurations (e.g. where or where not to run MPI applications). The resulting file can be used with the `--slurm-partition-config` option or saved alongside a profile. The plugin will query an environment variable `$SNAKEMAKE_SLURM_PARTITIONS`.
+Run `generate-slurm-partition-config -h` to see alll options. 
+
 *Jobs that explicitly specify a `slurm_partition` resource will bypass automatic selection and use the specified partition directly.*
 
 > **Note:** Partition selection supports specifying the target cluster using any of the resource keys `cluster`, `clusters`, or `slurm_cluster` in your workflow profile or the partition configuration file. All three are treated equivalently by the plugin.
