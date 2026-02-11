@@ -5,11 +5,45 @@ from pathlib import Path
 from math import inf
 
 from snakemake_interface_common.exceptions import WorkflowError
-from snakemake_executor_plugin_slurm.utils import parse_time_to_minutes
+from snakemake_executor_plugin_slurm.utils import time_to_seconds, parse_time_to_minutes
 from snakemake_executor_plugin_slurm.partitions import (
     PartitionLimits,
     read_partition_file,
 )
+from snakemake_executor_plugin_slurm.efficiency_report import (
+    parse_sacct_data,
+)
+
+
+def test_parse_sacct_data():
+    from io import StringIO
+
+    test_data = [
+        "10294159|b10191d0-6985-4c3a-8ccb-"
+        "aa7d23ebffc7|rule_bam_bwa_mem_mosdepth_"
+        "simulate_reads|00:01:31|00:24.041|1|1||32000M",
+        "10294159.batch|batch||00:01:31|00:03.292|1|1|71180K|",
+        "10294159.0|python3.12||00:01:10|00:20.749|1|1|183612K|",
+        "10294160|b10191d0-6985-4c3a-8ccb-"
+        "aa7d23ebffc7|rule_bam_bwa_mem_mosdepth_"
+        "simulate_reads|00:01:30|00:24.055|1|1||32000M",
+        "10294160.batch|batch||00:01:30|00:03.186|1|1|71192K|",
+        "10294160.0|python3.12||00:01:10|00:20.868|1|1|184352K|",
+    ]
+    df = parse_sacct_data(
+        lines=test_data, e_threshold=0.0, run_uuid="test", logger=None
+    )
+    output = StringIO()
+    df.to_csv(output, index=False)
+    print(output.getvalue())
+    # this should only be two rows once collapsed
+    assert len(df) == 2
+    # check that RuleName is properly inherited from main jobs
+    assert all(df["RuleName"] == "rule_bam_bwa_mem_mosdepth_simulate_reads")
+    # check that RequestedMem_MB is properly inherited
+    assert all(df["RequestedMem_MB"] == 32000.0)
+    # check that MaxRSS_MB is properly calculated from job steps
+    assert df.iloc[0]["MaxRSS_MB"] > 0  # Should have actual memory usage from job step
 
 
 class TestTimeConversion:
@@ -148,6 +182,45 @@ class TestTimeConversion:
         # = 7*24*60 + 23*60 + 59 + 59/60 = 10080 + 1380 + 59 + 0.98333 = 11519.98333,
         # rounded to 11520
         assert parse_time_to_minutes("7-23:59:59") == 11520
+
+
+class TestTimeToSeconds:
+    """Test the time_to_seconds function with SLURM sacct time formats."""
+
+    def test_elapsed_format_with_days(self):
+        """
+        Test Elapsed format: [D-]HH:MM:SS or
+        [DD-]HH:MM:SS (no fractional seconds).
+        """
+        # Single digit days
+        assert time_to_seconds("1-00:00:00") == 86400  # 1 day
+        assert (
+            time_to_seconds("1-12:30:45") == 86400 + 12 * 3600 + 30 * 60 + 45
+        )  # 131445
+        assert time_to_seconds("9-23:59:59") == 9 * 86400 + 23 * 3600 + 59 * 60 + 59
+
+        # Double digit days
+        assert (
+            time_to_seconds("10-01:02:03") == 10 * 86400 + 1 * 3600 + 2 * 60 + 3
+        )  # 867723
+
+    def test_elapsed_format_hours_minutes_seconds(self):
+        """Test Elapsed format: HH:MM:SS (no fractional seconds)."""
+        assert time_to_seconds("00:00:00") == 0
+        assert time_to_seconds("01:00:00") == 3600  # 1 hour
+        assert time_to_seconds("23:59:59") == 23 * 3600 + 59 * 60 + 59  # 86399
+        assert time_to_seconds("12:30:45") == 12 * 3600 + 30 * 60 + 45  # 45045
+
+    def test_totalcpu_format_with_days(self):
+        """
+        Test TotalCPU format: [D-][HH:]MM:SS or [DD-][HH:]MM:SS
+        (with fractional seconds).
+        """
+        # With days and hours
+        assert time_to_seconds("1-12:30:45.5") == 86400 + 12 * 3600 + 30 * 60 + 45.5
+        assert (
+            time_to_seconds("10-01:02:03.123") == 10 * 86400 + 1 * 3600 + 2 * 60 + 3.123
+        )
 
 
 class TestPartitionLimitsTimeConversion:

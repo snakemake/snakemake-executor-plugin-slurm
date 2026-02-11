@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "snakemake-executor-plugin-slurm"
-version = "2.1.0"
+version = "2.2.0"
 description = "A Snakemake executor plugin for submitting jobs to a SLURM cluster."
 authors = [
     "Christian Meesters <meesters@uni-mainz.de>",
@@ -34,8 +34,7 @@ pandas = "^2.2.3"
 omit = [".*", "*/site-packages/*", "Snakefile"]
 
 [tool.black]
-line-length = 87
-target-version = ['py311']
+line-length = 88
 
 [build-system]
 requires = ["poetry-core"]
