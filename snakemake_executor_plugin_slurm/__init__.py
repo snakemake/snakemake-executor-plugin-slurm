@@ -186,6 +186,17 @@ class ExecutorSettings(ExecutorSettingsBase):
         },
     )
 
+    exclude_failed_nodes: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": "Comma-separated list of nodes to exclude from job "
+            "submission. This is useful to exclude known problematic nodes. "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
     no_account: bool = field(
         default=False,
         metadata={
@@ -344,7 +355,12 @@ class Executor(RemoteExecutor):
         self.warn_on_jobcontext()
         self.test_mode = test_mode
         self.run_uuid = str(uuid.uuid4())
-        self._failed_nodes = set()
+        if self.workflow.executor_settings.exclude_failed_nodes:
+            self._failed_nodes = set(
+                self.workflow.executor_settings.exclude_failed_nodes.split(",")
+            )
+        else:
+            self._failed_nodes = set()
         # validate prefix: only allow alphanumeric, underscore, hyphen
         # cap length:
         if self.workflow.executor_settings.jobname_prefix:
