@@ -48,6 +48,7 @@ from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
 from .partitions import read_partition_file, get_best_partition
 from .validation import (
+    validate_or_get_slurm_job_id,
     validate_slurm_extra,
     validate_executor_settings,
     validate_status_command_settings,
@@ -242,6 +243,17 @@ class ExecutorSettings(ExecutorSettingsBase):
             "required": False,
         },
     )
+    jobname_prefix: Optional[str] = field(
+        default="",
+        metadata={
+            "help": "Prefix that is added to the job names. "
+            "Must contain only alphanumeric characters, "
+            "underscores or hyphens. Maximum length should "
+            "not exceed 50 characters.",
+            "env_var": False,
+            "required": False,
+        },
+    )
 
     status_command: Optional[str] = field(
         default_factory=_get_status_command_default,
@@ -332,6 +344,21 @@ class Executor(RemoteExecutor):
         self.warn_on_jobcontext()
         self.test_mode = test_mode
         self.run_uuid = str(uuid.uuid4())
+        # validate prefix: only allow alphanumeric, underscore, hyphen
+        # cap length:
+        if self.workflow.executor_settings.jobname_prefix:
+            if not re.match(
+                r"^[A-Za-z0-9_-]{1,50}$",
+                self.workflow.executor_settings.jobname_prefix,
+            ):
+                raise WorkflowError(
+                    "The jobname_prefix may only contain alphanumeric "
+                    "characters, underscores or hyphens, and must not "
+                    "exceed 50 characters in length."
+                )
+            self.run_uuid = "_".join(
+                [self.workflow.executor_settings.jobname_prefix, self.run_uuid]
+            )
         self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
         self._fallback_partition = None
@@ -407,9 +434,7 @@ class Executor(RemoteExecutor):
             return
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
-        self.logger.info(
-            f"Cleaning up SLURM log files older than {age_cutoff} day(s)."
-        )
+        self.logger.info(f"Cleaning up SLURM log files older than {age_cutoff} day(s).")
 
         for path in self.slurm_logdir.rglob("*.log"):
             if path.is_file():
@@ -588,8 +613,10 @@ class Executor(RemoteExecutor):
         # To extract the job id we split by semicolon and take the first
         # element (this also works if no cluster name was provided)
         slurm_jobid = out.strip().split(";")[0]
-        if not slurm_jobid:
-            raise WorkflowError("Failed to retrieve SLURM job ID from sbatch output.")
+        # this slurm_jobid might be wrong: some cluster admin give convoluted
+        # sbatch outputs. So we need to validate it properly (and replace it
+        # if necessary).
+        slurm_jobid = validate_or_get_slurm_job_id(slurm_jobid, out)
         slurm_logfile = slurm_logfile.with_name(
             slurm_logfile.name.replace("%j", slurm_jobid)
         )
@@ -728,8 +755,7 @@ class Executor(RemoteExecutor):
                         f"{active_jobs_ids_with_current_sacct_status}"
                     )
                     self.logger.debug(
-                        "active_jobs_seen_by_sacct are: "
-                        f"{active_jobs_seen_by_sacct}"
+                        "active_jobs_seen_by_sacct are: " f"{active_jobs_seen_by_sacct}"
                     )
                     self.logger.debug(
                         f"missing_sacct_status are: {missing_sacct_status}"
