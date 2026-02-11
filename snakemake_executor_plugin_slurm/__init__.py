@@ -423,6 +423,13 @@ class Executor(RemoteExecutor):
                 e_report_path=report_path,
                 logger=self.logger,
             )
+        # Report any failed nodes that were tracked during execution
+        if self._failed_nodes:
+            failed_nodes_str = ", ".join(sorted(self._failed_nodes))
+            self.logger.warning(
+                f"The following nodes failed during job execution and were "
+                f"excluded from subsequent submissions: {failed_nodes_str}"
+            )
 
     def clean_old_logs(self) -> None:
         """
@@ -866,8 +873,6 @@ We leave it to SLURM to resume your job(s)"""
                         msg = (
                             f"SLURM-job '{j.external_jobid}' failed due to a "
                             "node failure, SLURM status is: "
-                            # message ends with '. ', because it is proceeded
-                            # with a new sentence
                             f"'{status}'. "
                             "Failed nodes will be excluded from future job "
                             "submissions. Consider enabling requeueing for "
