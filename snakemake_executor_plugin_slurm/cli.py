@@ -51,7 +51,7 @@ The generated YAML file can be used with:
 OR for permant use, copy the `partitions.yaml` to a location
 (e.g. ~/.config/snakemake/ or /etc/xdg/snakemake). Be sure to set
 `$SNAKEMAKE_SLURM_PARTITIONS`, accordingly.
-    """
+    """,
     )
     parser.add_argument(
         "clusters",
@@ -60,7 +60,7 @@ OR for permant use, copy the `partitions.yaml` to a location
         help="Comma-separated list of cluster names for multi-cluster setups. "
         "If omitted, queries the current/default cluster.",
     )
-    
+
     parser.add_argument(
         "-o",
         "--output",
@@ -68,16 +68,16 @@ OR for permant use, copy the `partitions.yaml` to a location
         default=None,
         help="Output file path. If not specified, writes to stdout.",
     )
-    
+
     args = parser.parse_args()
-    
+
     try:
         # Generate partition configuration
         config = generate_partitions_from_slurm_query(args.clusters)
-        
+
         # Format output
         yaml_output = yaml.dump(config, default_flow_style=False, sort_keys=False)
-        
+
         # Write to file or stdout
         if args.output:
             with open(args.output, "w") as f:
@@ -86,13 +86,14 @@ OR for permant use, copy the `partitions.yaml` to a location
             # We need to issue a warning, that the file needs to be edited:
             print(
                 "\033[1mWARNING: Please review the generated partition configuration file. "
-                "You may need to adjust the limits based on your cluster's actual capabilities."
+                "You may need to adjust the limits based on your cluster's actual "
+                "capabilities. "
                 "For instance, enter `supports_mpi: true` for MPI partitions.\033[0m",
                 file=sys.stderr,
             )
         else:
             print(yaml_output)
-            
+
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
