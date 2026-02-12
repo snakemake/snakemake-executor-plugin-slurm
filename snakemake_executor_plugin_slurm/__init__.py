@@ -46,7 +46,10 @@ from .job_status_query import (
 )
 from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
-from .partitions import read_partition_file, get_best_partition
+from .partitions import (
+    read_partition_file,
+    get_best_partition,
+)
 from .validation import (
     validate_or_get_slurm_job_id,
     validate_slurm_extra,
@@ -354,6 +357,7 @@ class Executor(RemoteExecutor):
         # run check whether we are running in a SLURM job context
         self.warn_on_jobcontext()
         self.test_mode = test_mode
+
         self.run_uuid = str(uuid.uuid4())
         if self.workflow.executor_settings.exclude_failed_nodes:
             excluded_nodes = self.workflow.executor_settings.exclude_failed_nodes
