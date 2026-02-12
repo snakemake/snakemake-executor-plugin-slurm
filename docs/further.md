@@ -314,6 +314,15 @@ snakemake --slurm-requeue ...
 
 This flag effectively does not consider failed SLURM jobs or preserves job IDs and priorities or allows job priority to be accumulated while pending.
 
+##### Node Failure Tracking
+
+When jobs fail due to SLURM's `NODE_FAIL` status (indicating a hardware or infrastructure problem with the compute node), the plugin automatically tracks which nodes have failed. These failed nodes are then excluded from all subsequent job submissions using SLURM's `--exclude` flag, preventing your jobs from being repeatedly submitted to problematic hardware.
+
+At the end of workflow execution, the plugin will report all nodes that were excluded due to failures. This information can be useful for notifying your cluster administrator about hardware issues. If a workflow breaks, such nodes can be excluded with `--slurm-exclude-failed-nodes=<node1,node2,...>` for a fresh start.
+
+This node tracking works regardless of whether the `--slurm-requeue` flag is enabled:
+- **With `--slurm-requeue`**: SLURM will automatically requeue failed jobs, and they will be retried on different nodes
+- **Without `--slurm-requeue`**: Failed jobs will be reported as errors, but future retries (via `--retries` or other retry mechanisms) will avoid the problematic nodes
 
 #### MPI-specific Resources
 
