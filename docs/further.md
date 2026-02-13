@@ -42,6 +42,7 @@ $ snakemake --executor slurm \
 This example assumes no limit for submitted jobs (`-j unlimited`). Any number, e.g. `-j 150`, will throttle a workflow to this number of concurrent jobs.
 Furthermore, on many clusters we must assume separation of workflows and data. Use the `--directory <path>` flag to point to a file system that contains your data.
 
+
 ### Configuration
 
 Snakemake offers great [capabilities to specify and thereby limit resources](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#resources) used by a workflow as a whole and by individual jobs.
@@ -207,7 +208,7 @@ These are the available options, and the SLURM `sbatch` command line arguments t
 
 | Snakemake plugin     | Description                         | SLURM               |
 |----------------------|-------------------------------------|---------------------|
-| `clusters`           | list of clusters that (a) job(s)    | `--clusters`        |
+| `clusters` (or `cluster` or `slurm_cluster`)           | list of clusters that (a) job(s)    | `--clusters`        |
 |                      | can run on                          |                     |
 | `constraint`         | requiring particular node features  | `--constraint`/`-C` |
 |                      | for job execution                   |                     |
@@ -235,6 +236,11 @@ For details on the constraint syntax, see the [documentation of the SLURM `sbatc
 With SLURM, it is possible to [federate multiple clusters](https://slurm.schedmd.com/multi_cluster.html).
 This can allow users to submit jobs to a cluster different from the one they run their job submission commands.
 If this is available on your cluster, this resource accepts a string with a comma separated list of cluster names, which is passed on to the [SLURM `sbatch` command-line argument `--clusters`](https://slurm.schedmd.com/sbatch.html#SECTION_OPTIONS).
+
+We allow `clusters` or `cluster` or `slurm_cluster` as there are multiple conventions.
+
+.. note:: While it is possible to submit to more than one cluster in principle, not all SLURM multicluster setups will support this.
+
 
 ##### `slurm_partition`
 
@@ -308,6 +314,15 @@ snakemake --slurm-requeue ...
 
 This flag effectively does not consider failed SLURM jobs or preserves job IDs and priorities or allows job priority to be accumulated while pending.
 
+##### Node Failure Tracking
+
+When jobs fail due to SLURM's `NODE_FAIL` status (indicating a hardware or infrastructure problem with the compute node), the plugin automatically tracks which nodes have failed. These failed nodes are then excluded from all subsequent job submissions using SLURM's `--exclude` flag, preventing your jobs from being repeatedly submitted to problematic hardware.
+
+At the end of workflow execution, the plugin will report all nodes that were excluded due to failures. This information can be useful for notifying your cluster administrator about hardware issues. If a workflow breaks, such nodes can be excluded with `--slurm-exclude-failed-nodes=<node1,node2,...>` for a fresh start.
+
+This node tracking works regardless of whether the `--slurm-requeue` flag is enabled:
+- **With `--slurm-requeue`**: SLURM will automatically requeue failed jobs, and they will be retried on different nodes
+- **Without `--slurm-requeue`**: Failed jobs will be reported as errors, but future retries (via `--retries` or other retry mechanisms) will avoid the problematic nodes
 
 #### MPI-specific Resources
 
@@ -647,7 +662,19 @@ Note, that
 ### Inquiring about Job Information and Adjusting the Rate Limiter
 
 The executor plugin for SLURM uses unique job names to inquire about job status.
-It ensures inquiring about job status for the series of jobs of a workflow does not put too much strain on the batch system's database.
+Each workflow run is assigned a UUID (Universally Unique Identifier) as its job name, ensuring that job status queries can target only the jobs belonging to that specific workflow run.
+This approach prevents conflicts between concurrent workflow runs and ensures that job status checks do not put excessive strain on the batch system's database.
+
+By default, the job name is a randomly generated UUID (e.g., `a1b2c3d4-e5f6-7890-abcd-ef1234567890`).
+You can customize this by adding a human-readable prefix using the `--slurm-jobname-prefix` flag:
+
+```console
+snakemake --executor slurm --slurm-jobname-prefix myproject ...
+```
+
+This will generate job names like `myproject_a1b2c3d4-e5f6-7890-abcd-ef1234567890`, making it easier to identify your workflow runs in SLURM job listings.
+The prefix must contain only alphanumeric characters, underscores, or hyphens, and should not exceed 50 characters.
+
 Human readable information is stored in the comment of a particular job.
 It is a combination of the rule name and wildcards.
 You can ask for it with the `sacct` or `squeue` commands, for example:

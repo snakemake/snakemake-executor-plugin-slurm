@@ -49,6 +49,7 @@ from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
 from .partitions import read_partition_file, get_best_partition
 from .validation import (
+    validate_or_get_slurm_job_id,
     validate_slurm_extra,
     validate_executor_settings,
     validate_status_command_settings,
@@ -186,6 +187,17 @@ class ExecutorSettings(ExecutorSettingsBase):
         },
     )
 
+    exclude_failed_nodes: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": "Comma-separated list of nodes to exclude from job "
+            "submission. This is useful to exclude known problematic nodes. "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
     no_account: bool = field(
         default=False,
         metadata={
@@ -239,6 +251,17 @@ class ExecutorSettings(ExecutorSettingsBase):
         metadata={
             "help": "Threshold for efficiency report. "
             "Jobs with efficiency below this threshold will be reported.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    jobname_prefix: Optional[str] = field(
+        default="",
+        metadata={
+            "help": "Prefix that is added to the job names. "
+            "Must contain only alphanumeric characters, "
+            "underscores or hyphens. Maximum length should "
+            "not exceed 50 characters.",
             "env_var": False,
             "required": False,
         },
@@ -333,10 +356,33 @@ class Executor(RemoteExecutor):
         self.warn_on_jobcontext()
         self.test_mode = test_mode
         self.run_uuid = str(uuid.uuid4())
+        if self.workflow.executor_settings.exclude_failed_nodes:
+            excluded_nodes = self.workflow.executor_settings.exclude_failed_nodes
+            self._failed_nodes = set(
+                node.strip() for node in excluded_nodes.split(",") if node.strip()
+            )
+        else:
+            self._failed_nodes = set()
+        # validate prefix: only allow alphanumeric, underscore, hyphen
+        # cap length:
+        if self.workflow.executor_settings.jobname_prefix:
+            if not re.match(
+                r"^[A-Za-z0-9_-]{1,50}$",
+                self.workflow.executor_settings.jobname_prefix,
+            ):
+                raise WorkflowError(
+                    "The jobname_prefix may only contain alphanumeric "
+                    "characters, underscores or hyphens, and must not "
+                    "exceed 50 characters in length."
+                )
+            self.run_uuid = "_".join(
+                [self.workflow.executor_settings.jobname_prefix, self.run_uuid]
+            )
         self.logger.info(f"SLURM run ID: {self.run_uuid}")
         self._fallback_account_arg = None
         self._fallback_partition = None
         self._preemption_warning = False  # no preemption warning has been issued
+        self._submitted_job_clusters = set()  # track clusters of submitted jobs
         self.slurm_logdir = (
             Path(self.workflow.executor_settings.logdir)
             if self.workflow.executor_settings.logdir
@@ -395,6 +441,13 @@ class Executor(RemoteExecutor):
                 e_report_path=report_path,
                 logger=self.logger,
             )
+        # Report any failed nodes that were tracked during execution
+        if self._failed_nodes:
+            failed_nodes_str = ", ".join(sorted(self._failed_nodes))
+            self.logger.warning(
+                f"The following nodes failed during job execution and were "
+                f"excluded from subsequent submissions: {failed_nodes_str}"
+            )
 
     def clean_old_logs(self) -> None:
         """
@@ -407,9 +460,7 @@ class Executor(RemoteExecutor):
             return
         cutoff_secs = age_cutoff * 86400
         current_time = time.time()
-        self.logger.info(
-            f"Cleaning up SLURM log files older than {age_cutoff} day(s)."
-        )
+        self.logger.info(f"Cleaning up SLURM log files older than {age_cutoff} day(s).")
 
         for path in self.slurm_logdir.rglob("*.log"):
             if path.is_file():
@@ -527,6 +578,15 @@ class Executor(RemoteExecutor):
         if self.workflow.executor_settings.reservation:
             call += f" --reservation={self.workflow.executor_settings.reservation}"
 
+        # we exclude failed nodes from further job submissions, to avoid
+        # repeated failures.
+        if self._failed_nodes:
+            call += f" --exclude={','.join(self._failed_nodes)}"
+            self.logger.debug(
+                f"Excluding the following nodes from job submission: "
+                f"{','.join(self._failed_nodes)}"
+            )
+
         call += set_gres_string(job)
 
         if not job.resources.get("runtime"):
@@ -602,8 +662,10 @@ class Executor(RemoteExecutor):
         # To extract the job id we split by semicolon and take the first
         # element (this also works if no cluster name was provided)
         slurm_jobid = out.strip().split(";")[0]
-        if not slurm_jobid:
-            raise WorkflowError("Failed to retrieve SLURM job ID from sbatch output.")
+        # this slurm_jobid might be wrong: some cluster admin give convoluted
+        # sbatch outputs. So we need to validate it properly (and replace it
+        # if necessary).
+        slurm_jobid = validate_or_get_slurm_job_id(slurm_jobid, out)
         slurm_logfile = slurm_logfile.with_name(
             slurm_logfile.name.replace("%j", slurm_jobid)
         )
@@ -611,6 +673,14 @@ class Executor(RemoteExecutor):
             f"Job {job.jobid} has been submitted with SLURM jobid "
             f"{slurm_jobid} (log: {slurm_logfile})."
         )
+        # Track cluster specification for later use in cancel_jobs
+        cluster_val = (
+            job.resources.get("cluster")
+            or job.resources.get("clusters")
+            or job.resources.get("slurm_cluster")
+        )
+        if cluster_val:
+            self._submitted_job_clusters.add(cluster_val)
         self.report_job_submission(
             SubmittedJobInfo(
                 job,
@@ -707,30 +777,38 @@ class Executor(RemoteExecutor):
                     status_command
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
-                    self.logger.debug(f"could not check status of job {self.run_uuid}")
+                    is_final_attempt = i + 1 == status_attempts
+                    self.logger.debug(
+                        f"could not check status of job {self.run_uuid}"
+                        + (" (final attempt)" if is_final_attempt else "")
+                    )
                     continue
                 sacct_query_durations.append(sacct_query_duration)
-                self.logger.debug(f"status_of_jobs after sacct is: {status_of_jobs}")
                 # only take jobs that are still active
                 active_jobs_ids_with_current_sacct_status = (
                     set(status_of_jobs.keys()) & active_jobs_ids
-                )
-                self.logger.debug(
-                    f"active_jobs_ids_with_current_sacct_status are: "
-                    f"{active_jobs_ids_with_current_sacct_status}"
-                )
-                active_jobs_seen_by_sacct = (
-                    active_jobs_seen_by_sacct
-                    | active_jobs_ids_with_current_sacct_status
-                )
-                self.logger.debug(
-                    "active_jobs_seen_by_sacct are: " f"{active_jobs_seen_by_sacct}"
                 )
                 missing_sacct_status = (
                     active_jobs_seen_by_sacct
                     - active_jobs_ids_with_current_sacct_status
                 )
-                self.logger.debug(f"missing_sacct_status are: {missing_sacct_status}")
+                active_jobs_seen_by_sacct = (
+                    active_jobs_seen_by_sacct
+                    | active_jobs_ids_with_current_sacct_status
+                )
+                # Only log detailed debug info on final attempt or when complete.
+                # This avoids log flooding in verbose mode.
+                if not missing_sacct_status or i + 1 == status_attempts:
+                    self.logger.debug(
+                        f"active_jobs_ids_with_current_sacct_status are: "
+                        f"{active_jobs_ids_with_current_sacct_status}"
+                    )
+                    self.logger.debug(
+                        "active_jobs_seen_by_sacct are: " f"{active_jobs_seen_by_sacct}"
+                    )
+                    self.logger.debug(
+                        f"missing_sacct_status are: {missing_sacct_status}"
+                    )
                 if not missing_sacct_status:
                     break
 
@@ -790,13 +868,104 @@ We leave it to SLURM to resume your job(s)"""
                     self.report_job_success(j)
                     any_finished = True
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
+                elif status == "NODE_FAIL":
+                    # this is a special case: the job failed, but due to a node failure.
+                    # Always track the failed node so future submissions exclude it,
+                    # regardless of whether requeue is enabled.
+                    if is_query_tool_available("sacct"):
+                        try:
+                            sacct_output = subprocess.check_output(
+                                f"sacct -j {j.external_jobid} -n -X -o nodelist%-256",
+                                shell=True,
+                                text=True,
+                                stderr=subprocess.PIPE,
+                            )
+                            node = sacct_output.strip()
+                            if node:
+                                self._failed_nodes.add(node)
+                        except subprocess.CalledProcessError as e:
+                            self.logger.warning(
+                                f"Could not retrieve node information for job "
+                                f"{j.external_jobid}: {e.stderr}"
+                            )
+                    else:
+                        self.logger.debug(
+                            "sacct not available; cannot track failed node"
+                        )
+
+                    if self.workflow.executor_settings.requeue:
+                        self.logger.warning(
+                            f"Job '{j.external_jobid}' failed with status "
+                            f"'NODE_FAIL', but requeue is enabled. "
+                            "Leaving it to SLURM to requeue the job. "
+                            "Failed node will be excluded from future submissions."
+                        )
+                        yield j
+                    else:
+                        msg = (
+                            f"SLURM-job '{j.external_jobid}' failed due to a "
+                            "node failure, SLURM status is: "
+                            f"'{status}'. "
+                            "Failed nodes will be excluded from future job "
+                            "submissions. Consider enabling requeueing for "
+                            "such cases by setting the 'requeue' flag in the "
+                            "executor settings."
+                        )
+                        self.report_job_error(
+                            j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
+                        )
+                        active_jobs_seen_by_sacct.remove(j.external_jobid)
                 elif status in fail_stati:
-                    msg = (
-                        f"SLURM-job '{j.external_jobid}' failed, SLURM status is: "
-                        # message ends with '. ', because it is proceeded
-                        # with a new sentence
-                        f"'{status}'. "
-                    )
+                    # we can only check for the fail status, if `sacct` is available
+                    if status_command_name != "sacct":
+                        msg = (
+                            f"SLURM-job '{j.external_jobid}' failed, "
+                            f"SLURM status is: '{status}'. "
+                            "Detailed failure reason unavailable "
+                            "(status command is not 'sacct')."
+                        )
+                        self.report_job_error(
+                            j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
+                        )
+                        active_jobs_seen_by_sacct.discard(j.external_jobid)
+                        continue
+                    reasons = []
+                    for step in range(10):  # Iterate over up to 10 job steps
+                        reason_command = (
+                            f"sacct -j {j.external_jobid}.{step} "
+                            "--format=Reason --noheader"
+                        )
+                        try:
+                            reason_output = subprocess.check_output(
+                                reason_command,
+                                shell=True,
+                                text=True,
+                                stderr=subprocess.PIPE,
+                            ).strip()
+                            if reason_output:
+                                reasons.append(f"Step {step}: {reason_output}")
+                        except subprocess.CalledProcessError as e:
+                            self.logger.warning(
+                                f"Failed to retrieve jobstep reason for SLURM job "
+                                f"'{j.external_jobid}.{step}': {e.stderr.strip()}"
+                            )
+                            reasons.append(f"Step {step}: Unable to retrieve reason")
+
+                    if not reasons:
+                        reasons.append("Unknown")
+
+                    if len(reasons) == 1:
+                        msg = (
+                            f"SLURM-job '{j.external_jobid}' failed, "
+                            f"SLURM status is: '{status}'. "
+                            f"Reason: {reasons[0]}."
+                        )
+                    else:
+                        msg = (
+                            f"SLURM-job '{j.external_jobid}' failed, "
+                            f"SLURM status is: '{status}'. "
+                            f"Reasons: {', '.join(reasons)}."
+                        )
                     self.report_job_error(
                         j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
                     )
@@ -818,12 +987,21 @@ We leave it to SLURM to resume your job(s)"""
         if active_jobs:
             # TODO chunk jobids in order to avoid too long command lines
             jobids = " ".join([job_info.external_jobid for job_info in active_jobs])
+
             try:
                 # timeout set to 60, because a scheduler cycle usually is
                 # about 30 sec, but can be longer in extreme cases.
                 # Under 'normal' circumstances, 'scancel' is executed in
                 # virtually no time.
-                scancel_command = f"scancel {jobids} --clusters=all"
+                scancel_command = f"scancel {jobids}"
+
+                # Adding the --clusters=all flag, if we submitted to more than one
+                # cluster (assuming that choosing _a_ cluster is enough to fullfil
+                # this criterion). Issue #397 mentions that this flag is not available
+                # in older SLURM versions, but we assume that multicluster setups will
+                # usually run on a recent version of SLURM.
+                if self._submitted_job_clusters:
+                    scancel_command += " --clusters=all"
 
                 subprocess.check_output(
                     scancel_command,
@@ -838,6 +1016,16 @@ We leave it to SLURM to resume your job(s)"""
                 msg = e.stderr.strip()
                 if msg:
                     msg = f": {msg}"
+                # If we were using --clusters and it failed, provide additional context
+                if self._submitted_job_clusters:
+                    msg += (
+                        "\nWARNING: Job cancellation failed while using "
+                        "--clusters flag. Your multicluster SLURM setup may not "
+                        "support this feature, or the SLURM database may not be "
+                        "properly configured for multicluster operations. "
+                        "Please verify your SLURM configuration with your "
+                        "HPC administrator."
+                    )
                 raise WorkflowError(
                     "Unable to cancel jobs with scancel "
                     f"(exit code {e.returncode}){msg}"
