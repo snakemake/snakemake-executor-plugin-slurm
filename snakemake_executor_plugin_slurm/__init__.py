@@ -6,6 +6,7 @@ __license__ = "MIT"
 import atexit
 import csv
 from io import StringIO
+from itertools import groupby
 import os
 from pathlib import Path
 import re
@@ -497,6 +498,20 @@ class Executor(RemoteExecutor):
             general_args += " --slurm-jobstep-pass-command-as-script"
         return general_args
 
+    def run_jobs(self, jobs: List[JobExecutorInterface]):
+        for rule_name, group in groupby(jobs, key=lambda job: job.rule.name):
+            same_rule_jobs = list(group)  # Materialize the generator
+            if len(same_rule_jobs) == 1:
+                self.run_job(same_rule_jobs[0])
+            else:
+                # TODO submit as array
+                # share code with run_job
+
+                # TODO in the future: give a hint to the scheduler to select preferably
+                # many jobs from the same rule if possible, in order to have
+                # more efficient array jobs. This should be somehow tunable, because
+                # it might contradict other efficiency goals.
+                ...
     def run_job(self, job: JobExecutorInterface):
         # Implement here how to run a job.
         # You can access the job's resources, etc.
