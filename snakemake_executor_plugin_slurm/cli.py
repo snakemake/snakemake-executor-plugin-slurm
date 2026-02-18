@@ -48,7 +48,7 @@ Examples:
 The generated YAML file can be used with:
   snakemake --executor slurm --slurm-partition-config partitions.yaml
 
-OR for permant use, copy the `partitions.yaml` to a location
+OR for permanent use, copy the `partitions.yaml` to a location
 (e.g. ~/.config/snakemake/ or /etc/xdg/snakemake). Be sure to set
 `$SNAKEMAKE_SLURM_PARTITIONS`, accordingly.
     """,
