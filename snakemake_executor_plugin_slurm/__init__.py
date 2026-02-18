@@ -189,6 +189,17 @@ class ExecutorSettings(ExecutorSettingsBase):
         },
     )
 
+    exclude_failed_nodes: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": "Comma-separated list of nodes to exclude from job "
+            "submission. This is useful to exclude known problematic nodes. "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
     no_account: bool = field(
         default=False,
         metadata={
@@ -348,6 +359,13 @@ class Executor(RemoteExecutor):
         self.test_mode = test_mode
 
         self.run_uuid = str(uuid.uuid4())
+        if self.workflow.executor_settings.exclude_failed_nodes:
+            excluded_nodes = self.workflow.executor_settings.exclude_failed_nodes
+            self._failed_nodes = set(
+                node.strip() for node in excluded_nodes.split(",") if node.strip()
+            )
+        else:
+            self._failed_nodes = set()
         # validate prefix: only allow alphanumeric, underscore, hyphen
         # cap length:
         if self.workflow.executor_settings.jobname_prefix:
@@ -425,6 +443,13 @@ class Executor(RemoteExecutor):
                 run_uuid=self.run_uuid,
                 e_report_path=report_path,
                 logger=self.logger,
+            )
+        # Report any failed nodes that were tracked during execution
+        if self._failed_nodes:
+            failed_nodes_str = ", ".join(sorted(self._failed_nodes))
+            self.logger.warning(
+                f"The following nodes failed during job execution and were "
+                f"excluded from subsequent submissions: {failed_nodes_str}"
             )
 
     def clean_old_logs(self) -> None:
@@ -541,6 +566,15 @@ class Executor(RemoteExecutor):
 
         if self.workflow.executor_settings.reservation:
             call += f" --reservation={self.workflow.executor_settings.reservation}"
+
+        # we exclude failed nodes from further job submissions, to avoid
+        # repeated failures.
+        if self._failed_nodes:
+            call += f" --exclude={','.join(self._failed_nodes)}"
+            self.logger.debug(
+                f"Excluding the following nodes from job submission: "
+                f"{','.join(self._failed_nodes)}"
+            )
 
         call += set_gres_string(job)
 
@@ -823,13 +857,104 @@ We leave it to SLURM to resume your job(s)"""
                     self.report_job_success(j)
                     any_finished = True
                     active_jobs_seen_by_sacct.remove(j.external_jobid)
+                elif status == "NODE_FAIL":
+                    # this is a special case: the job failed, but due to a node failure.
+                    # Always track the failed node so future submissions exclude it,
+                    # regardless of whether requeue is enabled.
+                    if is_query_tool_available("sacct"):
+                        try:
+                            sacct_output = subprocess.check_output(
+                                f"sacct -j {j.external_jobid} -n -X -o nodelist%-256",
+                                shell=True,
+                                text=True,
+                                stderr=subprocess.PIPE,
+                            )
+                            node = sacct_output.strip()
+                            if node:
+                                self._failed_nodes.add(node)
+                        except subprocess.CalledProcessError as e:
+                            self.logger.warning(
+                                f"Could not retrieve node information for job "
+                                f"{j.external_jobid}: {e.stderr}"
+                            )
+                    else:
+                        self.logger.debug(
+                            "sacct not available; cannot track failed node"
+                        )
+
+                    if self.workflow.executor_settings.requeue:
+                        self.logger.warning(
+                            f"Job '{j.external_jobid}' failed with status "
+                            f"'NODE_FAIL', but requeue is enabled. "
+                            "Leaving it to SLURM to requeue the job. "
+                            "Failed node will be excluded from future submissions."
+                        )
+                        yield j
+                    else:
+                        msg = (
+                            f"SLURM-job '{j.external_jobid}' failed due to a "
+                            "node failure, SLURM status is: "
+                            f"'{status}'. "
+                            "Failed nodes will be excluded from future job "
+                            "submissions. Consider enabling requeueing for "
+                            "such cases by setting the 'requeue' flag in the "
+                            "executor settings."
+                        )
+                        self.report_job_error(
+                            j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
+                        )
+                        active_jobs_seen_by_sacct.remove(j.external_jobid)
                 elif status in fail_stati:
-                    msg = (
-                        f"SLURM-job '{j.external_jobid}' failed, SLURM status is: "
-                        # message ends with '. ', because it is proceeded
-                        # with a new sentence
-                        f"'{status}'. "
-                    )
+                    # we can only check for the fail status, if `sacct` is available
+                    if status_command_name != "sacct":
+                        msg = (
+                            f"SLURM-job '{j.external_jobid}' failed, "
+                            f"SLURM status is: '{status}'. "
+                            "Detailed failure reason unavailable "
+                            "(status command is not 'sacct')."
+                        )
+                        self.report_job_error(
+                            j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
+                        )
+                        active_jobs_seen_by_sacct.discard(j.external_jobid)
+                        continue
+                    reasons = []
+                    for step in range(10):  # Iterate over up to 10 job steps
+                        reason_command = (
+                            f"sacct -j {j.external_jobid}.{step} "
+                            "--format=Reason --noheader"
+                        )
+                        try:
+                            reason_output = subprocess.check_output(
+                                reason_command,
+                                shell=True,
+                                text=True,
+                                stderr=subprocess.PIPE,
+                            ).strip()
+                            if reason_output:
+                                reasons.append(f"Step {step}: {reason_output}")
+                        except subprocess.CalledProcessError as e:
+                            self.logger.warning(
+                                f"Failed to retrieve jobstep reason for SLURM job "
+                                f"'{j.external_jobid}.{step}': {e.stderr.strip()}"
+                            )
+                            reasons.append(f"Step {step}: Unable to retrieve reason")
+
+                    if not reasons:
+                        reasons.append("Unknown")
+
+                    if len(reasons) == 1:
+                        msg = (
+                            f"SLURM-job '{j.external_jobid}' failed, "
+                            f"SLURM status is: '{status}'. "
+                            f"Reason: {reasons[0]}."
+                        )
+                    else:
+                        msg = (
+                            f"SLURM-job '{j.external_jobid}' failed, "
+                            f"SLURM status is: '{status}'. "
+                            f"Reasons: {', '.join(reasons)}."
+                        )
                     self.report_job_error(
                         j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
                     )
