@@ -74,9 +74,28 @@ OR for permanent use, copy the `partitions.yaml` to a location
     try:
         # Generate partition configuration
         config = generate_partitions_from_slurm_query(args.clusters)
+        partitions = config.get("partitions", {})
+
+        # Strip "<cluster>_" key prefixes for YAML output while preserving
+        # internal generation logic in partitions.py.
+        output_partitions = {}
+        for key, limits in partitions.items():
+            cluster = limits.get("cluster")
+            if cluster and key.startswith(f"{cluster}_"):
+                output_key = key[len(f"{cluster}_") :]
+            else:
+                output_key = key
+
+            # Avoid accidental overwrite if two entries collapse to same key.
+            if output_key in output_partitions:
+                output_partitions[key] = limits
+            else:
+                output_partitions[output_key] = limits
+
+        output_config = {"partitions": output_partitions}
 
         # Format output
-        yaml_output = yaml.dump(config, default_flow_style=False, sort_keys=False)
+        yaml_output = yaml.dump(output_config, default_flow_style=False, sort_keys=False)
 
         # Write to file or stdout
         if args.output:
