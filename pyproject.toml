@@ -31,7 +31,6 @@ snakemake = "^9.6.0"
 pandas = "^2.2.3"
 
 [tool.poetry.scripts]
-snakemake-executor-plugin-slurm = "snakemake_executor_plugin_slurm.scripts:main"
 generate-slurm-partition-config = "snakemake_executor_plugin_slurm.cli:main"
 
 [tool.coverage.run]
