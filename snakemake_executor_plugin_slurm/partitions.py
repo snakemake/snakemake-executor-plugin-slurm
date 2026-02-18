@@ -204,7 +204,10 @@ def generate_partitions_from_slurm_query(
             for partition_name, partition_data in partitions_data.items():
                 limits = extract_partition_limits(partition_data)
                 limits["cluster"] = cluster
-                partitions_config[partition_name] = limits
+                # Scope key by cluster so identically-named partitions across
+                # clusters do not overwrite each other in the generated template.
+                key = f"{cluster}_{partition_name}"
+                partitions_config[key] = limits
     else:
         scontrol_output = query_scontrol_partitions()
         partitions_data = parse_scontrol_partition_output(scontrol_output)
