@@ -125,6 +125,47 @@ def test_generate_partitions_from_scontrol_mock(monkeypatch):
     config = generate_partitions_from_scontrol(cluster="test-cluster")
 
     assert "partitions" in config
-    assert "standard" in config["partitions"]
-    assert config["partitions"]["standard"]["cluster"] == "test-cluster"
-    assert config["partitions"]["standard"]["max_nodes"] == 1
+    assert "test-cluster_standard" in config["partitions"]
+    assert config["partitions"]["test-cluster_standard"]["cluster"] == "test-cluster"
+    assert config["partitions"]["test-cluster_standard"]["max_nodes"] == 1
+
+
+def test_generate_slurm_partition_config_strips_cluster_prefix(monkeypatch, capsys):
+    """Test that CLI strips cluster prefixes from partition keys in YAML output."""
+    from snakemake_executor_plugin_slurm.cli import main
+
+    # Mock the partition generation to return prefixed keys
+    mock_config = {
+        "partitions": {
+            "test-cluster_standard": {
+                "cluster": "test-cluster",
+                "max_nodes": 1,
+                "max_mem_mb_per_cpu": 1930,
+                "max_runtime": "6-00:00:00",
+            },
+            "test-cluster_gpu": {
+                "cluster": "test-cluster",
+                "max_gpu": 40,
+                "max_runtime": "6-00:00:00",
+            },
+        }
+    }
+
+    def mock_generate(clusters):
+        return mock_config
+
+    monkeypatch.setattr(
+        "snakemake_executor_plugin_slurm.cli.generate_partitions_from_slurm_query",
+        mock_generate,
+    )
+    monkeypatch.setattr("sys.argv", ["generate-slurm-partition-config", "test-cluster"])
+
+    main()
+
+    captured = capsys.readouterr()
+    # The YAML output should have unprefixed keys: "standard" and "gpu"
+    assert "standard:" in captured.out
+    assert "gpu:" in captured.out
+    # Should NOT have the prefixed keys
+    assert "test-cluster_standard:" not in captured.out
+    assert "test-cluster_gpu:" not in captured.out

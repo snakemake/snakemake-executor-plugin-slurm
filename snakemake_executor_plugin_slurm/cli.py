@@ -95,9 +95,7 @@ OR for permanent use, copy the `partitions.yaml` to a location
         output_config = {"partitions": output_partitions}
 
         # Format output
-        yaml_output = yaml.dump(
-            output_config, default_flow_style=False, sort_keys=True
-        )
+        yaml_output = yaml.dump(output_config, default_flow_style=False, sort_keys=True)
 
         # Write to file or stdout
         if args.output:
