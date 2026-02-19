@@ -114,7 +114,7 @@ def test_generate_partitions_from_scontrol_mock(monkeypatch):
     # the real query function. This means we need to add
     # a `noqa: ARG001` comment to avoid linter warnings
     # about the unused argument.
-    # See https://docs.astral.sh/ruff/rules/#flake8-type-checking-tc
+    # See https://docs.astral.sh/ruff/rules/#flake8-unused-arguments-arg
     def mock_query(cluster=None):  # noqa: ARG001
         return SCONTROL_OUTPUT
 
@@ -151,7 +151,9 @@ def test_generate_slurm_partition_config_strips_cluster_prefix(monkeypatch, caps
         }
     }
 
-    def mock_generate(clusters):
+    # See https://docs.astral.sh/ruff/rules/#flake8-unused-arguments-arg
+    # and the comment above about the unused argument in this mock function.
+    def mock_generate(clusters):  # noqa: ARG001
         return mock_config
 
     monkeypatch.setattr(
