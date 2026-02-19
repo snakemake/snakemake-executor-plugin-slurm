@@ -72,10 +72,10 @@ def query_scontrol_partitions(cluster=None) -> str:
     if cluster:
         cmd += f" -M {cluster}"
 
-    cmd = shlex.quote(cmd)
+    cmd = shlex.split(cmd)
     try:
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, check=True
+            cmd, capture_output=True, text=True, check=True
         )
         return result.stdout
     except subprocess.CalledProcessError as e:
