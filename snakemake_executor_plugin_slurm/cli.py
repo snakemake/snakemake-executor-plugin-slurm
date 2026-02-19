@@ -88,6 +88,13 @@ OR for permanent use, copy the `partitions.yaml` to a location
 
             # Avoid accidental overwrite if two entries collapse to same key.
             if output_key in output_partitions:
+                print(
+                    f"WARNING: partition '{output_key}' already present "
+                    f"(cluster='{output_partitions[output_key].get('cluster')}'). "
+                    f"Keeping prefixed key '{key}' — rename it to the actual "
+                    f"SLURM partition name before use.",
+                    file=sys.stderr,
+                )
                 output_partitions[key] = limits
             else:
                 output_partitions[output_key] = limits
