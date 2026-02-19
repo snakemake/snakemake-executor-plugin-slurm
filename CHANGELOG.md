@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.3.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.2.0...v2.3.0) (2026-02-19)
+
+
+### Features
+
+* attempt for detailed error reporting for job-steps ([#327](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/327)) ([79c986e](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/79c986eb3ad646c3f49c6cfde9c0317a6f473425))
+* automated partition writeout ([#410](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/410)) ([073b4eb](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/073b4eb5a72b71ca1ab57839c7a031ca7c20bc43))
+* excluding broken nodes from further job submission ([#411](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/411)) ([dddd86f](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/dddd86f5bd12a37ccf3cefaaed97a1fa956b53f2))
+
 ## [2.2.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.1.0...v2.2.0) (2026-02-09)
 
 
