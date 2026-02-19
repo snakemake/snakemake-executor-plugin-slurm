@@ -12,23 +12,31 @@ license = "MIT"
 repository = "https://github.com/snakemake/snakemake-executor-plugin-slurm"
 documentation = "https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html"
 keywords = ["snakemake", "plugin", "executor", "cluster", "slurm"]
+packages = [
+    { include = "snakemake_executor_plugin_slurm", from = "." }
+]
+include = [
+    { path = "snakemake_executor_plugin_slurm/_core*.so", format = "wheel" },
+    { path = "snakemake_executor_plugin_slurm/__init__.py", format = "wheel" }
+]
+
 
 [tool.poetry.dependencies]
 python = "^3.11"
 snakemake-interface-common = "^1.21.0"
 snakemake-interface-executor-plugins = "^9.3.9"
 snakemake-executor-plugin-slurm-jobstep = "^0.4.0"
-pandas = "^2.2.3"
-numpy = ">=1.26.4, <3"
+pandas = ">=2.2.3, <=3.0.0"
+numpy = ">=2.4.2, <3"
 throttler = "^1.2.2"
+Cython = "^3.2.4"
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.7.0"
+black = "^24.3.0"
 flake8 = "^6.1.0"
 coverage = "^7.3.1"
 pytest = "^8.3.5"
 snakemake = "^9.6.0"
-pandas = "^2.2.3"
 
 [tool.poetry.scripts]
 generate-slurm-partition-config = "snakemake_executor_plugin_slurm.cli:main"
@@ -40,6 +48,10 @@ omit = [".*", "*/site-packages/*", "Snakefile"]
 line-length = 88
 extend-exclude = 'tests/test_scontrol_parsing\.py'
 
+[tool.poetry.build]
+script = "build.py"
+generate-setup-file = true
+
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core", "setuptools", "Cython>=3.2.4", "wheel"]
 build-backend = "poetry.core.masonry.api"
