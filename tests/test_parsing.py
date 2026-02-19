@@ -1,4 +1,5 @@
 """Tests for parsing functions that don't require SLURM to be installed."""
+
 from io import StringIO
 import pandas as pd
 from snakemake_executor_plugin_slurm.efficiency_report import (

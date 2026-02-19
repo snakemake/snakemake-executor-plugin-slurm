@@ -30,11 +30,15 @@ pytest = "^8.3.5"
 snakemake = "^9.6.0"
 pandas = "^2.2.3"
 
+[tool.poetry.scripts]
+generate-slurm-partition-config = "snakemake_executor_plugin_slurm.cli:main"
+
 [tool.coverage.run]
 omit = [".*", "*/site-packages/*", "Snakefile"]
 
 [tool.black]
 line-length = 88
+extend-exclude = 'tests/test_scontrol_parsing\.py'
 
 [build-system]
 requires = ["poetry-core"]

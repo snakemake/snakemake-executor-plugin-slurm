@@ -5,7 +5,10 @@ from pathlib import Path
 from math import inf
 
 from snakemake_interface_common.exceptions import WorkflowError
-from snakemake_executor_plugin_slurm.utils import time_to_seconds, parse_time_to_minutes
+from snakemake_executor_plugin_slurm.utils import (
+    time_to_seconds,
+    parse_time_to_minutes,
+)
 from snakemake_executor_plugin_slurm.partitions import (
     PartitionLimits,
     read_partition_file,
