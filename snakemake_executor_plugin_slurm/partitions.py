@@ -70,8 +70,9 @@ def query_scontrol_partitions(cluster=None) -> str:
     """
     cmd = "scontrol show partition"
     if cluster:
-        cmd += f" -M {shlex.quote(cluster)}"
+        cmd += f" -M {cluster}"
 
+    cmd = shlex.quote(cmd)
     try:
         result = subprocess.run(
             cmd, shell=True, capture_output=True, text=True, check=True
