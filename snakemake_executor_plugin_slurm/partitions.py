@@ -74,9 +74,7 @@ def query_scontrol_partitions(cluster=None) -> str:
 
     cmd = shlex.split(cmd)
     try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, check=True
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         return result.stdout
     except subprocess.CalledProcessError as e:
         raise WorkflowError(
