@@ -45,6 +45,7 @@ from .job_status_query import (
     should_recommend_squeue_status_command,
     query_job_status_squeue,
     query_job_status_sacct,
+    query_job_status,
 )
 from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
@@ -764,8 +765,8 @@ class Executor(RemoteExecutor):
         # https://github.com/Snakemake-Profiles/slurm
         for i in range(status_attempts):
             async with self.status_rate_limiter:
-                (status_of_jobs, sacct_query_duration) = await self.job_stati(
-                    status_command
+                (status_of_jobs, sacct_query_duration) = await query_job_status(
+                    status_command, self.logger
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
                     is_final_attempt = i + 1 == status_attempts
@@ -1022,53 +1023,6 @@ We leave it to SLURM to resume your job(s)"""
                     f"(exit code {e.returncode}){msg}"
                 ) from e
 
-    async def job_stati(self, command):
-        """Obtain SLURM job status of all submitted jobs with sacct
-
-        Keyword arguments:
-        command -- a slurm command that returns one line for each job with:
-                   "<raw/main_job_id>|<long_status_string>"
-        """
-        res = query_duration = None
-        try:
-            time_before_query = time.time()
-            command_res = subprocess.check_output(
-                command, text=True, shell=True, stderr=subprocess.PIPE
-            )
-            query_duration = time.time() - time_before_query
-            self.logger.debug(
-                f"The job status was queried with command: {command}\n"
-                f"It took: {query_duration} seconds\n"
-                f"The output is:\n'{command_res}'\n"
-            )
-            res = {
-                # We split the second field in the output, as the State field
-                # could contain info beyond the JOB STATE CODE according to:
-                # https://slurm.schedmd.com/sacct.html#OPT_State
-                entry[0]: entry[1].split(sep=None, maxsplit=1)[0]
-                for entry in csv.reader(StringIO(command_res), delimiter="|")
-            }
-        except subprocess.CalledProcessError as e:
-            error_message = e.stderr.strip()
-            if "slurm_persist_conn_open_without_init" in error_message:
-                self.logger.warning(
-                    "The SLURM database might not be available ... "
-                    f"Error message: '{error_message}'"
-                    "This error message indicates that the SLURM database is "
-                    "currently not available. This is not an error of the "
-                    "Snakemake plugin, but some kind of server issue. "
-                    "Please consult with your HPC provider."
-                )
-            else:
-                self.logger.error(
-                    f"The job status query failed with command '{command}'"
-                    f"Error message: '{error_message}'"
-                    "This error message is not expected, please report it back to us."
-                )
-            pass
-
-        return (res, query_duration)
-
     def get_account_arg(self, job: JobExecutorInterface):
         """
         checks whether the desired account is valid,
@@ -1098,7 +1052,7 @@ We leave it to SLURM to resume your job(s)"""
                 account = self.get_account(self.logger)
                 if account:
                     self.logger.warning(f"Guessed SLURM account: {account}")
-                    self.test_account(f"{account}")
+                    test_account(f"{account}")
                     self._fallback_account_arg = f" -A {shlex.quote(account)}"
                 else:
                     self.logger.warning(
