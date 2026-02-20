@@ -184,7 +184,7 @@ async def query_job_status(command: str, logger):
             stderr=subprocess.PIPE,
             text=True,
         )
-        out, err = process.communicate()
+        out, err = process.communicate(timeout=60)
         query_duration = time.time() - start_time
 
         if process.returncode != 0:
