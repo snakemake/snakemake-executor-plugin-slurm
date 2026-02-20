@@ -15,9 +15,7 @@ def test_account(account, logger):
     cmd = shlex.split(cmd)
     sacctmgr_report = sshare_report = ""
     try:
-        accounts = subprocess.check_output(
-            cmd, text=True, stderr=subprocess.PIPE
-        )
+        accounts = subprocess.check_output(cmd, text=True, stderr=subprocess.PIPE)
     except subprocess.CalledProcessError as e:
         sacctmgr_report = (
             "Unable to test the validity of the given or guessed"
@@ -29,9 +27,7 @@ def test_account(account, logger):
         cmd = "sshare -U --format Account%256 --noheader"
         cmd = shlex.split(cmd)
         try:
-            accounts = subprocess.check_output(
-                cmd, text=True, stderr=subprocess.PIPE
-            )
+            accounts = subprocess.check_output(cmd, text=True, stderr=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
             sshare_report = (
                 "Unable to test the validity of the given or guessed "
@@ -68,9 +64,7 @@ def get_account(logger):
     cmd = f'sacct -nu "{getpass.getuser()}" -o Account%256 | tail -1'
     cmd = shlex.split(cmd)
     try:
-        sacct_out = subprocess.check_output(
-            cmd, text=True, stderr=subprocess.PIPE
-        )
+        sacct_out = subprocess.check_output(cmd, text=True, stderr=subprocess.PIPE)
         possible_account = sacct_out.replace("(null)", "").strip()
         if possible_account == "none":  # some clusters may not use an account
             return None
