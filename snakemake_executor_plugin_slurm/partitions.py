@@ -14,7 +14,7 @@ from snakemake_interface_executor_plugins.logging import LoggerExecutorInterface
 from .utils import parse_time_to_minutes
 
 
-def get_default_partition(job) -> str:
+def get_default_partition(job, logger) -> str:
     """
     if no partition is given, checks whether a fallback onto a default
     partition is possible
@@ -33,7 +33,7 @@ def get_default_partition(job) -> str:
         if "*" in partition:
             # the decode-call is necessary, because the output of sinfo is bytes
             return partition.replace("*", "")
-    self.logger.warning(
+    logger.warning(
         f"No partition was given for rule '{job}', and unable to find "
         "a default partition."
         " Trying to submit without partition information."

@@ -1155,7 +1155,7 @@ We leave it to SLURM to resume your job(s)"""
         # we didnt get a partition yet so try fallback.
         if not partition:
             if self._fallback_partition is None:
-                self._fallback_partition = get_default_partition(job)
+                self._fallback_partition = get_default_partition(job, self.logger)
             partition = self._fallback_partition
         if partition:
             # we have to quote the partition, because it might
