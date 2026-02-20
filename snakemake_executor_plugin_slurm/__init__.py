@@ -48,6 +48,7 @@ from .job_status_query import (
     query_job_status_sacct,
     query_job_status,
 )
+from .job_cancellation import cancel_slurm_jobs
 from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
 from .partitions import (
@@ -975,55 +976,11 @@ We leave it to SLURM to resume your job(s)"""
                 self.next_seconds_between_status_checks = initial_interval
 
     def cancel_jobs(self, active_jobs: List[SubmittedJobInfo]):
-        # Cancel all active jobs.
-        # This method is called when Snakemake is interrupted.
-        if active_jobs:
-            # TODO chunk jobids in order to avoid too long command lines
-            jobids = " ".join([job_info.external_jobid for job_info in active_jobs])
+        """Cancel all active jobs.
 
-            try:
-                # timeout set to 60, because a scheduler cycle usually is
-                # about 30 sec, but can be longer in extreme cases.
-                # Under 'normal' circumstances, 'scancel' is executed in
-                # virtually no time.
-                scancel_command = f"scancel {jobids}"
-
-                # Adding the --clusters=all flag, if we submitted to more than one
-                # cluster (assuming that choosing _a_ cluster is enough to fullfil
-                # this criterion). Issue #397 mentions that this flag is not available
-                # in older SLURM versions, but we assume that multicluster setups will
-                # usually run on a recent version of SLURM.
-                if self._submitted_job_clusters:
-                    scancel_command += " --clusters=all"
-                
-                scancel_command = shlex.split(scancel_command)
-
-                subprocess.check_output(
-                    scancel_command,
-                    text=True,
-                    timeout=60,
-                    stderr=subprocess.PIPE,
-                )
-            except subprocess.TimeoutExpired:
-                self.logger.warning("Unable to cancel jobs within a minute.")
-            except subprocess.CalledProcessError as e:
-                msg = e.stderr.strip()
-                if msg:
-                    msg = f": {msg}"
-                # If we were using --clusters and it failed, provide additional context
-                if self._submitted_job_clusters:
-                    msg += (
-                        "\nWARNING: Job cancellation failed while using "
-                        "--clusters flag. Your multicluster SLURM setup may not "
-                        "support this feature, or the SLURM database may not be "
-                        "properly configured for multicluster operations. "
-                        "Please verify your SLURM configuration with your "
-                        "HPC administrator."
-                    )
-                raise WorkflowError(
-                    "Unable to cancel jobs with scancel "
-                    f"(exit code {e.returncode}){msg}"
-                ) from e
+        This method is called when Snakemake is interrupted.
+        """
+        cancel_slurm_jobs(active_jobs, self._submitted_job_clusters, self.logger)
 
     def get_account_arg(self, job: JobExecutorInterface):
         """
