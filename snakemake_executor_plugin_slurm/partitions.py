@@ -14,6 +14,35 @@ from snakemake_interface_executor_plugins.logging import LoggerExecutorInterface
 from .utils import parse_time_to_minutes
 
 
+def get_default_partition(job) -> str:
+    """
+    if no partition is given, checks whether a fallback onto a default
+    partition is possible
+    """
+    try:
+        out = subprocess.check_output(
+            r"sinfo -o %P", shell=True, text=True, stderr=subprocess.PIPE
+        )
+    except subprocess.CalledProcessError as e:
+        raise WorkflowError(
+            f"Failed to run sinfo for retrieval of cluster partitions: {e.stderr}"
+        )
+    for partition in out.split():
+        # A default partition is marked with an asterisk, but this is not part of
+        # the name.
+        if "*" in partition:
+            # the decode-call is necessary, because the output of sinfo is bytes
+            return partition.replace("*", "")
+    self.logger.warning(
+        f"No partition was given for rule '{job}', and unable to find "
+        "a default partition."
+        " Trying to submit without partition information."
+        " You may want to invoke snakemake with --default-resources "
+        "'slurm_partition=<your default partition>'."
+    )
+    return ""
+
+
 def read_partition_file(partition_file: Path) -> List["Partition"]:
     """Read partition definitions from a YAML file"""
     try:

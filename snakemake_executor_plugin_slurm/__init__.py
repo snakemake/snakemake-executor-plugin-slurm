@@ -47,6 +47,7 @@ from .job_status_query import (
 from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
 from .partitions import (
+    get_default_partition,
     read_partition_file,
     get_best_partition,
 )
@@ -542,8 +543,7 @@ class Executor(RemoteExecutor):
             comment_str = f"rule_{job.name}_wildcards_{wildcard_str}"
         # check whether the 'slurm_extra' parameter is used correctly
         # prior to putatively setting in the sbatch call
-        if job.resources.get("slurm_extra"):
-            validate_slurm_extra(job)
+        validate_slurm_extra(job)
 
         # NOTE removed partition from below, such that partition
         # selection can benefit from resource checking as the call is built up.
@@ -1155,7 +1155,7 @@ We leave it to SLURM to resume your job(s)"""
         # we didnt get a partition yet so try fallback.
         if not partition:
             if self._fallback_partition is None:
-                self._fallback_partition = self.get_default_partition(job)
+                self._fallback_partition = get_default_partition(job)
             partition = self._fallback_partition
         if partition:
             # we have to quote the partition, because it might
@@ -1236,31 +1236,3 @@ We leave it to SLURM to resume your job(s)"""
                 f"The given account {account} appears to be invalid. Available "
                 f"accounts:\n{', '.join(accounts)}"
             )
-
-    def get_default_partition(self, job):
-        """
-        if no partition is given, checks whether a fallback onto a default
-        partition is possible
-        """
-        try:
-            out = subprocess.check_output(
-                r"sinfo -o %P", shell=True, text=True, stderr=subprocess.PIPE
-            )
-        except subprocess.CalledProcessError as e:
-            raise WorkflowError(
-                f"Failed to run sinfo for retrieval of cluster partitions: {e.stderr}"
-            )
-        for partition in out.split():
-            # A default partition is marked with an asterisk, but this is not part of
-            # the name.
-            if "*" in partition:
-                # the decode-call is necessary, because the output of sinfo is bytes
-                return partition.replace("*", "")
-        self.logger.warning(
-            f"No partition was given for rule '{job}', and unable to find "
-            "a default partition."
-            " Trying to submit without partition information."
-            " You may want to invoke snakemake with --default-resources "
-            "'slurm_partition=<your default partition>'."
-        )
-        return ""
