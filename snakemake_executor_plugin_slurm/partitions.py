@@ -19,10 +19,9 @@ def get_default_partition(job, logger) -> str:
     if no partition is given, checks whether a fallback onto a default
     partition is possible
     """
+    cmd = shlex.split("sinfo -o %P")
     try:
-        out = subprocess.check_output(
-            r"sinfo -o %P", shell=True, text=True, stderr=subprocess.PIPE
-        )
+        out = subprocess.check_output(cmd, text=True, stderr=subprocess.PIPE)
     except subprocess.CalledProcessError as e:
         raise WorkflowError(
             f"Failed to run sinfo for retrieval of cluster partitions: {e.stderr}"
