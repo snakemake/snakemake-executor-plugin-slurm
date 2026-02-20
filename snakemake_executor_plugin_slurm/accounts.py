@@ -74,3 +74,4 @@ def get_account(logger):
             f"{e.stderr}"
         )
         return None
+    return possible_account
