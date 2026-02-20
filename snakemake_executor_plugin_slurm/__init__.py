@@ -1053,7 +1053,7 @@ We leave it to SLURM to resume your job(s)"""
                 account = get_account(self.logger)
                 if account:
                     self.logger.warning(f"Guessed SLURM account: {account}")
-                    test_account(f"{account}")
+                    test_account(f"{account}", self.logger)
                     self._fallback_account_arg = f" -A {shlex.quote(account)}"
                 else:
                     self.logger.warning(
