@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Standalone script to generate SLURM partition configuration for Snakemake.
 
