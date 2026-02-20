@@ -4,8 +4,6 @@ __email__ = "johannes.koester@uni-due.de"
 __license__ = "MIT"
 
 import atexit
-import csv
-from io import StringIO
 import os
 from pathlib import Path
 import re
