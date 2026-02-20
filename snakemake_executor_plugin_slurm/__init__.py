@@ -543,7 +543,7 @@ class Executor(RemoteExecutor):
         # check whether the 'slurm_extra' parameter is used correctly
         # prior to putatively setting in the sbatch call
         if job.resources.get("slurm_extra"):
-            self.check_slurm_extra(job)
+            validate_slurm_extra(job)
 
         # NOTE removed partition from below, such that partition
         # selection can benefit from resource checking as the call is built up.
@@ -1264,7 +1264,3 @@ We leave it to SLURM to resume your job(s)"""
             "'slurm_partition=<your default partition>'."
         )
         return ""
-
-    def check_slurm_extra(self, job):
-        """Validate that slurm_extra doesn't contain executor-managed options."""
-        validate_slurm_extra(job)
