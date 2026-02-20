@@ -502,7 +502,12 @@ class Executor(RemoteExecutor):
         done = True
 
     def additional_general_args(self):
+        """
+        This function defines additional arguments to be
+        passed to `exec_job`.
+        """
         general_args = "--executor slurm-jobstep --jobs 1"
+        # need to pass
         if self.workflow.executor_settings.pass_command_as_script:
             general_args += " --slurm-jobstep-pass-command-as-script"
         return general_args
