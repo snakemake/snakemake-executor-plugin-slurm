@@ -995,11 +995,12 @@ We leave it to SLURM to resume your job(s)"""
                 # usually run on a recent version of SLURM.
                 if self._submitted_job_clusters:
                     scancel_command += " --clusters=all"
+                
+                scancel_command = shlex.split(scancel_command)
 
                 subprocess.check_output(
                     scancel_command,
                     text=True,
-                    shell=True,
                     timeout=60,
                     stderr=subprocess.PIPE,
                 )
