@@ -30,7 +30,10 @@ from snakemake_interface_executor_plugins.jobs import (
 )
 from snakemake_interface_common.exceptions import WorkflowError
 
-from .accounts import test_account
+from .accounts import (
+    test_account,
+    get_account,
+)
 
 from .utils import (
     delete_slurm_environment,
@@ -1047,7 +1050,7 @@ We leave it to SLURM to resume your job(s)"""
         else:
             if self._fallback_account_arg is None:
                 self.logger.warning("No SLURM account given, trying to guess.")
-                account = self.get_account(self.logger)
+                account = get_account(self.logger)
                 if account:
                     self.logger.warning(f"Guessed SLURM account: {account}")
                     test_account(f"{account}")
