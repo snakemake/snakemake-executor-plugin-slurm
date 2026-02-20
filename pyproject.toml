@@ -21,6 +21,7 @@ snakemake-executor-plugin-slurm-jobstep = "^0.4.0"
 pandas = "^2.2.3"
 numpy = ">=1.26.4, <3"
 throttler = "^1.2.2"
+pyyaml = "^6.0.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
