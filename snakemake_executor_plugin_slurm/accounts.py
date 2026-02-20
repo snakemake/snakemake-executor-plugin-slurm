@@ -40,7 +40,7 @@ def test_account(account, logger):
 
     # The set() has been introduced during review to eliminate
     # duplicates. They are not harmful, but disturbing to read.
-    accounts = set(_.strip() for _ in accounts.split("\n") if _)
+    accounts = set(_.strip().lower() for _ in accounts.split("\n") if _)
 
     if not accounts:
         logger.warning(
@@ -58,7 +58,7 @@ def test_account(account, logger):
 
 def get_account(logger):
     """
-    tries to deduce the acccount from recent jobs,
+    tries to deduce the account from recent jobs,
     returns None, if none is found
     """
     cmd = f'sacct -nu "{getpass.getuser()}" -o Account%256 | tail -1'
