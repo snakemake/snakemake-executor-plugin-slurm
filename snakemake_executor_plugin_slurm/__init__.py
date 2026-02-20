@@ -32,6 +32,8 @@ from snakemake_interface_executor_plugins.jobs import (
 )
 from snakemake_interface_common.exceptions import WorkflowError
 
+from .accounts import test_account
+
 from .utils import (
     delete_slurm_environment,
     delete_empty_dirs,
@@ -1082,13 +1084,13 @@ We leave it to SLURM to resume your job(s)"""
             for account in accounts:
                 # here, we check whether the given or guessed account is valid
                 # if not, a WorkflowError is raised
-                self.test_account(account)
+                test_account(account, self.logger)
             # sbatch only allows one account per submission
             # yield one after the other, if multiple were given
             # we have to quote the account, because it might
             # contain build-in shell commands - see issue #354
             for account in accounts:
-                self.test_account(account)
+                test_account(account, self.logger)
                 yield f" -A {shlex.quote(account)}"
         else:
             if self._fallback_account_arg is None:
@@ -1185,54 +1187,3 @@ We leave it to SLURM to resume your job(s)"""
             )
             return None
 
-    def test_account(self, account):
-        """
-        tests whether the given account is registered, raises an error, if not
-        """
-        # first we need to test with sacctmgr because sshare might not
-        # work in a multicluster environment
-        cmd = f'sacctmgr -n -s list user "{os.environ["USER"]}" format=account%256'
-        sacctmgr_report = sshare_report = ""
-        try:
-            accounts = subprocess.check_output(
-                cmd, shell=True, text=True, stderr=subprocess.PIPE
-            )
-        except subprocess.CalledProcessError as e:
-            sacctmgr_report = (
-                "Unable to test the validity of the given or guessed"
-                f" SLURM account '{account}' with sacctmgr: {e.stderr}."
-            )
-            accounts = ""
-
-        if not accounts.strip():
-            cmd = "sshare -U --format Account%256 --noheader"
-            try:
-                accounts = subprocess.check_output(
-                    cmd, shell=True, text=True, stderr=subprocess.PIPE
-                )
-            except subprocess.CalledProcessError as e:
-                sshare_report = (
-                    "Unable to test the validity of the given or guessed "
-                    f"SLURM account '{account}' with sshare: {e.stderr}."
-                )
-                raise WorkflowError(
-                    f"The 'sacctmgr' reported: '{sacctmgr_report}' "
-                    f"and likewise 'sshare' reported: '{sshare_report}'."
-                )
-
-        # The set() has been introduced during review to eliminate
-        # duplicates. They are not harmful, but disturbing to read.
-        accounts = set(_.strip() for _ in accounts.split("\n") if _)
-
-        if not accounts:
-            self.logger.warning(
-                f"Both 'sacctmgr' and 'sshare' returned empty results for account "
-                f"'{account}'. Proceeding without account validation."
-            )
-            return ""
-
-        if account.lower() not in accounts:
-            raise WorkflowError(
-                f"The given account {account} appears to be invalid. Available "
-                f"accounts:\n{', '.join(accounts)}"
-            )
