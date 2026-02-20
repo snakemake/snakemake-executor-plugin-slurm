@@ -1,4 +1,5 @@
-import os
+import getpass
+import shlex
 import subprocess
 
 from snakemake_interface_common.exceptions import WorkflowError
@@ -10,11 +11,12 @@ def test_account(account, logger):
     """
     # first we need to test with sacctmgr because sshare might not
     # work in a multicluster environment
-    cmd = f'sacctmgr -n -s list user "{os.environ["USER"]}" format=account%256'
+    cmd = f'sacctmgr -n -s list user "{getpass.getuser()}" format=account%256'
+    cmd = shlex.split(cmd)
     sacctmgr_report = sshare_report = ""
     try:
         accounts = subprocess.check_output(
-            cmd, shell=True, text=True, stderr=subprocess.PIPE
+            cmd, text=True, stderr=subprocess.PIPE
         )
     except subprocess.CalledProcessError as e:
         sacctmgr_report = (
@@ -25,9 +27,10 @@ def test_account(account, logger):
 
     if not accounts.strip():
         cmd = "sshare -U --format Account%256 --noheader"
+        cmd = shlex.split(cmd)
         try:
             accounts = subprocess.check_output(
-                cmd, shell=True, text=True, stderr=subprocess.PIPE
+                cmd, text=True, stderr=subprocess.PIPE
             )
         except subprocess.CalledProcessError as e:
             sshare_report = (
@@ -62,10 +65,11 @@ def get_account(logger):
     tries to deduce the acccount from recent jobs,
     returns None, if none is found
     """
-    cmd = f'sacct -nu "{os.environ["USER"]}" -o Account%256 | tail -1'
+    cmd = f'sacct -nu "{getpass.getuser()}" -o Account%256 | tail -1'
+    cmd = shlex.split(cmd)
     try:
         sacct_out = subprocess.check_output(
-            cmd, shell=True, text=True, stderr=subprocess.PIPE
+            cmd, text=True, stderr=subprocess.PIPE
         )
         possible_account = sacct_out.replace("(null)", "").strip()
         if possible_account == "none":  # some clusters may not use an account
