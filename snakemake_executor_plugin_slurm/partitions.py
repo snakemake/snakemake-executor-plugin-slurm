@@ -31,8 +31,7 @@ def get_default_partition(job, logger) -> str:
         # A default partition is marked with an asterisk, but this is not part of
         # the name.
         if "*" in partition:
-         if "*" in partition:
-             return partition.replace("*", "")
+            return partition.replace("*", "")
     logger.warning(
         f"No partition was given for rule '{job}', and unable to find "
         "a default partition."
