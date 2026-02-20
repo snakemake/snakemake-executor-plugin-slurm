@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.3.0...v2.3.1) (2026-02-20)
+
+
+### Bug Fixes
+
+* Add direct dependency on PyYAML ([#414](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/414)) ([673c4ff](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/673c4ff4d1b3e9a01a7135e059bdb38cd4454606))
+
 ## [2.3.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.2.0...v2.3.0) (2026-02-19)
 
 
