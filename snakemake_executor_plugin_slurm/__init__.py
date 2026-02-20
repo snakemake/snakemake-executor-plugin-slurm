@@ -1095,7 +1095,7 @@ We leave it to SLURM to resume your job(s)"""
         else:
             if self._fallback_account_arg is None:
                 self.logger.warning("No SLURM account given, trying to guess.")
-                account = self.get_account()
+                account = self.get_account(self.logger)
                 if account:
                     self.logger.warning(f"Guessed SLURM account: {account}")
                     self.test_account(f"{account}")
@@ -1166,23 +1166,3 @@ We leave it to SLURM to resume your job(s)"""
             return f" -p {shlex.quote(str(partition))}"
         else:
             return ""
-
-    def get_account(self):
-        """
-        tries to deduce the acccount from recent jobs,
-        returns None, if none is found
-        """
-        cmd = f'sacct -nu "{os.environ["USER"]}" -o Account%256 | tail -1'
-        try:
-            sacct_out = subprocess.check_output(
-                cmd, shell=True, text=True, stderr=subprocess.PIPE
-            )
-            possible_account = sacct_out.replace("(null)", "").strip()
-            if possible_account == "none":  # some clusters may not use an account
-                return None
-        except subprocess.CalledProcessError as e:
-            self.logger.warning(
-                f"No account was given, not able to get a SLURM account via sacct: "
-                f"{e.stderr}"
-            )
-            return None

@@ -55,3 +55,24 @@ def test_account(account, logger):
             f"The given account {account} appears to be invalid. Available "
             f"accounts:\n{', '.join(accounts)}"
         )
+
+
+def get_account(logger):
+    """
+    tries to deduce the acccount from recent jobs,
+    returns None, if none is found
+    """
+    cmd = f'sacct -nu "{os.environ["USER"]}" -o Account%256 | tail -1'
+    try:
+        sacct_out = subprocess.check_output(
+            cmd, shell=True, text=True, stderr=subprocess.PIPE
+        )
+        possible_account = sacct_out.replace("(null)", "").strip()
+        if possible_account == "none":  # some clusters may not use an account
+            return None
+    except subprocess.CalledProcessError as e:
+        logger.warning(
+            f"No account was given, not able to get a SLURM account via sacct: "
+            f"{e.stderr}"
+        )
+        return None
