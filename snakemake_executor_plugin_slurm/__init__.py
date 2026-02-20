@@ -1186,4 +1186,3 @@ We leave it to SLURM to resume your job(s)"""
                 f"{e.stderr}"
             )
             return None
-

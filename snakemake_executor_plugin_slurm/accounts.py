@@ -3,6 +3,7 @@ import subprocess
 
 from snakemake_interface_common.exceptions import WorkflowError
 
+
 def test_account(account, logger):
     """
     tests whether the given account is registered, raises an error, if not
