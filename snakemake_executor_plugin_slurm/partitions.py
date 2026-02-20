@@ -14,8 +14,9 @@ from snakemake_interface_executor_plugins.logging import LoggerExecutorInterface
 from .utils import parse_time_to_minutes
 
 
-def get_default_partition(job: JobExecutorInterface, 
-                          logger: LoggerExecutorInterface) -> str:
+def get_default_partition(
+    job: JobExecutorInterface, logger: LoggerExecutorInterface
+) -> str:
     """
     if no partition is given, checks whether a fallback onto a default
     partition is possible
