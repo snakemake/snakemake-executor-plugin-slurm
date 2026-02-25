@@ -598,7 +598,6 @@ class Executor(RemoteExecutor):
                 for job in same_rule_jobs:
                     self.run_job(job)
 
-
     def run_job(self, job: JobExecutorInterface):
         # Implement here how to run a job.
         # You can access the job's resources, etc.
