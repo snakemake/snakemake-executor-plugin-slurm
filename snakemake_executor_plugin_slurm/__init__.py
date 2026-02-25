@@ -412,7 +412,7 @@ class Executor(RemoteExecutor):
         self._status_query_min_seconds = None
         self._status_query_max_seconds = 0.0
         self._status_query_cycle_rows = []
-        array_job_setting = self.workflow.executor_settings.array_job
+        array_job_setting = self.workflow.executor_settings.array_jobs
         if array_job_setting:
             normalized_setting = array_job_setting.replace(";", ",")
             self.array_jobs = {
