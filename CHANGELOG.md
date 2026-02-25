@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.3.1...v2.3.2) (2026-02-25)
+
+
+### Performance Improvements
+
+* performanc tweaks ([#417](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/417)) ([a3f6abf](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/a3f6abf47a1d3baa51b987fc0fcdb1972fc2bdd6))
+
 ## [2.3.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.3.0...v2.3.1) (2026-02-20)
 
 
