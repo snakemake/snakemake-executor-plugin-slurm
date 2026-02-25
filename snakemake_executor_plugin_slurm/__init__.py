@@ -4,6 +4,7 @@ __email__ = "johannes.koester@uni-due.de"
 __license__ = "MIT"
 
 import atexit
+from concurrent.futures import ThreadPoolExecutor
 from itertools import groupby
 import os
 from pathlib import Path
@@ -406,6 +407,9 @@ class Executor(RemoteExecutor):
         self._fallback_partition = None
         self._preemption_warning = False  # no preemption warning has been issued
         self._submitted_job_clusters = set()  # track clusters of submitted jobs
+        self._job_submission_executor = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="slurm_job_submit"
+        )
         self._status_query_calls = 0
         self._status_query_failures = 0
         self._status_query_total_seconds = 0.0
@@ -463,6 +467,9 @@ class Executor(RemoteExecutor):
         This method is overloaded, to include the cleaning of old log files
         and to optionally create an efficiency report.
         """
+        # Shutdown the job submission thread pool first and wait for all tasks
+        self._job_submission_executor.shutdown(wait=True)
+
         # First, we invoke the original shutdown method
         super().shutdown()
 
@@ -569,23 +576,27 @@ class Executor(RemoteExecutor):
             # TODO: use more sensible logging information, once finished
             self.logger.info(f"Running jobs for rule: {rule_name}, {same_rule_jobs}")
             self.logger.info(f"Current array job settings: {self.array_jobs}")
-            if len(same_rule_jobs) == 1 or (
+            # check whether a job is a group job, as these cannot be submitted
+            # as array jobs.
+            if any(job.is_group() for job in same_rule_jobs):
+                self.logger.warning(
+                    f"Rule {rule_name} contains group jobs, which cannot be submitted as array jobs. "
+                    "These jobs will be submitted individually."
+                )
+                for job in same_rule_jobs:
+                    self._job_submission_executor.submit(self.run_job, job)
+            elif len(same_rule_jobs) == 1 or (
                 rule_name not in self.array_jobs and "all" not in self.array_jobs
             ):
-                self.run_job(same_rule_jobs[0])
+                self._job_submission_executor.submit(self.run_job, same_rule_jobs[0])
             else:
                 # if a job is a selected array job, wait for all jobs of the same rule
                 # to be ready for execution.
                 if "all" in self.array_jobs or rule_name in self.array_jobs:
+                    # TODO: this will NOT work, `is_ready` does not exist
+                    #      instead, we have to query the DAG to know the number
+                    #      of jobs of the same rule we are awaiting.
                     eligible_jobs = [job for job in same_rule_jobs if job.is_ready()]
-                    # check whether a job is a group job, as these cannot be submitted
-                    # as array jobs.
-                    if any(job.is_group() for job in eligible_jobs):
-                        raise WorkflowError(
-                            f"Rule {rule_name} contains group jobs, which cannot be "
-                            f"submitted as array jobs. Please remove group jobs from "
-                            f"this rule or disable array job submission for this rule."
-                        )
                     if len(eligible_jobs) < len(same_rule_jobs):
                         self.logger.info(
                             "Array job collection incomplete for rule "
@@ -604,7 +615,7 @@ class Executor(RemoteExecutor):
                         "Aborting after collecting eligible jobs."
                     )
                 for job in same_rule_jobs:
-                    self.run_job(job)
+                    self._job_submission_executor.submit(self.run_job, job)
 
     def run_job(self, job: JobExecutorInterface):
         # Implement here how to run a job.
