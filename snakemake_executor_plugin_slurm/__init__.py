@@ -140,6 +140,19 @@ def _get_status_command_help():
 class ExecutorSettings(ExecutorSettingsBase):
     """Settings for the SLURM executor plugin."""
 
+    array_job: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": "Will submit jobs as SLURM job arrays, if possible. "
+            "Use as: --slurm-array-job 'rule1, rule2' to submit jobs of "
+            "rule1 and rule2 as array jobs. If a DAG contains only one job for "
+            "a rule, it cannot be submitted as an array job. Selecting",
+            "--slurm-array-job 'all' will submit all eligiblejobs as array jobs. "
+            "env_var": False,
+            "required": False,
+        },
+    )
+
     logdir: Optional[Path] = field(
         default=None,
         metadata={
@@ -399,6 +412,14 @@ class Executor(RemoteExecutor):
         self._status_query_min_seconds = None
         self._status_query_max_seconds = 0.0
         self._status_query_cycle_rows = []
+        array_job_setting = self.workflow.executor_settings.array_job
+        if array_job_setting:
+            normalized_setting = array_job_setting.replace(";", ",")
+            self.array_jobs = {
+                rule.strip() for rule in normalized_setting.split(",") if rule.strip()
+            }
+        else:
+            self.array_jobs = set()
         self.slurm_logdir = (
             Path(self.workflow.executor_settings.logdir)
             if self.workflow.executor_settings.logdir
@@ -545,17 +566,37 @@ class Executor(RemoteExecutor):
     def run_jobs(self, jobs: List[JobExecutorInterface]):
         for rule_name, group in groupby(jobs, key=lambda job: job.rule.name):
             same_rule_jobs = list(group)  # Materialize the generator
-            if len(same_rule_jobs) == 1:
+            # TODO: use more sensible logging information, once finished
+            self.logger.info(f"Running jobs for rule: {rule_name}, {same_rule_jobs}")
+            if len(same_rule_jobs) == 1 or rule_name not in self.array_jobs:
                 self.run_job(same_rule_jobs[0])
             else:
-                # TODO submit as array
-                # share code with run_job
-
-                # TODO in the future: give a hint to the scheduler to select preferably
-                # many jobs from the same rule if possible, in order to have
-                # more efficient array jobs. This should be somehow tunable, because
-                # it might contradict other efficiency goals.
-                ...
+                # if a job is a selected array job, wait for all jobs of the same rule
+                # to be ready for execution.
+                if "all" in self.array_jobs or rule_name in self.array_jobs:
+                    eligible_jobs = [job for job in same_rule_jobs if job.is_ready()]
+                    if len(eligible_jobs) < len(same_rule_jobs):
+                        self.logger.info(
+                            "Array job collection incomplete for rule "
+                            f"{rule_name}: {len(eligible_jobs)}/"
+                            f"{len(same_rule_jobs)} ready. Aborting."
+                        )
+                        raise WorkflowError(
+                            "Array job submission is not yet implemented. "
+                            "Aborting before submission while waiting for all "
+                            "eligible jobs to arrive."
+                        )
+                    self.logger.info(
+                        "All array-eligible jobs have arrived for rule "
+                        f"{rule_name}: {eligible_jobs} "
+                        f"comparison: {same_rule_jobs}"
+                    )
+                    raise WorkflowError(
+                        "Array job submission is not yet implemented. "
+                        "Aborting after collecting eligible jobs."
+                    )
+                for job in same_rule_jobs:
+                    self.run_job(job)
 
 
     def run_job(self, job: JobExecutorInterface):
