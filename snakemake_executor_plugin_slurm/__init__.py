@@ -800,6 +800,9 @@ class Executor(RemoteExecutor):
         # this code is inspired by the snakemake profile:
         # https://github.com/Snakemake-Profiles/slurm
         cycle_failed_attempts = 0
+        # In the typical case, status polling completes in a single attempt.
+        # Additional attempts are mainly a resilience fallback for transient
+        # slurmdbd/accounting hiccups where job states are briefly incomplete.
         for i in range(status_attempts):
             async with self.status_rate_limiter:
                 (status_of_jobs, sacct_query_duration) = await query_job_status(
