@@ -392,6 +392,12 @@ class Executor(RemoteExecutor):
         self._fallback_partition = None
         self._preemption_warning = False  # no preemption warning has been issued
         self._submitted_job_clusters = set()  # track clusters of submitted jobs
+        self._status_query_calls = 0
+        self._status_query_failures = 0
+        self._status_query_total_seconds = 0.0
+        self._status_query_min_seconds = None
+        self._status_query_max_seconds = 0.0
+        self._status_query_cycle_rows = []
         self.slurm_logdir = (
             Path(self.workflow.executor_settings.logdir)
             if self.workflow.executor_settings.logdir
@@ -450,6 +456,29 @@ class Executor(RemoteExecutor):
                 e_report_path=report_path,
                 logger=self.logger,
             )
+        
+        # Finally, create a summary of status query timings and report it.
+        # (only in debug mode).
+        cumulative_avg_duration = (
+            self._status_query_total_seconds / self._status_query_calls
+            if self._status_query_calls
+            else 0.0
+        )
+        min_duration = (
+            f"{self._status_query_min_seconds:.3f}s"
+            if self._status_query_min_seconds is not None
+            else "n/a"
+        )
+        self.logger.debug(
+            "Status query timing summary at shutdown: "
+            f"calls={self._status_query_calls}, "
+            f"failures={self._status_query_failures}, "
+            f"min={min_duration}, "
+            f"avg={cumulative_avg_duration:.3f}s, "
+            f"max={self._status_query_max_seconds:.3f}s, "
+            f"total={self._status_query_total_seconds:.3f}s"
+        )
+
         # Report any failed nodes that were tracked during execution
         if self._failed_nodes:
             failed_nodes_str = ", ".join(sorted(self._failed_nodes))
@@ -770,12 +799,15 @@ class Executor(RemoteExecutor):
 
         # this code is inspired by the snakemake profile:
         # https://github.com/Snakemake-Profiles/slurm
+        cycle_failed_attempts = 0
         for i in range(status_attempts):
             async with self.status_rate_limiter:
                 (status_of_jobs, sacct_query_duration) = await query_job_status(
                     status_command, self.logger
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
+                    cycle_failed_attempts += 1
+                    self._status_query_failures += 1
                     is_final_attempt = i + 1 == status_attempts
                     self.logger.debug(
                         f"could not check status of job {self.run_uuid}"
@@ -783,6 +815,19 @@ class Executor(RemoteExecutor):
                     )
                     continue
                 sacct_query_durations.append(sacct_query_duration)
+                self._status_query_calls += 1
+                self._status_query_total_seconds += sacct_query_duration
+                if self._status_query_min_seconds is None:
+                    self._status_query_min_seconds = sacct_query_duration
+                else:
+                    self._status_query_min_seconds = min(
+                        self._status_query_min_seconds,
+                        sacct_query_duration,
+                    )
+                self._status_query_max_seconds = max(
+                    self._status_query_max_seconds,
+                    sacct_query_duration,
+                )
                 # only take jobs that are still active
                 active_jobs_ids_with_current_sacct_status = (
                     set(status_of_jobs.keys()) & active_jobs_ids
@@ -810,6 +855,42 @@ class Executor(RemoteExecutor):
                     )
                 if not missing_sacct_status:
                     break
+
+        if sacct_query_durations:
+            cycle_avg_duration = sum(sacct_query_durations) / len(sacct_query_durations)
+            self._status_query_cycle_rows.append(
+                {
+                    "cycle_index": len(self._status_query_cycle_rows) + 1,
+                    "command": status_command_name,
+                    "successful_attempts": len(sacct_query_durations),
+                    "failed_attempts": cycle_failed_attempts,
+                    "min_seconds": f"{min(sacct_query_durations):.6f}",
+                    "avg_seconds": f"{cycle_avg_duration:.6f}",
+                    "max_seconds": f"{max(sacct_query_durations):.6f}",
+                }
+            )
+            self.logger.debug(
+                "Status query timing (cycle): "
+                f"command={status_command_name}, "
+                f"attempts={len(sacct_query_durations)}, "
+                f"failed_attempts={cycle_failed_attempts}, "
+                f"min={min(sacct_query_durations):.3f}s, "
+                f"avg={cycle_avg_duration:.3f}s, "
+                f"max={max(sacct_query_durations):.3f}s"
+            )
+
+        if self._status_query_calls and self._status_query_calls % 25 == 0:
+            cumulative_avg_duration = (
+                self._status_query_total_seconds / self._status_query_calls
+            )
+            self.logger.info(
+                "Status query timing (cumulative): "
+                f"calls={self._status_query_calls}, "
+                f"failures={self._status_query_failures}, "
+                f"min={self._status_query_min_seconds:.3f}s, "
+                f"avg={cumulative_avg_duration:.3f}s, "
+                f"max={self._status_query_max_seconds:.3f}s"
+            )
 
         if missing_sacct_status:
             self.logger.warning(
