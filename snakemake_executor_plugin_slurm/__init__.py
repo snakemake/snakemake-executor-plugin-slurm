@@ -140,14 +140,14 @@ def _get_status_command_help():
 class ExecutorSettings(ExecutorSettingsBase):
     """Settings for the SLURM executor plugin."""
 
-    array_job: Optional[str] = field(
+    array_jobs: Optional[str] = field(
         default=None,
         metadata={
             "help": "Will submit jobs as SLURM job arrays, if possible. "
-            "Use as: --slurm-array-job 'rule1, rule2' to submit jobs of "
+            "Use as: --slurm-array-jobs='rule1, rule2' to submit jobs of "
             "rule1 and rule2 as array jobs. If a DAG contains only one job for "
             "a rule, it cannot be submitted as an array job. Selecting",
-            "--slurm-array-job 'all' will submit all eligiblejobs as array jobs. "
+            "--slurm-array-jobs=all will submit all eligiblejobs as array jobs. "
             "env_var": False,
             "required": False,
         },
