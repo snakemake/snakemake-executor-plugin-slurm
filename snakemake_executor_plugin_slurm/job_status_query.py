@@ -1,6 +1,10 @@
+import asyncio
 import shlex
 import subprocess
 import re
+import csv
+import time
+from io import StringIO
 from datetime import datetime, timedelta
 
 
@@ -155,3 +159,62 @@ def query_job_status_squeue(runid) -> list:
     query_command = " ".join(shlex.split(query_command))
 
     return query_command
+
+
+async def query_job_status(command: str, logger):
+    """Obtain SLURM job status of all submitted jobs with sacct or squeue
+
+    Args:
+        command: SLURM command that returns one line for each job with:
+                 "<raw/main_job_id>|<long_status_string>"
+        logger: Logger instance for debug/error output
+
+    Returns:
+        Tuple of (status_dict, query_duration) where status_dict is a dict
+        mapping job IDs to status strings, and query_duration is time in seconds.
+        Returns (None, None) on query failure.
+    """
+    status_of_jobs = {}
+
+    start_time = time.time()
+    try:
+        process = await asyncio.create_subprocess_exec(
+            *shlex.split(command),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+        # Note: The replacement of `communicate()` with `wait_for()` has been
+        #       benchmarked. The average call time has been reduced by ~16 %.
+        #       Without asnyncio.wait_for, the average call time was 0.014 seconds,
+        #       while with asyncio.wait_for, it is reduced to 0.011 seconds.
+        #       A t-test based on about 70 calls each, gives a p-value of 2e-27.
+
+        out, err = await asyncio.wait_for(process.communicate(), timeout=60)
+        query_duration = time.time() - start_time
+
+        out_text = out.decode() if out else ""
+        err_text = err.decode() if err else ""
+
+        if process.returncode != 0:
+            if err_text:
+                logger.debug(f"SLURM query command failed: {err_text}")
+            return None, None
+
+        # Parse the CSV output with | delimiter
+        reader = csv.reader(StringIO(out_text), delimiter="|")
+        for row in reader:
+            if len(row) >= 2:
+                job_id = row[0].strip()
+                status = row[1].strip()
+                if job_id:  # skip empty lines
+                    status_of_jobs[job_id] = status
+
+        return status_of_jobs, query_duration
+
+    except asyncio.TimeoutError:
+        logger.debug("SLURM query command timed out")
+        return None, None
+    except Exception as e:
+        logger.debug(f"Error querying SLURM job status: {e}")
+        return None, None
