@@ -4,8 +4,6 @@ __email__ = "johannes.koester@uni-due.de"
 __license__ = "MIT"
 
 import atexit
-import csv
-from io import StringIO
 import os
 from pathlib import Path
 import re
@@ -32,6 +30,11 @@ from snakemake_interface_executor_plugins.jobs import (
 )
 from snakemake_interface_common.exceptions import WorkflowError
 
+from .accounts import (
+    test_account,
+    get_account,
+)
+
 from .utils import (
     delete_slurm_environment,
     delete_empty_dirs,
@@ -43,10 +46,13 @@ from .job_status_query import (
     should_recommend_squeue_status_command,
     query_job_status_squeue,
     query_job_status_sacct,
+    query_job_status,
 )
+from .job_cancellation import cancel_slurm_jobs
 from .efficiency_report import create_efficiency_report
 from .submit_string import get_submit_command
 from .partitions import (
+    get_default_partition,
     read_partition_file,
     get_best_partition,
 )
@@ -496,7 +502,12 @@ class Executor(RemoteExecutor):
         done = True
 
     def additional_general_args(self):
+        """
+        This function defines additional arguments to be
+        passed to `exec_job`.
+        """
         general_args = "--executor slurm-jobstep --jobs 1"
+        # need to pass
         if self.workflow.executor_settings.pass_command_as_script:
             general_args += " --slurm-jobstep-pass-command-as-script"
         return general_args
@@ -542,8 +553,7 @@ class Executor(RemoteExecutor):
             comment_str = f"rule_{job.name}_wildcards_{wildcard_str}"
         # check whether the 'slurm_extra' parameter is used correctly
         # prior to putatively setting in the sbatch call
-        if job.resources.get("slurm_extra"):
-            self.check_slurm_extra(job)
+        validate_slurm_extra(job)
 
         # NOTE removed partition from below, such that partition
         # selection can benefit from resource checking as the call is built up.
@@ -762,8 +772,8 @@ class Executor(RemoteExecutor):
         # https://github.com/Snakemake-Profiles/slurm
         for i in range(status_attempts):
             async with self.status_rate_limiter:
-                (status_of_jobs, sacct_query_duration) = await self.job_stati(
-                    status_command
+                (status_of_jobs, sacct_query_duration) = await query_job_status(
+                    status_command, self.logger
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
                     is_final_attempt = i + 1 == status_attempts
@@ -971,101 +981,11 @@ We leave it to SLURM to resume your job(s)"""
                 self.next_seconds_between_status_checks = initial_interval
 
     def cancel_jobs(self, active_jobs: List[SubmittedJobInfo]):
-        # Cancel all active jobs.
-        # This method is called when Snakemake is interrupted.
-        if active_jobs:
-            # TODO chunk jobids in order to avoid too long command lines
-            jobids = " ".join([job_info.external_jobid for job_info in active_jobs])
+        """Cancel all active jobs.
 
-            try:
-                # timeout set to 60, because a scheduler cycle usually is
-                # about 30 sec, but can be longer in extreme cases.
-                # Under 'normal' circumstances, 'scancel' is executed in
-                # virtually no time.
-                scancel_command = f"scancel {jobids}"
-
-                # Adding the --clusters=all flag, if we submitted to more than one
-                # cluster (assuming that choosing _a_ cluster is enough to fullfil
-                # this criterion). Issue #397 mentions that this flag is not available
-                # in older SLURM versions, but we assume that multicluster setups will
-                # usually run on a recent version of SLURM.
-                if self._submitted_job_clusters:
-                    scancel_command += " --clusters=all"
-
-                subprocess.check_output(
-                    scancel_command,
-                    text=True,
-                    shell=True,
-                    timeout=60,
-                    stderr=subprocess.PIPE,
-                )
-            except subprocess.TimeoutExpired:
-                self.logger.warning("Unable to cancel jobs within a minute.")
-            except subprocess.CalledProcessError as e:
-                msg = e.stderr.strip()
-                if msg:
-                    msg = f": {msg}"
-                # If we were using --clusters and it failed, provide additional context
-                if self._submitted_job_clusters:
-                    msg += (
-                        "\nWARNING: Job cancellation failed while using "
-                        "--clusters flag. Your multicluster SLURM setup may not "
-                        "support this feature, or the SLURM database may not be "
-                        "properly configured for multicluster operations. "
-                        "Please verify your SLURM configuration with your "
-                        "HPC administrator."
-                    )
-                raise WorkflowError(
-                    "Unable to cancel jobs with scancel "
-                    f"(exit code {e.returncode}){msg}"
-                ) from e
-
-    async def job_stati(self, command):
-        """Obtain SLURM job status of all submitted jobs with sacct
-
-        Keyword arguments:
-        command -- a slurm command that returns one line for each job with:
-                   "<raw/main_job_id>|<long_status_string>"
+        This method is called when Snakemake is interrupted.
         """
-        res = query_duration = None
-        try:
-            time_before_query = time.time()
-            command_res = subprocess.check_output(
-                command, text=True, shell=True, stderr=subprocess.PIPE
-            )
-            query_duration = time.time() - time_before_query
-            self.logger.debug(
-                f"The job status was queried with command: {command}\n"
-                f"It took: {query_duration} seconds\n"
-                f"The output is:\n'{command_res}'\n"
-            )
-            res = {
-                # We split the second field in the output, as the State field
-                # could contain info beyond the JOB STATE CODE according to:
-                # https://slurm.schedmd.com/sacct.html#OPT_State
-                entry[0]: entry[1].split(sep=None, maxsplit=1)[0]
-                for entry in csv.reader(StringIO(command_res), delimiter="|")
-            }
-        except subprocess.CalledProcessError as e:
-            error_message = e.stderr.strip()
-            if "slurm_persist_conn_open_without_init" in error_message:
-                self.logger.warning(
-                    "The SLURM database might not be available ... "
-                    f"Error message: '{error_message}'"
-                    "This error message indicates that the SLURM database is "
-                    "currently not available. This is not an error of the "
-                    "Snakemake plugin, but some kind of server issue. "
-                    "Please consult with your HPC provider."
-                )
-            else:
-                self.logger.error(
-                    f"The job status query failed with command '{command}'"
-                    f"Error message: '{error_message}'"
-                    "This error message is not expected, please report it back to us."
-                )
-            pass
-
-        return (res, query_duration)
+        cancel_slurm_jobs(active_jobs, self._submitted_job_clusters, self.logger)
 
     def get_account_arg(self, job: JobExecutorInterface):
         """
@@ -1082,21 +1002,21 @@ We leave it to SLURM to resume your job(s)"""
             for account in accounts:
                 # here, we check whether the given or guessed account is valid
                 # if not, a WorkflowError is raised
-                self.test_account(account)
+                test_account(account, self.logger)
             # sbatch only allows one account per submission
             # yield one after the other, if multiple were given
             # we have to quote the account, because it might
             # contain build-in shell commands - see issue #354
             for account in accounts:
-                self.test_account(account)
+                test_account(account, self.logger)
                 yield f" -A {shlex.quote(account)}"
         else:
             if self._fallback_account_arg is None:
                 self.logger.warning("No SLURM account given, trying to guess.")
-                account = self.get_account()
+                account = get_account(self.logger)
                 if account:
                     self.logger.warning(f"Guessed SLURM account: {account}")
-                    self.test_account(f"{account}")
+                    test_account(f"{account}", self.logger)
                     self._fallback_account_arg = f" -A {shlex.quote(account)}"
                 else:
                     self.logger.warning(
@@ -1155,7 +1075,7 @@ We leave it to SLURM to resume your job(s)"""
         # we didnt get a partition yet so try fallback.
         if not partition:
             if self._fallback_partition is None:
-                self._fallback_partition = self.get_default_partition(job)
+                self._fallback_partition = get_default_partition(job, self.logger)
             partition = self._fallback_partition
         if partition:
             # we have to quote the partition, because it might
@@ -1164,107 +1084,3 @@ We leave it to SLURM to resume your job(s)"""
             return f" -p {shlex.quote(str(partition))}"
         else:
             return ""
-
-    def get_account(self):
-        """
-        tries to deduce the acccount from recent jobs,
-        returns None, if none is found
-        """
-        cmd = f'sacct -nu "{os.environ["USER"]}" -o Account%256 | tail -1'
-        try:
-            sacct_out = subprocess.check_output(
-                cmd, shell=True, text=True, stderr=subprocess.PIPE
-            )
-            possible_account = sacct_out.replace("(null)", "").strip()
-            if possible_account == "none":  # some clusters may not use an account
-                return None
-        except subprocess.CalledProcessError as e:
-            self.logger.warning(
-                f"No account was given, not able to get a SLURM account via sacct: "
-                f"{e.stderr}"
-            )
-            return None
-
-    def test_account(self, account):
-        """
-        tests whether the given account is registered, raises an error, if not
-        """
-        # first we need to test with sacctmgr because sshare might not
-        # work in a multicluster environment
-        cmd = f'sacctmgr -n -s list user "{os.environ["USER"]}" format=account%256'
-        sacctmgr_report = sshare_report = ""
-        try:
-            accounts = subprocess.check_output(
-                cmd, shell=True, text=True, stderr=subprocess.PIPE
-            )
-        except subprocess.CalledProcessError as e:
-            sacctmgr_report = (
-                "Unable to test the validity of the given or guessed"
-                f" SLURM account '{account}' with sacctmgr: {e.stderr}."
-            )
-            accounts = ""
-
-        if not accounts.strip():
-            cmd = "sshare -U --format Account%256 --noheader"
-            try:
-                accounts = subprocess.check_output(
-                    cmd, shell=True, text=True, stderr=subprocess.PIPE
-                )
-            except subprocess.CalledProcessError as e:
-                sshare_report = (
-                    "Unable to test the validity of the given or guessed "
-                    f"SLURM account '{account}' with sshare: {e.stderr}."
-                )
-                raise WorkflowError(
-                    f"The 'sacctmgr' reported: '{sacctmgr_report}' "
-                    f"and likewise 'sshare' reported: '{sshare_report}'."
-                )
-
-        # The set() has been introduced during review to eliminate
-        # duplicates. They are not harmful, but disturbing to read.
-        accounts = set(_.strip() for _ in accounts.split("\n") if _)
-
-        if not accounts:
-            self.logger.warning(
-                f"Both 'sacctmgr' and 'sshare' returned empty results for account "
-                f"'{account}'. Proceeding without account validation."
-            )
-            return ""
-
-        if account.lower() not in accounts:
-            raise WorkflowError(
-                f"The given account {account} appears to be invalid. Available "
-                f"accounts:\n{', '.join(accounts)}"
-            )
-
-    def get_default_partition(self, job):
-        """
-        if no partition is given, checks whether a fallback onto a default
-        partition is possible
-        """
-        try:
-            out = subprocess.check_output(
-                r"sinfo -o %P", shell=True, text=True, stderr=subprocess.PIPE
-            )
-        except subprocess.CalledProcessError as e:
-            raise WorkflowError(
-                f"Failed to run sinfo for retrieval of cluster partitions: {e.stderr}"
-            )
-        for partition in out.split():
-            # A default partition is marked with an asterisk, but this is not part of
-            # the name.
-            if "*" in partition:
-                # the decode-call is necessary, because the output of sinfo is bytes
-                return partition.replace("*", "")
-        self.logger.warning(
-            f"No partition was given for rule '{job}', and unable to find "
-            "a default partition."
-            " Trying to submit without partition information."
-            " You may want to invoke snakemake with --default-resources "
-            "'slurm_partition=<your default partition>'."
-        )
-        return ""
-
-    def check_slurm_extra(self, job):
-        """Validate that slurm_extra doesn't contain executor-managed options."""
-        validate_slurm_extra(job)
