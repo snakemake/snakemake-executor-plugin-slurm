@@ -456,7 +456,7 @@ class Executor(RemoteExecutor):
                 e_report_path=report_path,
                 logger=self.logger,
             )
-        
+
         # Finally, create a summary of status query timings and report it.
         # (only in debug mode).
         cumulative_avg_duration = (
