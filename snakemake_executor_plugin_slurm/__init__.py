@@ -568,6 +568,7 @@ class Executor(RemoteExecutor):
             same_rule_jobs = list(group)  # Materialize the generator
             # TODO: use more sensible logging information, once finished
             self.logger.info(f"Running jobs for rule: {rule_name}, {same_rule_jobs}")
+            self.logger.info(f"Current array job settings: {self.array_jobs}")
             if len(same_rule_jobs) == 1 or rule_name not in self.array_jobs:
                 self.run_job(same_rule_jobs[0])
             else:
@@ -581,11 +582,8 @@ class Executor(RemoteExecutor):
                             f"{rule_name}: {len(eligible_jobs)}/"
                             f"{len(same_rule_jobs)} ready. Aborting."
                         )
-                        raise WorkflowError(
-                            "Array job submission is not yet implemented. "
-                            "Aborting before submission while waiting for all "
-                            "eligible jobs to arrive."
-                        )
+                        return
+
                     self.logger.info(
                         "All array-eligible jobs have arrived for rule "
                         f"{rule_name}: {eligible_jobs} "
