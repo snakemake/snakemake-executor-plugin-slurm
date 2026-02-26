@@ -16,7 +16,8 @@ def safe_quote(value):
     return shlex.quote(str_value)
 
 
-def get_submit_command(job, params):
+def get_submit_command(job, params, settings=None,
+                       failed_nodes=set()) -> str:
     """
     Return the submit command for the job.
     """
@@ -75,6 +76,19 @@ def get_submit_command(job, params):
 
     if job.resources.get("nodes", False):
         call += f" --nodes={job.resources.get('nodes', 1)}"
+
+    if settings and settings.requeue:
+        call += " --requeue"
+
+    if settings and settings.qos:
+        call += f" --qos={safe_quote(settings.qos)}"
+
+    if settings and settings.reservation:
+        call += f" --reservation={safe_quote(settings.reservation)}"
+
+    # we exclude failed nodes from further job submissions, to avoid
+    # repeated failures.
+    call += f" --exclude={','.join(failed_nodes)}"
 
     gpu_job = job.resources.get("gpu") or "gpu" in job.resources.get("gres", "")
     if gpu_job:
