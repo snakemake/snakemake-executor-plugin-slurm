@@ -662,6 +662,13 @@ class Executor(RemoteExecutor):
         wildcard_strs = [get_job_wildcards(job) for job in jobs]
         array_limit = self.workflow.executor_settings.array_limit
 
+        if array_limit < len(jobs):
+            raise WorkflowError(
+                f"Array job submission limit exceeded: {len(jobs)} jobs, "
+                f"but array_limit is set to {array_limit}. "
+                "Submitting an array > this limit is currently not supported."
+            )
+
         self.slurm_logdir.mkdir(parents=True, exist_ok=True)
         for wildcard_str in wildcard_strs:
             slurm_logfile = (
@@ -727,6 +734,9 @@ class Executor(RemoteExecutor):
             f"{','.join(self._failed_nodes)}"
         )
         call += set_gres_string(jobs[0])
+
+        # the actual array job call:
+        call += f" --array=1-{len(jobs)}%{array_limit}"
 
     def run_job(self, job: JobExecutorInterface):
         group_or_rule = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
