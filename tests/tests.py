@@ -82,9 +82,9 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
                 report_found = True
                 report_path = os.path.join(expected_path, fname)
                 # Verify it's not empty
-                assert (
-                    os.stat(report_path).st_size > 0
-                ), f"Efficiency report {report_path} is empty"
+                assert os.stat(report_path).st_size > 0, (
+                    f"Efficiency report {report_path} is empty"
+                )
                 break
         assert report_found, "Efficiency report file not found"
 

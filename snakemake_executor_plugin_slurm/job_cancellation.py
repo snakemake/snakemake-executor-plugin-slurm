@@ -68,5 +68,5 @@ def cancel_slurm_jobs(
                     "HPC administrator."
                 )
             raise WorkflowError(
-                "Unable to cancel jobs with scancel " f"(exit code {e.returncode}){msg}"
+                f"Unable to cancel jobs with scancel (exit code {e.returncode}){msg}"
             ) from e

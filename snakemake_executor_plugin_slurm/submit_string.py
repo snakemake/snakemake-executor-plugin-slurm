@@ -16,8 +16,7 @@ def safe_quote(value):
     return shlex.quote(str_value)
 
 
-def get_submit_command(job, params, settings=None,
-                       failed_nodes=set()) -> str:
+def get_submit_command(job, params, settings=None, failed_nodes=set()) -> str:
     """
     Return the submit command for the job.
     """
