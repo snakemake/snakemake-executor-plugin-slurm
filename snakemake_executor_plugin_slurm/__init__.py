@@ -142,6 +142,23 @@ def _get_status_command_help():
     )
 
 
+def _status_lookup_ids(external_jobid: str) -> List[str]:
+    """Return candidate IDs for status lookup.
+
+    For array jobs, Snakemake tracks task IDs as ``<jobid>_<taskid>``.
+    Depending on SLURM command/options (e.g. ``sacct -X``), status output may
+    only contain the parent array ID ``<jobid>``. This helper returns IDs in
+    lookup order so callers can transparently fall back from task ID to parent
+    ID.
+    """
+    candidates = [external_jobid]
+    if "_" in external_jobid:
+        parent_id, task_id = external_jobid.split("_", 1)
+        if parent_id.isdigit() and task_id.isdigit():
+            candidates.append(parent_id)
+    return candidates
+
+
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
     """Settings for the SLURM executor plugin."""
@@ -154,6 +171,8 @@ class ExecutorSettings(ExecutorSettingsBase):
             "rule1 and rule2 as array jobs. If a DAG contains only one job for "
             "a rule, it cannot be submitted as an array job. Selecting",
             "--slurm-array-jobs=all will submit all eligiblejobs as array jobs. "
+            "Note: When choosing array job submission, the required jobs are "
+            "subject to a synchronization overhead."
             "env_var": False,
             "required": False,
         },
@@ -427,7 +446,7 @@ class Executor(RemoteExecutor):
         self._preemption_warning = False  # no preemption warning has been issued
         self._submitted_job_clusters = set()  # track clusters of submitted jobs
         self._job_submission_executor = ThreadPoolExecutor(
-            max_workers=1, thread_name_prefix="slurm_job_submit"
+            max_workers=2, thread_name_prefix="slurm_job_submit"
         )
         self._main_event_loop = None
         self._status_query_calls = 0
@@ -591,6 +610,12 @@ class Executor(RemoteExecutor):
         return general_args
 
     def run_jobs(self, jobs: List[JobExecutorInterface]):
+        """
+        This is a meta rule to delegate the job execution to either
+        - `run_job` for individual job submission, or
+        - `run_array_jobs` for array job submission, or
+        - `run_pool_jobs` for pool job submission (to be implemented in the future).
+        """
         if self._main_event_loop is None:
             try:
                 self._main_event_loop = asyncio.get_running_loop()
@@ -599,48 +624,68 @@ class Executor(RemoteExecutor):
 
         for rule_name, group in groupby(jobs, key=lambda job: job.rule.name):
             same_rule_jobs = list(group)  # Materialize the generator
+            eligible_jobs = pending_jobs_for_rule(self.workflow.dag, rule_name)
+            array_selected_for_rule = (
+                "all" in self.array_jobs or rule_name in self.array_jobs
+            )
             # TODO: use more sensible logging information, once finished
             self.logger.info(f"Running jobs for rule: {rule_name}, {same_rule_jobs}")
             self.logger.info(f"Current array job settings: {self.array_jobs}")
             # check whether a job is a group job, as these cannot be submitted
             # as array jobs.
-            if any(job.is_group() for job in same_rule_jobs):
+            if (
+                any(job.is_group() for job in same_rule_jobs)
+                and array_selected_for_rule
+            ):
                 self.logger.warning(
                     f"Rule {rule_name} contains group jobs, which cannot be submitted as array jobs. "
                     "These jobs will be submitted individually."
                 )
                 for job in same_rule_jobs:
                     self._job_submission_executor.submit(self.run_job, job)
-            elif len(same_rule_jobs) == 1 or (
-                rule_name not in self.array_jobs and "all" not in self.array_jobs
-            ):
-                self._job_submission_executor.submit(self.run_job, same_rule_jobs[0])
-            else:
-                # if a job is a selected array job, wait for all jobs of the same rule
-                # to be ready for execution.
-                if "all" in self.array_jobs or rule_name in self.array_jobs:
-                    # TODO: this will NOT work, `is_ready` does not exist
-                    #      instead, we have to query the DAG to know the number
-                    #      of jobs of the same rule we are awaiting.
-                    eligible_jobs = pending_jobs_for_rule(self.workflow.dag, rule_name)
-                    if eligible_jobs < len(same_rule_jobs):
-                        self.logger.debug(
-                            "Array job collection incomplete for rule "
-                            f"{rule_name}: {eligible_jobs}/"
-                            f"{len(same_rule_jobs)} ready. Aborting."
-                        )
-                        return
-
+                continue
+            # A single pending job cannot be submitted as an array job,
+            # even if array mode is selected for the rule.
+            elif eligible_jobs == 1:
+                if array_selected_for_rule:
                     self.logger.debug(
-                        "All array-eligible jobs have arrived for rule "
-                        f"{rule_name}: {eligible_jobs} "
-                        f"comparison: {same_rule_jobs}"
+                        f"Array submission requested for rule {rule_name}, "
+                        "but only one pending job is available; submitting "
+                        "it as a regular job."
                     )
-                    self._job_submission_executor.submit(
-                        self.run_array_jobs, same_rule_jobs
+                else:
+                    self.logger.debug(
+                        f"Submitting single job for rule {rule_name} as it "
+                        "is the only pending job for this rule."
                     )
-                for job in same_rule_jobs:
-                    self._job_submission_executor.submit(self.run_job, job)
+                self._job_submission_executor.submit(self.run_job, same_rule_jobs[0])
+                continue
+            # check whether a job is an array job candidate
+            elif eligible_jobs > 1 and array_selected_for_rule:
+                if len(same_rule_jobs) < eligible_jobs:
+                    self.logger.debug(
+                        "Array job collection incomplete for rule "
+                        f"{rule_name}: {len(same_rule_jobs)}/"
+                        f"{eligible_jobs} arrived. Waiting for remaining jobs."
+                    )
+                    continue
+
+                self.logger.debug(
+                    "All array-eligible jobs have arrived for rule "
+                    f"{rule_name}: {eligible_jobs} jobs ready "
+                    f"for array submission."
+                )
+                self._job_submission_executor.submit(
+                    self.run_array_jobs, same_rule_jobs
+                )
+                continue
+
+            self.logger.debug(
+                f"No submission triggered for rule {rule_name}: "
+                f"eligible_jobs={eligible_jobs}, "
+                f"arrived_jobs={len(same_rule_jobs)}, "
+                f"array_selected={array_selected_for_rule}."
+            )
 
     def _report_job_submission_threadsafe(self, job_info: SubmittedJobInfo):
         if self._main_event_loop is not None:
@@ -662,177 +707,236 @@ class Executor(RemoteExecutor):
             self.report_job_error(job_info, msg=msg)
 
     def run_array_jobs(self, jobs: List[JobExecutorInterface]):
-        group_or_rule = (
-            f"group_{jobs[0].name}" if jobs[0].is_group() else f"rule_{jobs[0].name}"
-        )
-        wildcard_strs = [get_job_wildcards(job) for job in jobs]
-        wildcard_str = wildcard_strs[0]
-        array_limit = self.workflow.executor_settings.array_limit
-
-        self.slurm_logdir.mkdir(parents=True, exist_ok=True)
-        for wildcard_str in wildcard_strs:
-            slurm_logfile = (
-                self.slurm_logdir / group_or_rule / wildcard_str / r"%A_%a.log"
-            )
-            slurm_logfile.parent.mkdir(parents=True, exist_ok=True)
-
-        # this behavior has been fixed in slurm 23.02, but there might be
-        # plenty of older versions around, hence we should rather be
-        # conservative here.
-        assert "%A" not in str(self.slurm_logdir), (
-            "bug: jobid placeholder in parent dir of logfile. This does not "
-            "work as we have to create that dir before submission in order to "
-            "make sbatch happy. Otherwise we get silent fails without "
-            "logfiles being created."
-        )
-        assert r"%a" not in str(self.slurm_logdir), (
-            "bug: jobid placeholder in parent dir of logfile. This does not "
-            "work as we have to create that dir before submission in order to "
-            "make sbatch happy. Otherwise we get silent fails without "
-            "logfiles being created."
-        )
-
-        # generic part of a submission string:
-        # we use a run_uuid as the job-name, to allow `--name`-based
-        # filtering in the job status checks (`sacct --name` and
-        # `squeue --name`)
-        if wildcard_str == "":
-            comment_str = f"rule_{job.name}"
-        else:
-            self.logger.warning(
-                "Array job submission does not allow for multiple differnt "
-                "wildcard combinationsin the comment string. Only the first "
-                "one will be used."
-            )
-            comment_str = f"rule_{job.name}_wildcards_{wildcard_strs[0]}"
-
-        for job in jobs:
-            # check whether the 'slurm_extra' parameter is used correctly
-            # prior to putatively setting in the sbatch call
-            validate_slurm_extra(job)
-
-        # Note: all jobs have the same resource requirement.
-        #       Thus, we can simply take the first job to extract
-        #       the relevant parameters for the sbatch call.
-        job_params = {
-            "run_uuid": self.run_uuid,
-            "slurm_logfile": slurm_logfile,
-            "comment_str": comment_str,
-            "account": next(self.get_account_arg(jobs[0])),
-            "partition": self.get_partition_arg(jobs[0]),
-            "workdir": self.workflow.workdir_init,
-        }
-
-        call = get_submit_command(
-            jobs[0],
-            job_params,
-            settings=self.workflow.executor_settings,
-            failed_nodes=self._failed_nodes,
-        )
-        self.logger.debug(
-            "Excluding failed nodes from array job submission: "
-            f"{','.join(self._failed_nodes)}"
-        )
-        call += set_gres_string(jobs[0])
-
-        if not jobs[0].resources.get("runtime"):
-            self.logger.warning(
-                "No wall time information given. This might or might not "
-                "work on your cluster. "
-                "If not, specify the resource runtime in your rule or as "
-                "a reasonable default via --default-resources."
-            )
-
-        if not jobs[0].resources.get("mem_mb_per_cpu") and not jobs[0].resources.get("mem_mb"):
-            self.logger.warning(
-                "No job memory information ('mem_mb' or 'mem_mb_per_cpu') is "
-                "given - submitting without. This might or might not work on "
-                "your cluster."
-            )
-
-        # we need to
-        # - get the job format for every job
-        # - compress this string to avoid hitting command line length limits
-        # - associate these strings with a json dict that maps SLURM array task ids
-        #   to the corresponding job format string
-        exec_formats = {
-            index: zlib.compress(self.format_job_exec(job).encode('utf-8'), level=9)
-            for index, job in enumerate(jobs, start=1)
-        }
-
-        exec_formats_json = json.dumps(
-            {index: exec_format.hex() for index, exec_format in exec_formats.items()}
-        )
-
-        # the actual array job call:
-        # we need to cycle over all jobs and submit up to `array_limit` jobs per
-        # submission, to avoid hitting cluster limits or oversaturating the 
-        # command line limits
-        for start_index in range(1, len(jobs) + 1, array_limit):
-            end_index = min(start_index + array_limit - 1, len(jobs))
-            call_with_array = call + f" --array={start_index}-{end_index} /dev/stdin"
-            sbatch_script = "\n".join(
-                [
-                    "#!/bin/sh",
-                    f"{shlex.quote(exec_formats_json)}",
-                    
-                ]
-            )
-            self.logger.debug(f"Submitting array job with sbatch call: {call_with_array}")
-            try:
-                process = subprocess.Popen(
-                    call_with_array,
-                    shell=True,
-                    text=True,
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                )
-                out, err = process.communicate(input=sbatch_script)
-                if process.returncode != 0:
-                    raise subprocess.CalledProcessError(
-                        process.returncode, call_with_array, output=err
-                    )
-            except subprocess.CalledProcessError as e:
-                self._report_job_error_threadsafe(
-                    SubmittedJobInfo(jobs[0]),
-                    (
-                        "SLURM sbatch failed for array job submission. "
-                        f"The error message was '{e.output.strip()}'.\n"
-                        f"    sbatch call:\n        {call_with_array}\n"
-                    ),
-                )
-                continue
-        
-        # To extract the job id we split by semicolon and take the first
-        # element (this also works if no cluster name was provided)
-        slurm_jobid = out.strip().split(";")[0]
-        # this slurm_jobid might be wrong: some cluster admin give convoluted
-        # sbatch outputs. So we need to validate it properly (and replace it
-        # if necessary).
-        slurm_jobid = validate_or_get_slurm_job_id(slurm_jobid, out)
-        # here, however we are dealing with array jobs and the job id is of
-        # the form <jobid>_<array_task_id>, so we need to add the task ids
-        for index in range(1, len(jobs) + 1):
-            job_info = SubmittedJobInfo(jobs[index - 1])
-            job_info.job_id = f"{slurm_jobid}_{index}"
-            self._report_job_submission_threadsafe(job_info)
-            # and to the job ids
-            slurm_jobid = validate_or_get_slurm_job_id(slurm_jobid, out)
-            slurm_jobids = [f"{slurm_jobid}_{i}" for i in range(1, len(jobs) + 1)]
+        try:
             self.logger.debug(
-                f"Submitted array job with SLURM job ID {slurm_jobid} and array task IDs 1-{len(jobs)}. Individual job IDs: {', '.join(slurm_jobids)}"
+                f"Preparing to submit array job for rule {jobs[0].rule.name} "
+                f"with {len(jobs)} tasks."
+            )
+            group_or_rule = (
+                f"group_{jobs[0].name}"
+                if jobs[0].is_group()
+                else f"rule_{jobs[0].name}"
+            )
+            wildcard_strs = [get_job_wildcards(job) for job in jobs]
+            wildcard_str = wildcard_strs[0]
+            array_limit = self.workflow.executor_settings.array_limit
+
+            self.slurm_logdir.mkdir(parents=True, exist_ok=True)
+            for wildcard_str in wildcard_strs:
+                slurm_logfile = (
+                    self.slurm_logdir / group_or_rule / wildcard_str / r"%A_%a.log"
+                )
+                slurm_logfile.parent.mkdir(parents=True, exist_ok=True)
+
+            # this behavior has been fixed in slurm 23.02, but there might be
+            # plenty of older versions around, hence we should rather be
+            # conservative here.
+            assert "%A" not in str(self.slurm_logdir), (
+                "bug: jobid placeholder in parent dir of logfile. This does not "
+                "work as we have to create that dir before submission in order to "
+                "make sbatch happy. Otherwise we get silent fails without "
+                "logfiles being created."
+            )
+            assert r"%a" not in str(self.slurm_logdir), (
+                "bug: jobid placeholder in parent dir of logfile. This does not "
+                "work as we have to create that dir before submission in order to "
+                "make sbatch happy. Otherwise we get silent fails without "
+                "logfiles being created."
             )
 
-        # Track cluster specification for later use in cancel_jobs
-        cluster_val = (
-            job.resources.get("cluster")
-            or job.resources.get("clusters")
-            or job.resources.get("slurm_cluster")
-        )
-        if cluster_val:
-            self._submitted_job_clusters.add(cluster_val)
+            # generic part of a submission string:
+            # we use a run_uuid as the job-name, to allow `--name`-based
+            # filtering in the job status checks (`sacct --name` and
+            # `squeue --name`)
+            if wildcard_str == "":
+                comment_str = f"rule_{jobs[0].name}"
+            else:
+                self.logger.warning(
+                    "Array job submission does not allow for multiple different "
+                    "wildcard combinations in the comment string. Only the first "
+                    "one will be used."
+                )
+                comment_str = f"rule_{jobs[0].name}_wildcards_{wildcard_strs[0]}"
 
+            for job in jobs:
+                # check whether the 'slurm_extra' parameter is used correctly
+                # prior to putatively setting in the sbatch call
+                validate_slurm_extra(job)
+
+            self.logger.debug("Building job params for array job")
+            # Note: all jobs have the same resource requirement.
+            #       Thus, we can simply take the first job to extract
+            #       the relevant parameters for the sbatch call.
+            job_params = {
+                "run_uuid": self.run_uuid,
+                "slurm_logfile": slurm_logfile,
+                "comment_str": comment_str,
+                "account": next(self.get_account_arg(jobs[0])),
+                "partition": self.get_partition_arg(jobs[0]),
+                "workdir": self.workflow.workdir_init,
+            }
+
+            call = get_submit_command(
+                jobs[0],
+                job_params,
+                settings=self.workflow.executor_settings,
+                failed_nodes=self._failed_nodes,
+            )
+            if self._failed_nodes:
+                self.logger.debug(
+                    "Excluding failed nodes from array job submission: "
+                    f"{','.join(self._failed_nodes)}"
+                )
+            call += set_gres_string(jobs[0])
+
+            if not jobs[0].resources.get("runtime"):
+                self.logger.warning(
+                    "No wall time information given. This might or might not "
+                    "work on your cluster. "
+                    "If not, specify the resource runtime in your rule or as "
+                    "a reasonable default via --default-resources."
+                )
+
+            if not jobs[0].resources.get("mem_mb_per_cpu") and not jobs[
+                0
+            ].resources.get("mem_mb"):
+                self.logger.warning(
+                    "No job memory information ('mem_mb' or 'mem_mb_per_cpu') is "
+                    "given - submitting without. This might or might not work on "
+                    "your cluster."
+                )
+            # we are using jobs[0] assuming all equal resource requirements
+            # and are going to extract
+            exec_job = self.format_job_exec(jobs[0])
+
+            # Build a compressed map of array task id -> full execution string
+            # for all jobs except jobs[0]. Task 1 executes via the base command.
+            array_execs = {
+                index: zlib.compress(
+                    self.format_job_exec(job).encode("utf-8"), level=9
+                ).hex()
+                for index, job in enumerate(jobs[1:], start=2)
+            }
+
+            # the actual array job call:
+
+            # we need to cycle over all jobs and submit up to `array_limit` jobs per
+            # submission, to avoid hitting cluster limits or oversaturating the
+            # command line limits
+            for start_index in range(1, len(jobs) + 1, array_limit):
+                end_index = min(start_index + array_limit - 1, len(jobs))
+                call_with_array = call + f" --array={start_index}-{end_index}"
+                sub_array_execs = {
+                    str(i): array_execs[i]
+                    for i in range(start_index, end_index + 1)
+                    if i > 1
+                }
+
+                if not self.workflow.executor_settings.pass_command_as_script:
+                    # Use --wrap for the base execution command.
+                    call_with_array += (
+                        f' --wrap="{exec_job}'
+                        f' --slurm-jobstep-array-execs={shlex.quote(json.dumps(sub_array_execs))}"'
+                    )
+                    subprocess_stdin = None
+                else:
+                    # Use /dev/stdin to pass the base execution command as a script.
+                    sbatch_script = "\n".join(
+                        [
+                            "#!/bin/sh",
+                            exec_job,
+                            "--slurm-jobstep-array-execs",
+                            shlex.quote(json.dumps(sub_array_execs)),
+                        ]
+                    )
+                    call_with_array += " /dev/stdin"
+                    subprocess_stdin = sbatch_script
+
+                self.logger.debug(
+                    f"Submitting array job with sbatch call: {call_with_array}"
+                )
+                try:
+                    process = subprocess.Popen(
+                        call_with_array,
+                        shell=True,
+                        text=True,
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                    )
+                    out, err = process.communicate(input=subprocess_stdin)
+                    if process.returncode != 0:
+                        raise subprocess.CalledProcessError(
+                            process.returncode, call_with_array, output=err
+                        )
+                except subprocess.CalledProcessError as e:
+                    self._report_job_error_threadsafe(
+                        SubmittedJobInfo(jobs[0]),
+                        (
+                            "SLURM sbatch failed for array job submission. "
+                            f"The error message was '{e.output.strip()}'.\n"
+                            f"    sbatch call:\n        {call_with_array}\n"
+                        ),
+                    )
+                    continue
+
+                # To extract the job id we split by semicolon and take the first
+                # element (this also works if no cluster name was provided)
+                slurm_jobid = out.strip().split(";")[0]
+                # this slurm_jobid might be wrong: some cluster admin give convoluted
+                # sbatch outputs. So we need to validate it properly (and replace it
+                # if necessary).
+                slurm_jobid = validate_or_get_slurm_job_id(slurm_jobid, out)
+                # here, however we are dealing with array jobs and the job id is of
+                # the form <jobid>_<array_task_id>, so we need to add the task ids
+                job_ids = list()  # Snakemake interal ids
+                for index in range(start_index, end_index + 1):
+                    # Calculate the actual logfile path for this array task
+                    job = jobs[index - 1]
+                    job_ids.append(job.jobid)
+                    job_wildcard_str = get_job_wildcards(job)
+                    job_logfile = (
+                        self.slurm_logdir
+                        / group_or_rule
+                        / job_wildcard_str
+                        / f"{slurm_jobid}_{index}.log"
+                    )
+
+                    job_info = SubmittedJobInfo(
+                        job,
+                        external_jobid=f"{slurm_jobid}_{index}",
+                        aux={"slurm_logfile": job_logfile},
+                    )
+                    self._report_job_submission_threadsafe(job_info)
+                    self.logger.debug(
+                        f"Registered array job task: external_jobid={slurm_jobid}_{index}, "
+                        f"snakemake_jobid={job.jobid}"
+                    )
+
+                self.logger.info(
+                    f"Submitted array job with Snakemake IDs {','.join(map(str, job_ids))} and "
+                    f"SLURM job ID {slurm_jobid}. The individual task IDs are "
+                    f"{start_index}-{end_index}."
+                )
+
+            # Track cluster specification for later use in cancel_jobs
+            cluster_val = (
+                jobs[0].resources.get("cluster")
+                or jobs[0].resources.get("clusters")
+                or jobs[0].resources.get("slurm_cluster")
+            )
+            if cluster_val:
+                self._submitted_job_clusters.add(cluster_val)
+        except Exception as e:
+            self.logger.error(
+                f"Exception in run_array_jobs for rule {jobs[0].rule.name}: {e}",
+                exc_info=True,
+            )
+            for job in jobs:
+                self._report_job_error_threadsafe(
+                    SubmittedJobInfo(job),
+                    f"Array job submission failed with exception: {e}",
+                )
 
     def run_job(self, job: JobExecutorInterface):
         group_or_rule = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
@@ -882,10 +986,11 @@ class Executor(RemoteExecutor):
             failed_nodes=self._failed_nodes,
         )
 
-        self.logger.debug(
-            "Excluding failed nodes from array job submission: "
-            f"{','.join(self._failed_nodes)}"
-        )
+        if self._failed_nodes:
+            self.logger.debug(
+                "Excluding failed nodes from job submission: "
+                f"{','.join(self._failed_nodes)}"
+            )
 
         call += set_gres_string(job)
 
@@ -1103,10 +1208,17 @@ class Executor(RemoteExecutor):
                     self._status_query_max_seconds,
                     sacct_query_duration,
                 )
-                # only take jobs that are still active
-                active_jobs_ids_with_current_sacct_status = (
-                    set(status_of_jobs.keys()) & active_jobs_ids
-                )
+                # only take jobs that are still active; for array tasks fall
+                # back from <jobid>_<taskid> to parent <jobid> if needed.
+                status_keys = set(status_of_jobs.keys())
+                active_jobs_ids_with_current_sacct_status = {
+                    external_jobid
+                    for external_jobid in active_jobs_ids
+                    if any(
+                        candidate in status_keys
+                        for candidate in _status_lookup_ids(external_jobid)
+                    )
+                }
                 missing_sacct_status = (
                     active_jobs_seen_by_sacct
                     - active_jobs_ids_with_current_sacct_status
@@ -1123,7 +1235,7 @@ class Executor(RemoteExecutor):
                         f"{active_jobs_ids_with_current_sacct_status}"
                     )
                     self.logger.debug(
-                        "active_jobs_seen_by_sacct are: " f"{active_jobs_seen_by_sacct}"
+                        f"active_jobs_seen_by_sacct are: {active_jobs_seen_by_sacct}"
                     )
                     self.logger.debug(
                         f"missing_sacct_status are: {missing_sacct_status}"
@@ -1180,19 +1292,37 @@ class Executor(RemoteExecutor):
 
         if status_of_jobs is not None:
             any_finished = False
+            self.logger.debug(
+                f"Status query returned {len(status_of_jobs)} job IDs: "
+                f"{list(status_of_jobs.keys())[:10]}..."  # Show first 10
+            )
+            self.logger.debug(
+                f"Checking {len(active_jobs)} active jobs with external IDs: "
+                f"{[j.external_jobid for j in active_jobs][:10]}..."  # Show first 10
+            )
             for j in active_jobs:
+                slurm_logfile = j.aux.get("slurm_logfile")
+                slurm_logfile_str = getattr(slurm_logfile, "_str", str(slurm_logfile))
+                status_lookup_id = next(
+                    (
+                        candidate
+                        for candidate in _status_lookup_ids(j.external_jobid)
+                        if candidate in status_of_jobs
+                    ),
+                    None,
+                )
                 # the job probably didn't make it into slurmdbd yet, so
                 # `sacct` doesn't return it
-                if j.external_jobid not in status_of_jobs:
+                if status_lookup_id is None:
                     # but the job should still be queueing or running and
                     # appear in slurmdbd (and thus `sacct` output) later
                     yield j
                     continue
-                status = status_of_jobs[j.external_jobid]
+                status = status_of_jobs[status_lookup_id]
                 if status == "COMPLETED":
                     self.report_job_success(j)
                     any_finished = True
-                    active_jobs_seen_by_sacct.remove(j.external_jobid)
+                    active_jobs_seen_by_sacct.discard(j.external_jobid)
                     if not self.workflow.executor_settings.keep_successful_logs:
                         self.logger.debug(
                             "removing SLURM log for successful job "
@@ -1222,7 +1352,7 @@ We leave it to SLURM to resume your job(s)"""
                     # so we assume it is finished
                     self.report_job_success(j)
                     any_finished = True
-                    active_jobs_seen_by_sacct.remove(j.external_jobid)
+                    active_jobs_seen_by_sacct.discard(j.external_jobid)
                 elif status == "NODE_FAIL":
                     # this is a special case: the job failed, but due to a node failure.
                     # Always track the failed node so future submissions exclude it,
@@ -1266,10 +1396,8 @@ We leave it to SLURM to resume your job(s)"""
                             "such cases by setting the 'requeue' flag in the "
                             "executor settings."
                         )
-                        self.report_job_error(
-                            j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
-                        )
-                        active_jobs_seen_by_sacct.remove(j.external_jobid)
+                        self.report_job_error(j, msg=msg, aux_logs=[slurm_logfile_str])
+                        active_jobs_seen_by_sacct.discard(j.external_jobid)
                 elif status in fail_stati:
                     # we can only check for the fail status, if `sacct` is available
                     if status_command_name != "sacct":
@@ -1279,9 +1407,7 @@ We leave it to SLURM to resume your job(s)"""
                             "Detailed failure reason unavailable "
                             "(status command is not 'sacct')."
                         )
-                        self.report_job_error(
-                            j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
-                        )
+                        self.report_job_error(j, msg=msg, aux_logs=[slurm_logfile_str])
                         active_jobs_seen_by_sacct.discard(j.external_jobid)
                         continue
                     reasons = []
@@ -1321,10 +1447,8 @@ We leave it to SLURM to resume your job(s)"""
                             f"SLURM status is: '{status}'. "
                             f"Reasons: {', '.join(reasons)}."
                         )
-                    self.report_job_error(
-                        j, msg=msg, aux_logs=[j.aux["slurm_logfile"]._str]
-                    )
-                    active_jobs_seen_by_sacct.remove(j.external_jobid)
+                    self.report_job_error(j, msg=msg, aux_logs=[slurm_logfile_str])
+                    active_jobs_seen_by_sacct.discard(j.external_jobid)
                 else:  # still running?
                     yield j
 
