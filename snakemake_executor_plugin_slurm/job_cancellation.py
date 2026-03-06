@@ -26,7 +26,18 @@ def cancel_slurm_jobs(
     """
     if active_jobs:
         # TODO chunk jobids in order to avoid too long command lines
-        jobids = " ".join([job_info.external_jobid for job_info in active_jobs])
+        # Filter out None values in case some jobs haven't been assigned external IDs yet
+        jobids = " ".join(
+            [
+                job_info.external_jobid
+                for job_info in active_jobs
+                if job_info.external_jobid is not None
+            ]
+        )
+
+        if not jobids:
+            # No valid job IDs to cancel
+            return
 
         try:
             # timeout set to 60, because a scheduler cycle usually is
