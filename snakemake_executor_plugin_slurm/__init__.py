@@ -355,18 +355,20 @@ common_settings = CommonSettings(
     auto_deploy_default_storage_provider=False,
 )
 
-def _select_logdir(workflow) : 
+
+def _select_logdir(workflow):
     """Selects where slurm_logdir should be created"""
     logdir = workflow.executor_settings.logdir
     # logdir is defined as absolute, keep "as is"
-    if logdir and str(logdir).startswith("/"):  
+    if logdir and str(logdir).startswith("/"):
         return Path(logdir)
     # logdir is relative, we ensure it stays relative to the wokflow's workdir
-    elif logdir : 
+    elif logdir:
         return Path(workflow.workdir_init) / workflow.executor_settings.logdir
     # logdir is unset
-    else : 
+    else:
         return Path(".snakemake/slurm_logs").resolve()
+
 
 # Required:
 # Implementation of your executor
