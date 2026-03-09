@@ -131,7 +131,7 @@ def query_job_status_sacct(runid) -> list:
                         --endtime now --name {runid}"""
 
     # for better redability in verbose output
-    query_command = " ".join(shlex.split(query_command))
+    query_command = shlex.join(shlex.split(query_command))
 
     return query_command
 
@@ -156,7 +156,7 @@ def query_job_status_squeue(runid) -> list:
                        --noheader
                        --name {runid}"""
     # for better redability in verbose output
-    query_command = " ".join(shlex.split(query_command))
+    query_command = shlex.join(shlex.split(query_command))
 
     return query_command
 
