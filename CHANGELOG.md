@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.4.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.3.1...v2.4.0) (2026-03-09)
+
+
+### Features
+
+* updated announcement message to work with the new --repo-title … ([#423](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/423)) ([a47466b](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/a47466bccc065fbb84db599d25d181fe1740cb60))
+
+
+### Bug Fixes
+
+* query quoting ([#424](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/424)) ([b9941de](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/b9941def6c8432162fa7c704b5385d18ec2a3ebe))
+* silent crashes on sbatch whend pwd!=workdir ([#420](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/420)) ([6ddeffd](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6ddeffdc4eabbe579cb0225916891cfc5f9ca205))
+
+
+### Performance Improvements
+
+* performanc tweaks ([#417](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/417)) ([a3f6abf](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/a3f6abf47a1d3baa51b987fc0fcdb1972fc2bdd6))
+
 ## [2.3.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.3.0...v2.3.1) (2026-02-20)
 
 
