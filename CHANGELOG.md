@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.4.0...v2.5.0) (2026-03-09)
+
+
+### Features
+
+* mastodon rendering ([#425](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/425)) ([e1d37b8](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/e1d37b84f6d12e9a55dd416cfd011dcf6dbce8df))
+
 ## [2.4.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.3.1...v2.4.0) (2026-03-09)
 
 
