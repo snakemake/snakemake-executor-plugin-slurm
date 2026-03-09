@@ -6,7 +6,6 @@ __license__ = "MIT"
 import atexit
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from itertools import groupby
 import json
 import os
 from pathlib import Path
@@ -41,7 +40,6 @@ from .accounts import (
 )
 
 from .utils import (
-    pending_jobs_for_rule,
     get_job_wildcards,
     delete_slurm_environment,
     delete_empty_dirs,
@@ -622,15 +620,18 @@ class Executor(RemoteExecutor):
             except RuntimeError:
                 self._main_event_loop = None
 
-        for rule_name, group in groupby(jobs, key=lambda job: job.rule.name):
-            same_rule_jobs = list(group)  # Materialize the generator
-            eligible_jobs = pending_jobs_for_rule(self.workflow.dag, rule_name)
+        ready_jobs_by_rule = {}
+        for job in jobs:
+            ready_jobs_by_rule.setdefault(job.rule.name, []).append(job)
+
+        for rule_name, same_rule_jobs in ready_jobs_by_rule.items():
             array_selected_for_rule = (
                 "all" in self.array_jobs or rule_name in self.array_jobs
             )
             # TODO: use more sensible logging information, once finished
             self.logger.info(f"Running jobs for rule: {rule_name}, {same_rule_jobs}")
             self.logger.info(f"Current array job settings: {self.array_jobs}")
+
             # check whether a job is a group job, as these cannot be submitted
             # as array jobs.
             if (
@@ -644,48 +645,45 @@ class Executor(RemoteExecutor):
                 for job in same_rule_jobs:
                     self._job_submission_executor.submit(self.run_job, job)
                 continue
-            # A single pending job cannot be submitted as an array job,
-            # even if array mode is selected for the rule.
-            elif eligible_jobs == 1:
-                if array_selected_for_rule:
+
+            # In array mode, submit based on jobs that are ready now.
+            # Avoid waiting for all needrun jobs of a rule, which can
+            # starve scheduling when jobs become ready in waves.
+            if array_selected_for_rule:
+                if len(same_rule_jobs) == 1:
                     self.logger.debug(
                         f"Array submission requested for rule {rule_name}, "
-                        "but only one pending job is available; submitting "
-                        "it as a regular job."
+                        "but only one ready job is available; submitting it "
+                        "as a regular job."
+                    )
+                    self._job_submission_executor.submit(
+                        self.run_job, same_rule_jobs[0]
                     )
                 else:
                     self.logger.debug(
-                        f"Submitting single job for rule {rule_name} as it "
-                        "is the only pending job for this rule."
+                        "Submitting ready jobs for rule "
+                        f"{rule_name} as array: {len(same_rule_jobs)} jobs."
                     )
-                self._job_submission_executor.submit(self.run_job, same_rule_jobs[0])
+                    self._job_submission_executor.submit(
+                        self.run_array_jobs, same_rule_jobs
+                    )
                 continue
-            # check whether a job is an array job candidate
-            elif eligible_jobs > 1 and array_selected_for_rule:
-                if len(same_rule_jobs) < eligible_jobs:
-                    self.logger.debug(
-                        "Array job collection incomplete for rule "
-                        f"{rule_name}: {len(same_rule_jobs)}/"
-                        f"{eligible_jobs} arrived. Waiting for remaining jobs."
-                    )
-                    continue
 
+            # Non-array mode: submit all ready jobs individually.
+            if len(same_rule_jobs) == 1:
                 self.logger.debug(
-                    "All array-eligible jobs have arrived for rule "
-                    f"{rule_name}: {eligible_jobs} jobs ready "
-                    f"for array submission."
+                    f"Submitting single job for rule {rule_name} as "
+                    "array mode is disabled."
                 )
-                self._job_submission_executor.submit(
-                    self.run_array_jobs, same_rule_jobs
-                )
+                self._job_submission_executor.submit(self.run_job, same_rule_jobs[0])
                 continue
 
             self.logger.debug(
-                f"No submission triggered for rule {rule_name}: "
-                f"eligible_jobs={eligible_jobs}, "
-                f"arrived_jobs={len(same_rule_jobs)}, "
-                f"array_selected={array_selected_for_rule}."
+                f"Submitting {len(same_rule_jobs)} ready jobs for rule "
+                f"{rule_name} individually (array mode disabled)."
             )
+            for job in same_rule_jobs:
+                self._job_submission_executor.submit(self.run_job, job)
 
     def _report_job_submission_threadsafe(self, job_info: SubmittedJobInfo):
         if self._main_event_loop is not None:
