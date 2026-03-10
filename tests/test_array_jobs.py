@@ -354,8 +354,8 @@ class TestRunArrayJobs:
         self, tmp_path, mock_popen_success
     ):
         """
-           When wildcards are non-empty, a warning
-           about comment limitations is logged.
+        When wildcards are non-empty, a warning
+        about comment limitations is logged.
         """
         executor = self._build_executor(tmp_path)
         jobs = self._make_jobs(n=2)
