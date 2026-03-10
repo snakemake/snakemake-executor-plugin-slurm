@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.5.2...v2.5.3) (2026-03-10)
+
+
+### Bug Fixes
+
+* jinja syntax in announce action ([#431](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/431)) ([3c58478](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/3c58478c46b191b6cd7268389fb500ff588db8cb))
+
 ## [2.5.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.5.1...v2.5.2) (2026-03-10)
 
 
