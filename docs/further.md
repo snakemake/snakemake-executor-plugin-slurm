@@ -340,6 +340,12 @@ Note: group jobs cannot be array jobs.
 
 .. note:: Using array jobs does impose a synchronization overhead (all jobs of a particular rule need to be ready for execution).
 
+ VALUE
+When submitting array jobs, the `--slurm-array-limit` flag defines the
+maximum number of array tasks to be submitted in one job submission.
+If the number of tasks exceeds this limit, multiple array job submissions will be performed. This is useful to avoid hitting cluster limits on the maximum number of array tasks per job. Please obey your cluster limits and set this flag accordingly.
+
+
 #### MPI-specific Resources
 
 Snakemake's SLURM executor plugin supports the execution of MPI ([Message Passing Interface](https://en.wikipedia.org/wiki/Message_Passing_Interface)) jobs.
