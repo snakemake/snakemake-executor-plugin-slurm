@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.5.1...v2.5.2) (2026-03-10)
+
+
+### Bug Fixes
+
+* repo_title -&gt; repotitle because of rendering issues ([#429](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/429)) ([253c723](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/253c723454f9a49172556e6344dd3312390978f7))
+
 ## [2.5.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.5.0...v2.5.1) (2026-03-09)
 
 
