@@ -3,6 +3,8 @@
 from collections import Counter
 import math
 import os
+import shutil
+import subprocess
 import re
 from pathlib import Path
 from typing import Union
@@ -26,7 +28,22 @@ def get_max_array_size() -> int:
         Defaults to 1000 if the SLURM_ARRAY_MAX environment variable is not set
         or cannot be parsed as an integer.
     """
-    max_array_size_str = os.getenv("SLURM_ARRAY_MAX", "1000")
+    max_array_size_str = None
+    scontrol_cmd = "scontrol show config"
+    try:
+        res = subprocess.run(
+            shutil.split(scontrol_cmd),
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        out = (res.stdout or "") + (res.stderr or "")
+        m = re.search(r"MaxArraySize\s*=?\s*(\d+)", out, re.IGNORECASE)
+        if m:
+            max_array_size_str = m.group(1)
+    except (subprocess.SubprocessError, OSError):
+        max_array_size_str = None
+
     try:
         max_array_size = int(max_array_size_str)
     except ValueError:
