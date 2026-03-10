@@ -34,14 +34,16 @@ jobs:
           pr-title: ${{ github.event.head_commit.message }}
           image: "long_logo_hpc.png"
           image-description: "Snakemake HPC logo for Mastodon"
+          repo-title: "Snakemake Executor Plugin for SLURM"
           message: |
             Beep, Beep - I am your friendly #Snakemake release announcement bot.
             
-            There is a new release of the Snakemake executor for #SLURM on #HPC systems. Its version now is {{ version }}!
+            There is a new release of the {repo-title} systems. Its version now is {{ version }}!
             
             Give us some time, and you will automatically find the plugin on #Bioconda and #Pypi.
             
-            If you want to discuss the release, you will find the maintainers here on Mastodon!
+            This plugin is relevant for #HPC users using the #SLURM batch system. If you want to 
+            discuss the release, you will find the maintainers here on Mastodon!
             @rupdecat and @johanneskoester@fosstodon.org
             
             If you discover any issues, please report them on {{ issue_url }}.

@@ -407,6 +407,20 @@ common_settings = CommonSettings(
 )
 
 
+def _select_logdir(workflow):
+    """Selects where slurm_logdir should be created"""
+    logdir = workflow.executor_settings.logdir
+    # logdir is defined as absolute, keep "as is"
+    if logdir and str(logdir).startswith("/"):
+        return Path(logdir)
+    # logdir is relative, we ensure it stays relative to the wokflow's workdir
+    elif logdir:
+        return Path(workflow.workdir_init) / workflow.executor_settings.logdir
+    # logdir is unset
+    else:
+        return Path(".snakemake/slurm_logs").resolve()
+
+
 # Required:
 # Implementation of your executor
 class Executor(RemoteExecutor):
@@ -461,11 +475,7 @@ class Executor(RemoteExecutor):
             }
         else:
             self.array_jobs = set()
-        self.slurm_logdir = (
-            Path(self.workflow.executor_settings.logdir)
-            if self.workflow.executor_settings.logdir
-            else Path(".snakemake/slurm_logs").resolve()
-        )
+        self.slurm_logdir = _select_logdir(self.workflow)
         # Check the environment variable "SNAKEMAKE_SLURM_PARTITIONS",
         # if set, read the partitions from the given file. Let the CLI
         # option override this behavior.
