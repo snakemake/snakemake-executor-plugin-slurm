@@ -476,17 +476,27 @@ class Executor(RemoteExecutor):
             }
         else:
             self.array_jobs = set()
-        if int(self.workflow.executor_settings.array_limit) <= 10:
+        self.max_array_size = min(
+            get_max_array_size(), int(self.workflow.executor_settings.array_limit)
+        )
+        if self.max_array_size <= 10:
             self.logger.warning(
                 "Array limit is set to "
-                f"{self.workflow.executor_settings.array_limit}, "
+                f"{self.max_array_size}, "
                 "which is very low and may lead to excessive numbers of array "
                 "job submissions. Please consider increasing this limit if your "
                 "cluster allows it."
             )
-        self.max_array_size = min(
-            get_max_array_size(), int(self.workflow.executor_settings.array_limit)
-        )
+        if self.max_array_size < 2:
+            self.logger.error(
+                "Array job submission is effectively disabled due to "
+                f"max_array_size={self.max_array_size}. Consider increasing "
+                "the array_limit setting to enable array job submission."
+            )
+            raise WorkflowError(
+                "Array job submission is effectively disabled due to "
+                "low array_limit."
+            )
         self.slurm_logdir = _select_logdir(self.workflow)
         # Check the environment variable "SNAKEMAKE_SLURM_PARTITIONS",
         # if set, read the partitions from the given file. Let the CLI
