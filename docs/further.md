@@ -332,6 +332,14 @@ This node tracking works regardless of whether the `--slurm-requeue` flag is ena
 - **With `--slurm-requeue`**: SLURM will automatically requeue failed jobs, and they will be retried on different nodes
 - **Without `--slurm-requeue`**: Failed jobs will be reported as errors, but future retries (via `--retries` or other retry mechanisms) will avoid the problematic nodes
 
+### SLURM Job Arrays
+
+Using `--slurm-array-jobs` SLURM job arrays can be submitted. `--slurm-array-jobs=rule1,rule2,...` lets you select specific rules by name to be selected as an array job. Alternatively, `--slurm-array-jobs=all` will submit all eligible rules as array jobs.
+
+Note: group jobs cannot be array jobs.
+
+.. note:: Using array jobs does impose a synchronization overhead (all jobs of a particular rule need to be ready for execution).
+
 #### MPI-specific Resources
 
 Snakemake's SLURM executor plugin supports the execution of MPI ([Message Passing Interface](https://en.wikipedia.org/wiki/Message_Passing_Interface)) jobs.
