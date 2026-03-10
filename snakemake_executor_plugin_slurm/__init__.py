@@ -170,7 +170,7 @@ class ExecutorSettings(ExecutorSettingsBase):
             "a rule, it cannot be submitted as an array job. Selecting "
             "--slurm-array-jobs=all will submit all eligiblejobs as array jobs. "
             "Note: When choosing array job submission, the required jobs are "
-            "subject to a synchronization overhead."
+            "subject to a synchronization overhead.",
             "env_var": False,
             "required": False,
         },
