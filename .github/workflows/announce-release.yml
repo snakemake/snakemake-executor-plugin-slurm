@@ -38,7 +38,7 @@ jobs:
           message: |
             Beep, Beep - I am your friendly #Snakemake release announcement bot.
             
-            There is a new release of the {repotitle} systems. Its version now is {{ version }}!
+            There is a new release of the {{ repotitle }} systems. Its version now is {{ version }}!
             
             Give us some time, and you will automatically find the plugin on #Bioconda and #Pypi.
             
