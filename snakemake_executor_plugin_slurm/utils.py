@@ -1,5 +1,6 @@
 # utility functions for the SLURM executor plugin
 
+from collections import Counter
 import math
 import os
 import re
@@ -9,7 +10,48 @@ from typing import Union
 from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
+from snakemake_interface_executor_plugins.dag import (
+    DAGExecutorInterface,
+)
 from snakemake_interface_common.exceptions import WorkflowError
+
+
+def get_job_wildcards(job: JobExecutorInterface) -> str:
+    """
+    Function to get the wildcards of a job as a string. This is used to
+    create the job name for the SLURM job submission.
+
+    Args:
+        job: The JobExecutorInterface instance representing the job
+    Returns:
+        A string representation of the job's wildcards, with slashes replaced
+        by underscores.
+    """
+    try:
+        wildcard_str = (
+            "_".join(job.wildcards).replace("/", "_") if job.wildcards else ""
+        )
+    except AttributeError:
+        wildcard_str = ""
+
+    return wildcard_str
+
+
+def pending_jobs_for_rule(dag: DAGExecutorInterface, rule_name: str) -> int:
+    """
+    Function to count the number of pending jobs for a given rule in the DAG.
+    This is used to determine how many jobs of a rule are still pending and
+    can be used to decide when to submit new jobs.
+
+    Args:
+        dag: The DAGExecutorInterface instance representing the workflow DAG
+        rule_name: The name of the rule for which to count pending jobs
+
+    Returns:
+        The number of pending jobs for the specified rule
+    """
+    counts = Counter(job.rule.name for job in dag.needrun_jobs())
+    return counts.get(rule_name, 0)
 
 
 def round_half_up(n):

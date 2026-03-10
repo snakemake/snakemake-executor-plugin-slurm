@@ -1,9 +1,9 @@
 """
-   Tests for CLI-related executor settings.
+Tests for CLI-related executor settings.
 
-   This suite will only test settings, which
-   are to be tested separately from the full
-   executor functionality.
+This suite will only test settings, which
+are to be tested separately from the full
+executor functionality.
 """
 
 from unittest.mock import MagicMock, patch
