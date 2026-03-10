@@ -34,11 +34,11 @@ jobs:
           pr-title: ${{ github.event.head_commit.message }}
           image: "long_logo_hpc.png"
           image-description: "Snakemake HPC logo for Mastodon"
-          repo-title: "Snakemake Executor Plugin for SLURM"
+          repotitle: "Snakemake Executor Plugin for SLURM"
           message: |
             Beep, Beep - I am your friendly #Snakemake release announcement bot.
             
-            There is a new release of the {repo_title} systems. Its version now is {{ version }}!
+            There is a new release of the {repotitle} systems. Its version now is {{ version }}!
             
             Give us some time, and you will automatically find the plugin on #Bioconda and #Pypi.
             
