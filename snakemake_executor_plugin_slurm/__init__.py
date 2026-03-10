@@ -1334,7 +1334,9 @@ class Executor(RemoteExecutor):
             )
             for j in active_jobs:
                 slurm_logfile = j.aux.get("slurm_logfile")
-                slurm_logfile_str = getattr(slurm_logfile, "_str", str(slurm_logfile))
+                slurm_logfile_str = (
+                    str(slurm_logfile) if slurm_logfile is not None else None
+                )
                 status_lookup_id = next(
                     (
                         candidate
