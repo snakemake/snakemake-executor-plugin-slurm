@@ -632,12 +632,14 @@ class Executor(RemoteExecutor):
 
         ready_jobs_by_rule = {}
 
-        # check whether any other job is a group job, as these cannot be submitted as array jobs and require special handling
+        # check whether any other job is a group job, as these cannot be
+        # submitted as array jobs and require special handling
         for job in jobs:
             if job.is_group():
                 if job.name in self.array_jobs or "all" in self.array_jobs:
                     self.logger.warning(
-                        f"Job '{job.name}' is a group job and cannot be submitted as an array job. "
+                        f"Job '{job.name}' is a group job and cannot be "
+                        "submitted as an array job. "
                         "Submitting it as a regular job instead."
                     )
                 self._job_submission_executor.submit(self.run_job, job)
@@ -649,8 +651,10 @@ class Executor(RemoteExecutor):
                 "all" in self.array_jobs or rule_name in self.array_jobs
             )
             # TODO: use more sensible logging information, once finished
-            self.logger.info(f"Running jobs for rule: {rule_name}, {same_rule_jobs}")
-            self.logger.info(f"Current array job settings: {self.array_jobs}")
+            self.logger.info(
+                f"Running jobs for rule: {rule_name}, " f"{same_rule_jobs}"
+            )
+            self.logger.info("Current array job settings: " f"{self.array_jobs}")
 
             # In array mode, submit based on jobs that are ready now.
             # Avoid waiting for all needrun jobs of a rule, which can
@@ -658,7 +662,7 @@ class Executor(RemoteExecutor):
             if array_selected_for_rule:
                 if len(same_rule_jobs) == 1:
                     self.logger.debug(
-                        f"Array submission requested for rule {rule_name}, "
+                        f"Array submission requested for rule {rule_name},"
                         "but only one ready job is available; submitting it "
                         "as a regular job."
                     )
@@ -838,9 +842,10 @@ class Executor(RemoteExecutor):
 
                 if not self.workflow.executor_settings.pass_command_as_script:
                     # Use --wrap for the base execution command.
+                    array_execs_arg = shlex.quote(json.dumps(sub_array_execs))
                     call_with_array += (
                         f' --wrap="{exec_job}'
-                        f' --slurm-jobstep-array-execs={shlex.quote(json.dumps(sub_array_execs))}"'
+                        f' --slurm-jobstep-array-execs={array_execs_arg}"'
                     )
                     subprocess_stdin = None
                 else:
@@ -913,12 +918,14 @@ class Executor(RemoteExecutor):
                     )
                     self._report_job_submission_threadsafe(job_info)
                     self.logger.debug(
-                        f"Registered array job task: external_jobid={slurm_jobid}_{index}, "
+                        f"Registered array job task: "
+                        f"external_jobid={slurm_jobid}_{index}, "
                         f"snakemake_jobid={job.jobid}"
                     )
 
+                job_ids_str = ",".join(map(str, job_ids))
                 self.logger.info(
-                    f"Submitted array job with Snakemake IDs {','.join(map(str, job_ids))} and "
+                    f"Submitted array job with Snakemake IDs {job_ids_str} and "
                     f"SLURM job ID {slurm_jobid}. The individual task IDs are "
                     f"{start_index}-{end_index}."
                 )
