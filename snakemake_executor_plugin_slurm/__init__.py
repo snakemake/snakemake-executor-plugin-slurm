@@ -167,7 +167,7 @@ class ExecutorSettings(ExecutorSettingsBase):
             "help": "Will submit jobs as SLURM job arrays, if possible. "
             "Use as: --slurm-array-jobs='rule1, rule2' to submit jobs of "
             "rule1 and rule2 as array jobs. If a DAG contains only one job for "
-            "a rule, it cannot be submitted as an array job. Selecting",
+            "a rule, it cannot be submitted as an array job. Selecting "
             "--slurm-array-jobs=all will submit all eligiblejobs as array jobs. "
             "Note: When choosing array job submission, the required jobs are "
             "subject to a synchronization overhead."
