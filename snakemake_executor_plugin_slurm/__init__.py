@@ -476,8 +476,16 @@ class Executor(RemoteExecutor):
             }
         else:
             self.array_jobs = set()
+        if int(self.workflow.executor_settings.array_limit) <= 10:
+            self.logger.warning(
+                "Array limit is set to "
+                f"{self.workflow.executor_settings.array_limit}, "
+                "which is very low and may lead to excessive numbers of array "
+                "job submissions. Please consider increasing this limit if your "
+                "cluster allows it."
+            )
         self.max_array_size = min(
-            get_max_array_size(), self.workflow.executor_settings.array_limit
+            get_max_array_size(), int(self.workflow.executor_settings.array_limit)
         )
         self.slurm_logdir = _select_logdir(self.workflow)
         # Check the environment variable "SNAKEMAKE_SLURM_PARTITIONS",
