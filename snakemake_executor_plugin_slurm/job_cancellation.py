@@ -26,7 +26,8 @@ def cancel_slurm_jobs(
     """
     if active_jobs:
         # TODO chunk jobids in order to avoid too long command lines
-        # Filter out None values in case some jobs haven't been assigned external IDs yet
+        # Filter out None values in case some jobs haven't been assigned 
+        # external IDs yet
         jobids = " ".join(
             [
                 job_info.external_jobid

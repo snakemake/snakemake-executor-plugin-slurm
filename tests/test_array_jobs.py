@@ -353,7 +353,10 @@ class TestRunArrayJobs:
     def test_non_empty_wildcards_in_comment_triggers_warning(
         self, tmp_path, mock_popen_success
     ):
-        """When wildcards are non-empty, a warning about comment limitations is logged."""
+        """
+           When wildcards are non-empty, a warning
+           about comment limitations is logged.
+        """
         executor = self._build_executor(tmp_path)
         jobs = self._make_jobs(n=2)
 
