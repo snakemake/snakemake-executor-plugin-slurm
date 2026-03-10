@@ -16,6 +16,24 @@ from snakemake_interface_executor_plugins.dag import (
 from snakemake_interface_common.exceptions import WorkflowError
 
 
+def get_max_array_size() -> int:
+    """
+    Function to get the maximum array size for SLURM job arrays. This is used
+    to determine how many jobs can be submitted in a single array job.
+
+    Returns:
+        The maximum array size for SLURM job arrays, as an integer.
+        Defaults to 1000 if the SLURM_ARRAY_MAX environment variable is not set
+        or cannot be parsed as an integer.
+    """
+    max_array_size_str = os.getenv("SLURM_ARRAY_MAX", "1000")
+    try:
+        max_array_size = int(max_array_size_str)
+    except ValueError:
+        max_array_size = 1000
+    return max_array_size
+
+
 def get_job_wildcards(job: JobExecutorInterface) -> str:
     """
     Function to get the wildcards of a job as a string. This is used to

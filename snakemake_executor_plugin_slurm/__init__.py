@@ -40,6 +40,7 @@ from .accounts import (
 )
 
 from .utils import (
+    get_max_array_size,
     get_job_wildcards,
     delete_slurm_environment,
     delete_empty_dirs,
@@ -177,7 +178,7 @@ class ExecutorSettings(ExecutorSettingsBase):
     )
 
     array_limit: Optional[int] = field(
-        default=100,
+        default=1000,
         metadata={
             "help": "When submitting array jobs, this flag defines the maximum "
             "number of array tasks to be submitted in one sbatch call. If the "
@@ -475,6 +476,9 @@ class Executor(RemoteExecutor):
             }
         else:
             self.array_jobs = set()
+        self.max_array_size = min(
+            get_max_array_size(), self.workflow.executor_settings.array_limit
+        )
         self.slurm_logdir = _select_logdir(self.workflow)
         # Check the environment variable "SNAKEMAKE_SLURM_PARTITIONS",
         # if set, read the partitions from the given file. Let the CLI
@@ -727,7 +731,6 @@ class Executor(RemoteExecutor):
             )
             wildcard_strs = [get_job_wildcards(job) for job in jobs]
             wildcard_str = wildcard_strs[0]
-            array_limit = self.workflow.executor_settings.array_limit
 
             self.slurm_logdir.mkdir(parents=True, exist_ok=True)
             for wildcard_str in wildcard_strs:
@@ -831,8 +834,8 @@ class Executor(RemoteExecutor):
             # we need to cycle over all jobs and submit up to `array_limit` jobs per
             # submission, to avoid hitting cluster limits or oversaturating the
             # command line limits
-            for start_index in range(1, len(jobs) + 1, array_limit):
-                end_index = min(start_index + array_limit - 1, len(jobs))
+            for start_index in range(1, len(jobs) + 1, self.max_array_size):
+                end_index = min(start_index + self.max_array_size - 1, len(jobs))
                 call_with_array = call + f" --array={start_index}-{end_index}"
                 sub_array_execs = {
                     str(i): array_execs[i]
