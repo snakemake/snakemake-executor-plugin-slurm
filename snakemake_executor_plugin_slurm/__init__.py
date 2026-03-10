@@ -621,8 +621,18 @@ class Executor(RemoteExecutor):
                 self._main_event_loop = None
 
         ready_jobs_by_rule = {}
+
+        # check whether any other job is a group job, as these cannot be submitted as array jobs and require special handling
         for job in jobs:
-            ready_jobs_by_rule.setdefault(job.rule.name, []).append(job)
+            if job.is_group():
+                if job.name in self.array_jobs or "all" in self.array_jobs:
+                    self.logger.warning(
+                        f"Job '{job.name}' is a group job and cannot be submitted as an array job. "
+                        "Submitting it as a regular job instead."
+                    )
+                self._job_submission_executor.submit(self.run_job, job)
+            else:
+                ready_jobs_by_rule.setdefault(job.rule.name, []).append(job)
 
         for rule_name, same_rule_jobs in ready_jobs_by_rule.items():
             array_selected_for_rule = (
@@ -631,20 +641,6 @@ class Executor(RemoteExecutor):
             # TODO: use more sensible logging information, once finished
             self.logger.info(f"Running jobs for rule: {rule_name}, {same_rule_jobs}")
             self.logger.info(f"Current array job settings: {self.array_jobs}")
-
-            # check whether a job is a group job, as these cannot be submitted
-            # as array jobs.
-            if (
-                any(job.is_group() for job in same_rule_jobs)
-                and array_selected_for_rule
-            ):
-                self.logger.warning(
-                    f"Rule {rule_name} contains group jobs, which cannot be submitted as array jobs. "
-                    "These jobs will be submitted individually."
-                )
-                for job in same_rule_jobs:
-                    self._job_submission_executor.submit(self.run_job, job)
-                continue
 
             # In array mode, submit based on jobs that are ready now.
             # Avoid waiting for all needrun jobs of a rule, which can
