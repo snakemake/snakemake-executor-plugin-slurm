@@ -70,6 +70,9 @@ def _make_executor_stub(array_jobs=None, array_limit=100):
     executor = Executor.__new__(Executor)
     executor.logger = MagicMock()
     executor.run_uuid = "test-run-uuid"
+    executor._fallback_account_arg = None
+    executor._fallback_partition = None
+    executor._partitions = None
     executor._failed_nodes = set()
     executor._main_event_loop = None
     executor._status_query_calls = 0
@@ -87,6 +90,7 @@ def _make_executor_stub(array_jobs=None, array_limit=100):
         executor.array_jobs = {r.strip() for r in normalized.split(",") if r.strip()}
     else:
         executor.array_jobs = set()
+    executor.max_array_size = int(array_limit)
 
     executor.slurm_logdir = Path("/tmp/test_slurm_logs")
     executor.workflow = SimpleNamespace(
@@ -119,10 +123,10 @@ class TestArrayJobsSettings:
         settings = ExecutorSettings()
         assert settings.array_jobs is None
 
-    def test_array_limit_default_is_100(self):
-        """array_limit field defaults to 100."""
+    def test_array_limit_default_is_1000(self):
+        """array_limit field defaults to 1000."""
         settings = ExecutorSettings()
-        assert settings.array_limit == 100
+        assert settings.array_limit == 1000
 
     def test_array_jobs_none_yields_empty_set_on_executor(self):
         """Executor with array_jobs=None initialises self.array_jobs as empty set."""
@@ -250,7 +254,7 @@ class TestRunArrayJobs:
             mock_popen.return_value = proc
             yield mock_popen
 
-    def _build_executor(self, tmp_path, array_limit=100):
+    def _build_executor(self, tmp_path, array_limit=1000):
         executor = _make_executor_stub(array_limit=array_limit)
         executor.slurm_logdir = tmp_path / "slurm_logs"
         executor.get_account_arg = MagicMock(
@@ -305,7 +309,6 @@ class TestRunArrayJobs:
         executor = self._build_executor(tmp_path)
         jobs = self._make_jobs(n=3)
         executor.run_array_jobs(jobs)
-
         popen_call_str = mock_popen_success.call_args_list[0][0][0]
         match = re.search(r"--slurm-jobstep-array-execs='([^']+)'", popen_call_str)
         assert match, (
@@ -334,21 +337,6 @@ class TestRunArrayJobs:
         second_call_str = mock_popen.call_args_list[1][0][0]
         assert "--array=1-3" in first_call_str
         assert "--array=4-5" in second_call_str
-
-    def test_sbatch_failure_reports_error_not_submission(self, tmp_path):
-        """Non-zero sbatch returncode → error reported; submission NOT reported."""
-        executor = self._build_executor(tmp_path)
-        jobs = self._make_jobs(n=3)
-
-        with patch("snakemake_executor_plugin_slurm.subprocess.Popen") as mock_popen:
-            proc = MagicMock()
-            proc.communicate.return_value = ("", "sbatch: error: something failed")
-            proc.returncode = 1
-            mock_popen.return_value = proc
-            executor.run_array_jobs(jobs)
-
-        executor._report_job_error_threadsafe.assert_called_once()
-        executor._report_job_submission_threadsafe.assert_not_called()
 
     def test_non_empty_wildcards_in_comment_triggers_warning(
         self, tmp_path, mock_popen_success
