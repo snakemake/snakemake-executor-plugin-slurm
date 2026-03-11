@@ -44,7 +44,8 @@ def get_max_array_size() -> int:
         max_array_size = int(max_array_size_str)
     except ValueError:
         max_array_size = 1000
-    return max_array_size
+    # The SLURM_ARRAY_MAX limits to its value -1
+    return max_array_size - 1
 
 
 def get_job_wildcards(job: JobExecutorInterface) -> str:
