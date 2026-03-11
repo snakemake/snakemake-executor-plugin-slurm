@@ -913,7 +913,8 @@ class Executor(RemoteExecutor):
                             SubmittedJobInfo(job),
                             (
                                 f"Part of failed array sbatch submission "
-                                f"(tasks {start_index}-{end_index}); see log for details."
+                                f"(tasks {start_index}-{end_index}); "
+                                "see log for details."
                             ),
                         )
                     continue
