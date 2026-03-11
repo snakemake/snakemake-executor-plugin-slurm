@@ -100,7 +100,7 @@ def test_parent_fallback_completed_keeps_array_task_log(monkeypatch, tmp_path):
     executor._status_query_cycle_rows = []
     executor._preemption_warning = False
     # ensures working, even if cleanup fails
-    executor._keep_successful_logs = True 
+    executor._keep_successful_logs = True
     executor._failed_nodes = set()
     executor.report_job_success = MagicMock()
     executor.report_job_error = MagicMock()
@@ -153,4 +153,3 @@ def test_parent_fallback_completed_keeps_array_task_log(monkeypatch, tmp_path):
     assert remaining == []
     executor.report_job_success.assert_called_once()
     executor.report_job_error.assert_not_called()
-
