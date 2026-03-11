@@ -1,5 +1,6 @@
 import os
 import re
+import inspect
 from pathlib import Path
 from typing import Optional
 import snakemake.common.tests
@@ -33,7 +34,7 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
 
     def get_config_settings(self) -> Optional[ConfigSettings]:
         """Override to provide config settings for the workflow under test.
-    
+
         Returns None by default, which uses the workflow's default config.
         """
         return None
@@ -57,7 +58,10 @@ class TestPassCommandAsScript(snakemake.common.tests.TestWorkflowsLocalStorageBa
             init_seconds_before_status_checks=2,
         )
 
-class TestWrapExecJobQuoteEscaping(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+
+class TestWrapExecJobQuoteEscaping(
+    snakemake.common.tests.TestWorkflowsLocalStorageBase
+):
     """Regression test for issue #29: ensure double quotes in config values are
     properly escaped when passed to --wrap="{exec_job}".
     Runs the real workflow on the Slurm test cluster  and verifies the plugin can
@@ -74,16 +78,19 @@ class TestWrapExecJobQuoteEscaping(snakemake.common.tests.TestWorkflowsLocalStor
         return ExecutorSettings(
             init_seconds_before_status_checks=2,
         )
-    
+
     def get_config_settings(self) -> Optional[ConfigSettings]:
-        """The config that triggered the error
-        """
-        return ConfigSettings(
-            config={"path": "{'x': '/path/to/file'}"}
-        )
+        """The config that triggered the error"""
+        return ConfigSettings(config={"path": "{'x': '/path/to/file'}"})
 
     def run_workflow(self, test_name, tmp_path, deployment_method=frozenset()):
-        test_path = Path(__file__).parent / "testcases" / test_name
+        test_path = (
+            Path(
+                inspect.getfile(snakemake.common.tests.TestWorkflowsLocalStorageBase)
+            ).parent
+            / "testcases"
+            / test_name
+        )
         if self.omit_tmp:
             tmp_path = test_path
         else:
