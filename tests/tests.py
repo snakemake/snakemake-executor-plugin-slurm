@@ -81,7 +81,7 @@ class TestWrapExecJobQuoteEscaping(
 
     def get_config_settings(self) -> Optional[ConfigSettings]:
         """The config that triggered the error"""
-        return ConfigSettings(config={"path": "{'x': '/path/to/file'}"})
+        return ConfigSettings(config_args={"path": "{'x': '/path/to/file'}"})
 
     def run_workflow(self, test_name, tmp_path, deployment_method=frozenset()):
         test_path = (
