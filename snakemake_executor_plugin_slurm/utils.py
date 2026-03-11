@@ -72,23 +72,6 @@ def get_job_wildcards(job: JobExecutorInterface) -> str:
     return wildcard_str
 
 
-def pending_jobs_for_rule(dag: DAGExecutorInterface, rule_name: str) -> int:
-    """
-    Function to count the number of pending jobs for a given rule in the DAG.
-    This is used to determine how many jobs of a rule are still pending and
-    can be used to decide when to submit new jobs.
-
-    Args:
-        dag: The DAGExecutorInterface instance representing the workflow DAG
-        rule_name: The name of the rule for which to count pending jobs
-
-    Returns:
-        The number of pending jobs for the specified rule
-    """
-    counts = Counter(job.rule.name for job in dag.needrun_jobs())
-    return counts.get(rule_name, 0)
-
-
 def round_half_up(n):
     return int(math.floor(n + 0.5))
 
