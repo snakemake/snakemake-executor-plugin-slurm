@@ -747,15 +747,16 @@ class Executor(RemoteExecutor):
                 if jobs[0].is_group()
                 else f"rule_{jobs[0].name}"
             )
+
+            # in an array job `sbatch --output` gets a single value
+            # hence, we can only consider the first wildcard string
+            # to create the SLURM log file path.
             wildcard_strs = [get_job_wildcards(job) for job in jobs]
             wildcard_str = wildcard_strs[0]
-
-            self.slurm_logdir.mkdir(parents=True, exist_ok=True)
-            for wildcard_str in wildcard_strs:
-                slurm_logfile = (
-                    self.slurm_logdir / group_or_rule / wildcard_str / r"%A_%a.log"
-                )
-                slurm_logfile.parent.mkdir(parents=True, exist_ok=True)
+            # the wildcard string shall be ignored for the SLURM log
+            # file path.
+            slurm_logfile = self.slurm_logdir / group_or_rule / r"%A_%a.log"
+            slurm_logfile.parent.mkdir(parents=True, exist_ok=True)
 
             # this behavior has been fixed in slurm 23.02, but there might be
             # plenty of older versions around, hence we should rather be
