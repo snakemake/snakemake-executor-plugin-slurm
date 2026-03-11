@@ -1,6 +1,5 @@
 # utility functions for the SLURM executor plugin
 
-from collections import Counter
 import math
 import os
 import shlex
