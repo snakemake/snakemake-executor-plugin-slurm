@@ -16,12 +16,14 @@ def safe_quote(value):
     return shlex.quote(str_value)
 
 
-def get_submit_command(job, params, settings=None, failed_nodes=set()) -> str:
+def get_submit_command(job, params, settings=None, failed_nodes=None) -> str:
     """
     Return the submit command for the job.
     """
     # Convert params dict to a SimpleNamespace for attribute-style access
     params = SimpleNamespace(**params)
+
+    failed_nodes = failed_nodes or set()
 
     call = (
         "sbatch "
@@ -87,7 +89,8 @@ def get_submit_command(job, params, settings=None, failed_nodes=set()) -> str:
 
     # we exclude failed nodes from further job submissions, to avoid
     # repeated failures.
-    call += f" --exclude={','.join(failed_nodes)}"
+    if failed_nodes:
+        call += f" --exclude={','.join(failed_nodes)}"
 
     gpu_job = job.resources.get("gpu") or "gpu" in job.resources.get("gres", "")
     if gpu_job:
