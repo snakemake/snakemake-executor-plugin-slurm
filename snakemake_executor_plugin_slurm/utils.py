@@ -11,9 +11,6 @@ from typing import Union
 from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
-from snakemake_interface_executor_plugins.dag import (
-    DAGExecutorInterface,
-)
 from snakemake_interface_common.exceptions import WorkflowError
 
 
