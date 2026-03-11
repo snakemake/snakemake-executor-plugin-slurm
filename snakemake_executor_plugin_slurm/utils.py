@@ -3,7 +3,7 @@
 from collections import Counter
 import math
 import os
-import shutil
+import shlex
 import subprocess
 import re
 from pathlib import Path
@@ -32,7 +32,7 @@ def get_max_array_size() -> int:
     scontrol_cmd = "scontrol show config"
     try:
         res = subprocess.run(
-            shutil.split(scontrol_cmd),
+            shlex.split(scontrol_cmd),
             capture_output=True,
             text=True,
             timeout=5,
