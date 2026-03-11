@@ -3,6 +3,9 @@ import re
 from pathlib import Path
 from typing import Optional
 import snakemake.common.tests
+from snakemake.settings.types import ConfigSettings
+import snakemake.settings.types as settings
+from snakemake import api
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
 from unittest.mock import MagicMock, patch
 import pytest
@@ -28,6 +31,13 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
             # seconds_between_status_checks=5,
         )
 
+    def get_config_settings(self) -> Optional[ConfigSettings]:
+        """Override to provide config settings for the workflow under test.
+    
+        Returns None by default, which uses the workflow's default config.
+        """
+        return None
+
 
 class TestPassCommandAsScript(snakemake.common.tests.TestWorkflowsLocalStorageBase):
     """Integration-style test that runs the real workflow on the Slurm test cluster
@@ -46,6 +56,89 @@ class TestPassCommandAsScript(snakemake.common.tests.TestWorkflowsLocalStorageBa
             pass_command_as_script=True,
             init_seconds_before_status_checks=2,
         )
+
+class TestWrapExecJobQuoteEscaping(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+    """Regression test for issue #29: ensure double quotes in config values are
+    properly escaped when passed to --wrap="{exec_job}".
+    Runs the real workflow on the Slurm test cluster  and verifies the plugin can
+    submit the wrapped exec_job string with escaped double quotes.
+    """
+
+    __test__ = True
+
+    def get_executor(self) -> str:
+        return "slurm"
+
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        # Use the real ExecutorSettings and enable the flag under test.
+        return ExecutorSettings(
+            init_seconds_before_status_checks=2,
+        )
+    
+    def get_config_settings(self) -> Optional[ConfigSettings]:
+        """The config that triggered the error
+        """
+        return ConfigSettings(
+            config={"path": "{'x': '/path/to/file'}"}
+        )
+
+    def run_workflow(self, test_name, tmp_path, deployment_method=frozenset()):
+        test_path = Path(__file__).parent / "testcases" / test_name
+        if self.omit_tmp:
+            tmp_path = test_path
+        else:
+            tmp_path = Path(tmp_path) / test_name
+            self._copy_test_files(test_path, tmp_path)
+
+        resource_settings = self.get_resource_settings()
+
+        if self._common_settings().local_exec:
+            resource_settings.cores = 3
+            resource_settings.nodes = None
+        else:
+            resource_settings.cores = 1
+            resource_settings.nodes = 3
+
+        with api.SnakemakeApi(
+            settings.OutputSettings(
+                verbose=True,
+                show_failed_logs=True,
+            ),
+        ) as snakemake_api:
+            workflow_api = snakemake_api.workflow(
+                config_settings=self.get_config_settings(),
+                resource_settings=resource_settings,
+                storage_settings=settings.StorageSettings(
+                    default_storage_provider=self.get_default_storage_provider(),
+                    default_storage_prefix=self.get_default_storage_prefix(),
+                    shared_fs_usage=(
+                        settings.SharedFSUsage.all()
+                        if self.get_assume_shared_fs()
+                        else frozenset()
+                    ),
+                ),
+                deployment_settings=self.get_deployment_settings(deployment_method),
+                storage_provider_settings=self.get_default_storage_provider_settings(),
+                workdir=Path(tmp_path),
+                snakefile=tmp_path / "Snakefile",
+            )
+
+            dag_api = workflow_api.dag()
+
+            if self.create_report:
+                dag_api.create_report(
+                    reporter=self.get_reporter(),
+                    report_settings=self.get_report_settings(),
+                )
+            else:
+                dag_api.execute_workflow(
+                    executor=self.get_executor(),
+                    executor_settings=self.get_executor_settings(),
+                    execution_settings=settings.ExecutionSettings(
+                        latency_wait=self.latency_wait,
+                    ),
+                    remote_execution_settings=self.get_remote_execution_settings(),
+                )
 
 
 class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase):

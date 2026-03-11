@@ -41,6 +41,9 @@ omit = [".*", "*/site-packages/*", "Snakefile"]
 line-length = 88
 extend-exclude = 'tests/test_scontrol_parsing\.py'
 
+[tool.pytest.ini_options]
+python_files = ["test_*.py", "tests.py"]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
