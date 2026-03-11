@@ -900,14 +900,21 @@ class Executor(RemoteExecutor):
                             process.returncode, call_with_array, output=err
                         )
                 except subprocess.CalledProcessError as e:
-                    self._report_job_error_threadsafe(
-                        SubmittedJobInfo(jobs[0]),
-                        (
-                            "SLURM sbatch failed for array job submission. "
-                            f"The error message was '{e.output.strip()}'.\n"
-                            f"    sbatch call:\n        {call_with_array}\n"
-                        ),
+                    error_msg = (
+                        "SLURM sbatch failed for array job submission "
+                        f"(tasks {start_index}-{end_index}). "
+                        f"The error message was '{e.output.strip()}'.\n"
+                        f"    sbatch call:\n        {call_with_array}\n"
                     )
+                    self.logger.error(error_msg)
+                    for job in jobs[start_index - 1 : end_index]:
+                        self._report_job_error_threadsafe(
+                            SubmittedJobInfo(job),
+                            (
+                                f"Part of failed array sbatch submission "
+                                f"(tasks {start_index}-{end_index}); see log for details."
+                            ),
+                        )
                     continue
 
                 # To extract the job id we split by semicolon and take the first
