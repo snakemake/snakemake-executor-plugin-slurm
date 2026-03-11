@@ -874,7 +874,7 @@ class Executor(RemoteExecutor):
                     sbatch_script = "\n".join(
                         [
                             "#!/bin/sh",
-                            exec_job,
+                            f"{exec_job}",
                             "--slurm-jobstep-array-execs",
                             shlex.quote(json.dumps(sub_array_execs)),
                         ]
