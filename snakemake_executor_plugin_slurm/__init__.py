@@ -646,7 +646,7 @@ class Executor(RemoteExecutor):
 
         if not self.workflow.executor_settings.pass_command_as_script:
             # Escape potential double quotes in wrapped command.
-            # Otherwise it sbatch throwhs:
+            # Otherwise sbatch throws:
             # sbatch: error: script arguments not permitted with --wrap option
             # See:
             # https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/29
