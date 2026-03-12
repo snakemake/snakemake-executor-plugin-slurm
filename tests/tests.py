@@ -36,6 +36,8 @@ class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
         """Override to provide config settings for the workflow under test.
 
         Returns None by default, which uses the workflow's default config.
+        This dummy function is needed to inject config setting ast he
+        baseclass does not provide this functionality."
         """
         return None
 
