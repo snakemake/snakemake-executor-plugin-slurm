@@ -42,9 +42,9 @@ jobs:
             
             Give us some time, and you will automatically find the plugin on #Bioconda and #Pypi.
             
-            This plugin is relevant for #HPC users using the #SLURM batch system. If you want to 
-            discuss the release, you will find the maintainers here on Mastodon!
-            @rupdecat and @johanneskoester@fosstodon.org
+            This plugin is relevant for #HPC users using the #SLURM batch system. 
+            The maintainers are here on Mastodon -
+            @rupdecat and @johanneskoester@fosstodon.org.
             
             If you discover any issues, please report them on {{ issue_url }}.
 
