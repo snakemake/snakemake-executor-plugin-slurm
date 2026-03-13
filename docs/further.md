@@ -842,6 +842,10 @@ Note that `salloc` opens a subshell. Exit it before starting another interactive
 As an HPC cluster administrator, you can help your users to run Snakemake seamlessly on your cluster.
 Consider providing a global Snakemake profile and storing it at `/etc/xdg/snakemake` on login and cluster nodes.
 
+Cluster specific profiles consist of two files:
+- the Snakemake specific partition configuration
+- and a cluster profile which contains information about this SLURM executor, potential file system latency to consider, mount points for temporary files (e.g. a node local scratch) and more.
+
 Cluster-specific profiles can be submitted to the [Snakemake cluster profiles repository](https://github.com/snakemake/snakemake-cluster-profiles). There you can find further documentation about testing profiles, best practices, and inspiration from already published profiles.
 In the Snakemake documentation you can find [documentation about profiles in general](https://snakemake.readthedocs.io/en/stable/executing/cli.html#executing-profiles).
 
