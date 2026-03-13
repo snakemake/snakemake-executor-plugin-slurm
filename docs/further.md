@@ -836,3 +836,14 @@ $ salloc -A <your SLURM account> -p <your partition> \
 You need to consider the extra waiting time for jobs to start on your cluster, when choosing a value for the `--time` flag.
 
 Note that `salloc` opens a subshell. Exit it before starting another interactive job in the same terminal -- even if the previous job has completed.
+
+### HPC cluster admins
+
+As an HPC cluster admin, you can help your users run Snakemake more seamlessly on your cluster.
+Consider writing a global Snakemake profile and storing it at `/etc/xdg/snakemake` on login and cluster nodes.
+
+Cluster-specific profiles can be submitted to the [Snakemake cluster profiles repository](https://github.com/snakemake/snakemake-cluster-profiles). There you can find further documentation about testing profiles, best practices, and inspiration from already published profiles.
+In the Snakemake documentation you can find [documentation about profiles in general](https://snakemake.readthedocs.io/en/stable/executing/cli.html#executing-profiles).
+
+Your users will usually install Snakemake, this Slurm executor plugin, and their workflows themselves. Normally you don't have to do anything in that regard.
+
