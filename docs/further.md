@@ -840,7 +840,8 @@ Note that `salloc` opens a subshell. Exit it before starting another interactive
 ### Short Guide for HPC Cluster Administrators
 
 As an HPC cluster administrator, you can help your users to run Snakemake seamlessly on your cluster.
-Consider providing a global Snakemake profile and storing it at `/etc/xdg/snakemake` on login and cluster nodes.
+Consider providing a global Snakemake profile and storing it at `/etc/xdg/snakemake` on login and cluster nodes. 
+Such a configuration will not interfere with other workflow management systems and can always be overwritten by a user - it merely defines sensible defaults.
 
 Cluster specific profiles consist of two files:
 - the Snakemake specific partition configuration
