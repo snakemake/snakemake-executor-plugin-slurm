@@ -846,7 +846,7 @@ Cluster specific profiles consist of two files:
 - the Snakemake specific partition configuration
 - and a cluster profile which contains information about this SLURM executor, potential file system latency to consider, mount points for temporary files (e.g. a node local scratch) and more.
 
-Cluster-specific profiles can be submitted to the [Snakemake cluster profiles repository](https://github.com/snakemake/snakemake-cluster-profiles). There you can find further documentation about testing profiles, best practices, and inspiration from already published profiles.
+To obtain a template for a cluster specific profile, search at the [Snakemake cluster profiles repository](https://github.com/snakemake/snakemake-cluster-profiles). This repository not only provides configuration templates, but also maintainer contacts and deploymend hints. 
 In the Snakemake documentation you can find [documentation about profiles in general](https://snakemake.readthedocs.io/en/stable/executing/cli.html#executing-profiles).
 
 Your users will usually install Snakemake, this Slurm executor plugin, and their workflows themselves. Normally you don't have to do anything in that regard.
