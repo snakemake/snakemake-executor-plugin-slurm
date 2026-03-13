@@ -837,10 +837,10 @@ You need to consider the extra waiting time for jobs to start on your cluster, w
 
 Note that `salloc` opens a subshell. Exit it before starting another interactive job in the same terminal -- even if the previous job has completed.
 
-### HPC cluster admins
+### Short Guide for HPC Cluster Administrators
 
-As an HPC cluster admin, you can help your users run Snakemake more seamlessly on your cluster.
-Consider writing a global Snakemake profile and storing it at `/etc/xdg/snakemake` on login and cluster nodes.
+As an HPC cluster administrator, you can help your users to run Snakemake seamlessly on your cluster.
+Consider providing a global Snakemake profile and storing it at `/etc/xdg/snakemake` on login and cluster nodes.
 
 Cluster-specific profiles can be submitted to the [Snakemake cluster profiles repository](https://github.com/snakemake/snakemake-cluster-profiles). There you can find further documentation about testing profiles, best practices, and inspiration from already published profiles.
 In the Snakemake documentation you can find [documentation about profiles in general](https://snakemake.readthedocs.io/en/stable/executing/cli.html#executing-profiles).
