@@ -21,11 +21,11 @@ jobs:
       - name: Verify logo file exists
         run: |
           ls -la ${{ github.workspace }}/pr_logo/
-          if [ ! -f "${{ github.workspace }}/pr_logo/long_logo_hpc.png" ]; then
+          if [ ! -f "${{ github.workspace }}/pr_logo/logo_dark.png" ]; then
             echo "ERROR: Logo file not found!"
             exit 1
           fi
-          echo "Logo file found at: ${{ github.workspace }}/pr_logo/long_logo_hpc.png"
+          echo "Logo file found at: ${{ github.workspace }}/pr_logo/logo_dark.png"
       
       - name: Post to Mastodon
         uses: snakemake/mastodon-release-post-action@main # == latest
