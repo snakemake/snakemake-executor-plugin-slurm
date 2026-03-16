@@ -5,6 +5,8 @@ __license__ = "MIT"
 
 import atexit
 import asyncio
+import base64
+import errno
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
@@ -42,6 +44,7 @@ from .accounts import (
 from .utils import (
     get_max_array_size,
     get_job_wildcards,
+    pending_jobs_for_rule,
     delete_slurm_environment,
     delete_empty_dirs,
     set_gres_string,
@@ -678,44 +681,71 @@ class Executor(RemoteExecutor):
             )
             self.logger.info("Current array job settings: " f"{self.array_jobs}")
 
-            # In array mode, submit based on jobs that are ready now.
-            # Avoid waiting for all needrun jobs of a rule, which can
-            # starve scheduling when jobs become ready in waves.
             if array_selected_for_rule:
-                if len(same_rule_jobs) == 1:
-                    self.logger.debug(
-                        f"Array submission requested for rule {rule_name},"
-                        "but only one ready job is available; submitting it "
-                        "as a regular job."
-                    )
-                    self._job_submission_executor.submit(
-                        self.run_job, same_rule_jobs[0]
-                    )
+                dag = getattr(self.workflow, "dag", None)
+                if dag is not None:
+                    eligible_jobs = pending_jobs_for_rule(dag, rule_name)
                 else:
+                    eligible_jobs = len(same_rule_jobs)
                     self.logger.debug(
-                        "Submitting ready jobs for rule "
-                        f"{rule_name} as array: {len(same_rule_jobs)} jobs."
+                        "workflow.dag unavailable in run_jobs(); "
+                        "falling back to ready-job count for eligibility "
+                        f"({rule_name}: {eligible_jobs})."
+                    )
+
+                # Keep synchronization against DAG eligibility, but do not block
+                # once at least one full array chunk is ready.
+                chunk_size = self.max_array_size
+
+                if len(same_rule_jobs) == 1:
+                    if eligible_jobs <= 1:
+                        self.logger.debug(
+                            f"Array submission requested for rule {rule_name}, "
+                            "but only one pending job is available; submitting "
+                            "as a regular job."
+                        )
+                        self._job_submission_executor.submit(
+                            self.run_job, same_rule_jobs[0]
+                        )
+                    else:
+                        self.logger.debug(
+                            "Array job collection incomplete for rule "
+                            f"{rule_name}: 1/{eligible_jobs} arrived. Waiting "
+                            "for at least one full chunk."
+                        )
+                else:
+                    if len(same_rule_jobs) < eligible_jobs and len(same_rule_jobs) < chunk_size:
+                        self.logger.debug(
+                            "Array job collection incomplete for rule "
+                            f"{rule_name}: {len(same_rule_jobs)}/{eligible_jobs} "
+                            "arrived (< chunk size), waiting for more jobs."
+                        )
+                        continue
+
+                    self.logger.debug(
+                        "Submitting array-selected jobs for rule "
+                        f"{rule_name}: {len(same_rule_jobs)} ready, "
+                        f"{eligible_jobs} eligible, chunk_size={chunk_size}."
                     )
                     self._job_submission_executor.submit(
                         self.run_array_jobs, same_rule_jobs
                     )
                 continue
-
             # Non-array mode: submit all ready jobs individually.
-            if len(same_rule_jobs) == 1:
+            elif len(same_rule_jobs) == 1:
                 self.logger.debug(
                     f"Submitting single job for rule {rule_name} as "
                     "array mode is disabled."
                 )
                 self._job_submission_executor.submit(self.run_job, same_rule_jobs[0])
                 continue
-
-            self.logger.debug(
+            else:
+                self.logger.debug(
                 f"Submitting {len(same_rule_jobs)} ready jobs for rule "
                 f"{rule_name} individually (array mode disabled)."
-            )
-            for job in same_rule_jobs:
-                self._job_submission_executor.submit(self.run_job, job)
+                )
+                for job in same_rule_jobs:
+                    self._job_submission_executor.submit(self.run_job, job)
 
     def _report_job_submission_threadsafe(self, job_info: SubmittedJobInfo):
         if self._main_event_loop is not None:
@@ -840,12 +870,14 @@ class Executor(RemoteExecutor):
             exec_job = self.format_job_exec(jobs[0])
 
             # Build a compressed map of array task id -> full execution string
-            # for all jobs except jobs[0]. Task 1 executes via the base command.
+            # for all jobs, including task 1. This avoids relying on implicit
+            # fallback behavior for the first task and keeps task-command
+            # assignment explicit.
             array_execs = {
                 index: zlib.compress(
                     self.format_job_exec(job).encode("utf-8"), level=9
                 ).hex()
-                for index, job in enumerate(jobs[1:], start=2)
+                for index, job in enumerate(jobs, start=1)
             }
 
             # the actual array job call:
@@ -853,70 +885,96 @@ class Executor(RemoteExecutor):
             # we need to cycle over all jobs and submit up to `array_limit` jobs per
             # submission, to avoid hitting cluster limits or oversaturating the
             # command line limits
-            for start_index in range(1, len(jobs) + 1, self.max_array_size):
-                end_index = min(start_index + self.max_array_size - 1, len(jobs))
-                call_with_array = call + f" --array={start_index}-{end_index}"
+            array_limit = min(self.max_array_size, len(jobs))
+            for start_index in range(1, len(jobs) + 1, array_limit):
+                end_index = min(start_index + array_limit - 1, len(jobs))
                 sub_array_execs = {
                     str(i): array_execs[i]
                     for i in range(start_index, end_index + 1)
-                    if i > 1
                 }
+                array_execs_payload = base64.b64encode(
+                    json.dumps(sub_array_execs).encode("utf-8")
+                ).decode()
 
-                if not self.workflow.executor_settings.pass_command_as_script:
-                    # Use --wrap for the base execution command.
-                    array_execs_arg = shlex.quote(json.dumps(sub_array_execs))
-                    call_with_array += (
-                        f' --wrap="{exec_job}'
-                        f' --slurm-jobstep-array-execs={array_execs_arg}"'
-                    )
-                    subprocess_stdin = None
-                else:
-                    # Use /dev/stdin to pass the base execution command as a script.
-                    sbatch_script = "\n".join(
-                        [
-                            "#!/bin/sh",
-                            f"{exec_job}",
-                            "--slurm-jobstep-array-execs",
-                            shlex.quote(json.dumps(sub_array_execs)),
-                        ]
-                    )
-                    call_with_array += " /dev/stdin"
-                    subprocess_stdin = sbatch_script
-
-                self.logger.debug(
-                    f"Submitting array job with sbatch call: {call_with_array}"
+                use_script_submission = (
+                    self.workflow.executor_settings.pass_command_as_script
                 )
-                try:
-                    process = subprocess.Popen(
-                        call_with_array,
-                        shell=True,
-                        text=True,
-                        stdin=subprocess.PIPE,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                    )
-                    out, err = process.communicate(input=subprocess_stdin)
-                    if process.returncode != 0:
-                        raise subprocess.CalledProcessError(
-                            process.returncode, call_with_array, output=err
+                submission_failed = False
+                while True:
+                    call_with_array = call + f" --array={start_index}-{end_index}"
+
+                    if not use_script_submission:
+                        # Use --wrap for the base execution command.
+                        call_with_array += (
+                            f' --wrap="{exec_job}'
+                            f" --slurm-jobstep-array-execs="
+                            f"{shlex.quote(array_execs_payload)}"
+                            '"'
                         )
-                except subprocess.CalledProcessError as e:
-                    error_msg = (
-                        "SLURM sbatch failed for array job submission "
-                        f"(tasks {start_index}-{end_index}). "
-                        f"The error message was '{e.output.strip()}'.\n"
-                        f"    sbatch call:\n        {call_with_array}\n"
-                    )
-                    self.logger.error(error_msg)
-                    for job in jobs[start_index - 1 : end_index]:
-                        self._report_job_error_threadsafe(
-                            SubmittedJobInfo(job),
-                            (
-                                f"Part of failed array sbatch submission "
-                                f"(tasks {start_index}-{end_index}); "
-                                "see log for details."
-                            ),
+                        subprocess_stdin = None
+                        self.logger.debug(f"call with array: {call_with_array}")
+                    else:
+                        # Use /dev/stdin to pass the base execution command as a script.
+                        sbatch_script = "\n".join(
+                            [
+                                "#!/bin/sh",
+                                f"{exec_job}",
+                                "--slurm-jobstep-array-execs",
+                                shlex.quote(array_execs_payload),
+                            ]
                         )
+                        call_with_array += " /dev/stdin"
+                        subprocess_stdin = sbatch_script
+
+                    self.logger.debug(
+                        f"Submitting array job with sbatch call: {call_with_array}"
+                    )
+                    try:
+                        process = subprocess.Popen(
+                            call_with_array,
+                            shell=True,
+                            text=True,
+                            stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                        )
+                        out, err = process.communicate(input=subprocess_stdin)
+                        if process.returncode != 0:
+                            raise subprocess.CalledProcessError(
+                                process.returncode, call_with_array, output=err
+                            )
+                        break
+                    except OSError as e:
+                        if e.errno == errno.E2BIG and not use_script_submission:
+                            self.logger.warning(
+                                "Array sbatch command exceeds argument-length "
+                                "limits; retrying via /dev/stdin script mode "
+                                f"for tasks {start_index}-{end_index}."
+                            )
+                            use_script_submission = True
+                            continue
+                        raise
+                    except subprocess.CalledProcessError as e:
+                        error_msg = (
+                            "SLURM sbatch failed for array job submission "
+                            f"(tasks {start_index}-{end_index}). "
+                            f"The error message was '{e.output.strip()}'.\n"
+                            f"    sbatch call:\n        {call_with_array}\n"
+                        )
+                        self.logger.error(error_msg)
+                        for job in jobs[start_index - 1 : end_index]:
+                            self._report_job_error_threadsafe(
+                                SubmittedJobInfo(job),
+                                (
+                                    f"Part of failed array sbatch submission "
+                                    f"(tasks {start_index}-{end_index}); "
+                                    "see log for details."
+                                ),
+                            )
+                        submission_failed = True
+                        break
+
+                if submission_failed:
                     continue
 
                 # To extract the job id we split by semicolon and take the first
@@ -1065,6 +1123,7 @@ class Executor(RemoteExecutor):
             subprocess_stdin = sbatch_script
 
         self.logger.debug(f"sbatch call: {call}")
+        time.sleep(5)
         try:
             process = subprocess.Popen(
                 call,
