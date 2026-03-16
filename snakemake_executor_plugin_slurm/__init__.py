@@ -865,14 +865,8 @@ class Executor(RemoteExecutor):
                     "given - submitting without. This might or might not work on "
                     "your cluster."
                 )
-            # we are using jobs[0] assuming all equal resource requirements
-            # and are going to extract
-            exec_job = self.format_job_exec(jobs[0])
-
             # Build a compressed map of array task id -> full execution string
-            # for all jobs, including task 1. This avoids relying on implicit
-            # fallback behavior for the first task and keeps task-command
-            # assignment explicit.
+            # for all jobs.
             array_execs = {
                 index: zlib.compress(
                     self.format_job_exec(job).encode("utf-8"), level=9
@@ -888,9 +882,12 @@ class Executor(RemoteExecutor):
             array_limit = min(self.max_array_size, len(jobs))
             for start_index in range(1, len(jobs) + 1, array_limit):
                 end_index = min(start_index + array_limit - 1, len(jobs))
+                # The first task of each chunk runs via the plain base command.
+                # Remaining tasks are dispatched from --slurm-jobstep-array-execs.
+                exec_job = self.format_job_exec(jobs[start_index - 1])
                 sub_array_execs = {
                     str(i): array_execs[i]
-                    for i in range(start_index, end_index + 1)
+                    for i in range(start_index + 1, end_index + 1)
                 }
                 array_execs_payload = base64.b64encode(
                     json.dumps(sub_array_execs).encode("utf-8")
