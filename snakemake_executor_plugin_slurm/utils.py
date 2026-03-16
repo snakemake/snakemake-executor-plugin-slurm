@@ -44,7 +44,7 @@ def get_max_array_size() -> int:
 
     try:
         max_array_size = int(max_array_size_str)
-    except ValueError:
+    except (ValueError, TypeError):
         max_array_size = 1000
     # The SLURM_ARRAY_MAX limits to its value -1
     return max_array_size - 1
