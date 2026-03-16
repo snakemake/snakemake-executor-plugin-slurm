@@ -256,9 +256,7 @@ class TestRunJobsRouting:
     def test_array_rule_submits_at_chunk_size_even_if_more_eligible_in_dag(self):
         """With DAG showing more pending jobs, submit once at least one full chunk is ready."""
         executor = _make_executor_stub(array_jobs="myrule", array_limit=10)
-        ready_jobs = [
-            _make_mock_job(rule_name="myrule", jobid=i) for i in range(1, 11)
-        ]
+        ready_jobs = [_make_mock_job(rule_name="myrule", jobid=i) for i in range(1, 11)]
         pending_jobs = [
             _make_mock_job(rule_name="myrule", jobid=i) for i in range(1, 101)
         ]

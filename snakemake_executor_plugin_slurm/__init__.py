@@ -714,7 +714,10 @@ class Executor(RemoteExecutor):
                             "for at least one full chunk."
                         )
                 else:
-                    if len(same_rule_jobs) < eligible_jobs and len(same_rule_jobs) < chunk_size:
+                    if (
+                        len(same_rule_jobs) < eligible_jobs
+                        and len(same_rule_jobs) < chunk_size
+                    ):
                         self.logger.debug(
                             "Array job collection incomplete for rule "
                             f"{rule_name}: {len(same_rule_jobs)}/{eligible_jobs} "
@@ -741,8 +744,8 @@ class Executor(RemoteExecutor):
                 continue
             else:
                 self.logger.debug(
-                f"Submitting {len(same_rule_jobs)} ready jobs for rule "
-                f"{rule_name} individually (array mode disabled)."
+                    f"Submitting {len(same_rule_jobs)} ready jobs for rule "
+                    f"{rule_name} individually (array mode disabled)."
                 )
                 for job in same_rule_jobs:
                     self._job_submission_executor.submit(self.run_job, job)
