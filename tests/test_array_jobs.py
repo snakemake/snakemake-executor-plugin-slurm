@@ -11,6 +11,8 @@ TestWorkflows. They cover:
 """
 
 import asyncio
+import base64
+import errno
 import json
 import re
 from pathlib import Path
@@ -238,6 +240,37 @@ class TestRunJobsRouting:
         assert executor.run_job in methods
         assert executor.run_array_jobs in methods
 
+    def test_array_rule_waits_below_chunk_if_more_eligible_in_dag(self):
+        """With DAG showing more pending jobs, do not submit until chunk size is reached."""
+        executor = _make_executor_stub(array_jobs="myrule", array_limit=10)
+        ready_jobs = [_make_mock_job(rule_name="myrule", jobid=i) for i in range(1, 6)]
+        pending_jobs = [
+            _make_mock_job(rule_name="myrule", jobid=i) for i in range(1, 101)
+        ]
+        executor.workflow.dag = SimpleNamespace(needrun_jobs=lambda: pending_jobs)
+
+        executor.run_jobs(ready_jobs)
+
+        assert executor._job_submission_executor.submit.call_count == 0
+
+    def test_array_rule_submits_at_chunk_size_even_if_more_eligible_in_dag(self):
+        """With DAG showing more pending jobs, submit once at least one full chunk is ready."""
+        executor = _make_executor_stub(array_jobs="myrule", array_limit=10)
+        ready_jobs = [
+            _make_mock_job(rule_name="myrule", jobid=i) for i in range(1, 11)
+        ]
+        pending_jobs = [
+            _make_mock_job(rule_name="myrule", jobid=i) for i in range(1, 101)
+        ]
+        executor.workflow.dag = SimpleNamespace(needrun_jobs=lambda: pending_jobs)
+
+        executor.run_jobs(ready_jobs)
+
+        calls = executor._job_submission_executor.submit.call_args_list
+        assert len(calls) == 1
+        assert calls[0][0][0] == executor.run_array_jobs
+        assert calls[0][0][1] == ready_jobs
+
 
 class TestRunArrayJobs:
     """Tests for run_array_jobs: sbatch command structure, chunking, error handling."""
@@ -310,15 +343,58 @@ class TestRunArrayJobs:
         jobs = self._make_jobs(n=3)
         executor.run_array_jobs(jobs)
         popen_call_str = mock_popen_success.call_args_list[0][0][0]
-        match = re.search(r"--slurm-jobstep-array-execs='([^']+)'", popen_call_str)
+        match = re.search(
+            r"--slurm-jobstep-array-execs=(?:'([A-Za-z0-9+/=]+)'|([A-Za-z0-9+/=]+))",
+            popen_call_str,
+        )
         assert match, (
             "Could not find --slurm-jobstep-array-execs in sbatch call.\n"
             f"Call was: {popen_call_str!r}"
         )
-        array_execs = json.loads(match.group(1))
+        encoded_payload = match.group(1) or match.group(2)
+        array_execs = json.loads(base64.b64decode(encoded_payload).decode("utf-8"))
         assert "1" not in array_execs
         assert "2" in array_execs
         assert "3" in array_execs
+
+    def test_array_execs_omits_first_task_of_each_chunk(self, tmp_path):
+        """For each chunk, first task uses base exec command and is absent from map."""
+        executor = self._build_executor(tmp_path, array_limit=3)
+        jobs = self._make_jobs(n=5)
+
+        with patch("snakemake_executor_plugin_slurm.subprocess.Popen") as mock_popen:
+            proc = MagicMock()
+            proc.communicate.return_value = ("333333", "")
+            proc.returncode = 0
+            mock_popen.return_value = proc
+            executor.run_array_jobs(jobs)
+
+        first_call_str = mock_popen.call_args_list[0][0][0]
+        second_call_str = mock_popen.call_args_list[1][0][0]
+
+        assert '--wrap="snakemake_exec_1 ' in first_call_str
+        assert '--wrap="snakemake_exec_4 ' in second_call_str
+
+        first_match = re.search(
+            r"--slurm-jobstep-array-execs=(?:'([A-Za-z0-9+/=]+)'|([A-Za-z0-9+/=]+))",
+            first_call_str,
+        )
+        second_match = re.search(
+            r"--slurm-jobstep-array-execs=(?:'([A-Za-z0-9+/=]+)'|([A-Za-z0-9+/=]+))",
+            second_call_str,
+        )
+        assert first_match and second_match
+
+        first_payload = first_match.group(1) or first_match.group(2)
+        second_payload = second_match.group(1) or second_match.group(2)
+        first_map = json.loads(base64.b64decode(first_payload).decode("utf-8"))
+        second_map = json.loads(base64.b64decode(second_payload).decode("utf-8"))
+
+        assert "1" not in first_map
+        assert "2" in first_map
+        assert "3" in first_map
+        assert "4" not in second_map
+        assert "5" in second_map
 
     def test_array_limit_produces_chunked_sbatch_calls(self, tmp_path):
         """5 jobs with array_limit=3 → 2 Popen calls: --array=1-3 and --array=4-5."""
@@ -337,6 +413,29 @@ class TestRunArrayJobs:
         second_call_str = mock_popen.call_args_list[1][0][0]
         assert "--array=1-3" in first_call_str
         assert "--array=4-5" in second_call_str
+
+    def test_e2big_retries_with_stdin_script_mode(self, tmp_path):
+        """If --wrap exceeds argv size, retry once via /dev/stdin script mode."""
+        executor = self._build_executor(tmp_path)
+        jobs = self._make_jobs(n=3)
+
+        with patch("snakemake_executor_plugin_slurm.subprocess.Popen") as mock_popen:
+            proc = MagicMock()
+            proc.communicate.return_value = ("222222", "")
+            proc.returncode = 0
+            mock_popen.side_effect = [
+                OSError(errno.E2BIG, "Argument list too long"),
+                proc,
+            ]
+
+            executor.run_array_jobs(jobs)
+
+        assert mock_popen.call_count == 2
+        first_call_str = mock_popen.call_args_list[0][0][0]
+        second_call_str = mock_popen.call_args_list[1][0][0]
+        assert "--wrap=" in first_call_str
+        assert "/dev/stdin" in second_call_str
+        assert proc.communicate.call_args.kwargs["input"].startswith("#!/bin/sh")
 
     def test_non_empty_wildcards_in_comment_triggers_warning(
         self, tmp_path, mock_popen_success
