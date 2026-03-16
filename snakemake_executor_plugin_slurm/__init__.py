@@ -1111,8 +1111,15 @@ class Executor(RemoteExecutor):
         exec_job = self.format_job_exec(job)
 
         if not self.workflow.executor_settings.pass_command_as_script:
+            # Escape potential double quotes in wrapped command.
+            # Otherwise sbatch throws:
+            # sbatch: error: script arguments not permitted with --wrap option
+            # See:
+            # https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/29
+            exec_job_escaped = exec_job.replace('"', '\\"')
+
             # and finally wrap the job to execute with all the snakemake parameters
-            call += f' --wrap="{exec_job}"'
+            call += f' --wrap="{exec_job_escaped}"'
             subprocess_stdin = None
         else:
             # format the job to execute with all the snakemake parameters into a script

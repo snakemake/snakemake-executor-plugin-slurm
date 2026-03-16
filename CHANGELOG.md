@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.5.4](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.5.3...v2.5.4) (2026-03-13)
+
+
+### Bug Fixes
+
+* [#29](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/29) and add regression test ([#434](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/434)) ([e6432d4](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/e6432d4e0c055199dcff16b733a4bd4e47a48c3c))
+* cleaner mastodon post ([#435](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/435)) ([c6e8893](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/c6e88934282796c0862b2eb0d9a6b55bc1c1bbc5))
+
 ## [2.5.3](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.5.2...v2.5.3) (2026-03-10)
 
 
