@@ -1,5 +1,6 @@
 # utility functions for the SLURM executor plugin
 
+from collections import Counter
 import math
 import os
 import shlex
@@ -8,6 +9,7 @@ import re
 from pathlib import Path
 from typing import Union
 
+from snakemake_interface_executor_plugins.dag import DAGExecutorInterface
 from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
@@ -67,6 +69,12 @@ def get_job_wildcards(job: JobExecutorInterface) -> str:
         wildcard_str = ""
 
     return wildcard_str
+
+
+def pending_jobs_for_rule(dag: DAGExecutorInterface, rule_name: str) -> int:
+    """Count pending jobs for a given rule in the DAG."""
+    counts = Counter(job.rule.name for job in dag.needrun_jobs())
+    return counts.get(rule_name, 0)
 
 
 def round_half_up(n):
