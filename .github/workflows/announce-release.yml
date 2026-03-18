@@ -21,30 +21,30 @@ jobs:
       - name: Verify logo file exists
         run: |
           ls -la ${{ github.workspace }}/pr_logo/
-          if [ ! -f "${{ github.workspace }}/pr_logo/long_logo_hpc.png" ]; then
+          if [ ! -f "${{ github.workspace }}/pr_logo/logo_dark.png" ]; then
             echo "ERROR: Logo file not found!"
             exit 1
           fi
-          echo "Logo file found at: ${{ github.workspace }}/pr_logo/long_logo_hpc.png"
+          echo "Logo file found at: ${{ github.workspace }}/pr_logo/logo_dark.png"
       
       - name: Post to Mastodon
         uses: snakemake/mastodon-release-post-action@main # == latest
         with:
           access-token: ${{ secrets.MASTODONBOT }}
           pr-title: ${{ github.event.head_commit.message }}
-          image: "long_logo_hpc.png"
+          image: "logo_dark.png"
           image-description: "Snakemake HPC logo for Mastodon"
-          repo-title: "Snakemake Executor Plugin for SLURM"
+          repotitle: "Snakemake Executor Plugin for SLURM"
           message: |
             Beep, Beep - I am your friendly #Snakemake release announcement bot.
             
-            There is a new release of the {repo-title} systems. Its version now is {{ version }}!
+            There is a new release of the {{ repotitle }} systems. Its version now is {{ version }}!
             
             Give us some time, and you will automatically find the plugin on #Bioconda and #Pypi.
             
-            This plugin is relevant for #HPC users using the #SLURM batch system. If you want to 
-            discuss the release, you will find the maintainers here on Mastodon!
-            @rupdecat and @johanneskoester@fosstodon.org
+            This plugin is relevant for #HPC users using the #SLURM batch system. 
+            The maintainers are here on Mastodon -
+            @rupdecat and @johanneskoester@fosstodon.org.
             
             If you discover any issues, please report them on {{ issue_url }}.
 
