@@ -1138,36 +1138,67 @@ We leave it to SLURM to resume your job(s)"""
 
         # Check if a specific partition is requested
         if job.resources.get("slurm_partition"):
-            # But also check if there's a cluster requirement that might override it
-            job_cluster = (
-                job.resources.get("slurm_cluster")
-                or job.resources.get("cluster")
-                or job.resources.get("clusters")
-            )
-
-            if job_cluster and self._partitions:
-                # If a cluster is specified, verify the partition exists and matches
-                # Otherwise, use auto-selection to find a partition for that cluster
-                partition_obj = next(
-                    (
-                        p
-                        for p in self._partitions
-                        if p.name == job.resources.slurm_partition
-                    ),
-                    None,
+            # the following code is a potential fix for 
+            # https://github.com/snakemake/snakemake/issues/3992
+            if job.is_group() and isinstance(job.resources.slurm_partition, int):
+                num_rules = len(list(job.rules))
+                aggregated = job.resources.slurm_partition
+                if num_rules > 0 and aggregated % num_rules == 0:
+                    recovered = aggregated // num_rules
+                    self.logger.warning(
+                        f"Group job '{job.name}' has a numeric 'slurm_partition' "
+                        f"resource ({aggregated}). Snakemake summed it across "
+                        f"{num_rules} constituent rule(s) ({list(job.rules)}). "
+                        f"Recovered original partition name as '{recovered}' by "
+                        "dividing by the number of rules. If this is incorrect "
+                        "(rules use different numeric partitions), please use a "
+                        "non-numeric partition alias in your cluster configuration."
+                    )
+                    partition = str(recovered)
+                else:
+                    self.logger.warning(
+                        f"Group job '{job.name}' has a numeric 'slurm_partition' "
+                        f"resource ({aggregated}) that Snakemake has summed across "
+                        f"constituent rules ({list(job.rules)}), and the original "
+                        "value cannot be reliably recovered (not evenly divisible "
+                        f"by {num_rules} rules). Falling back to default partition "
+                        "selection. Consider using a non-numeric partition alias."
+                    )
+                    # if partition remains None it falls through to auto/default selection
+            else:
+                # Not a group job (or partition is already a string): use as-is.
+                # Also check if there's a cluster requirement that might override it.
+                job_cluster = (
+                    job.resources.get("slurm_cluster")
+                    or job.resources.get("cluster")
+                    or job.resources.get("clusters")
                 )
-                if (
-                    partition_obj
-                    and partition_obj.partition_cluster
-                    and partition_obj.partition_cluster != job_cluster
-                ):
-                    # Partition exists but is for a different cluster:
-                    # use auto-selection
-                    partition = get_best_partition(self._partitions, job, self.logger)
+
+                if job_cluster and self._partitions:
+                    # If a cluster is specified, verify the partition exists and matches
+                    # Otherwise, use auto-selection to find a partition for that cluster
+                    partition_obj = next(
+                        (
+                            p
+                            for p in self._partitions
+                            if p.name == job.resources.slurm_partition
+                        ),
+                        None,
+                    )
+                    if (
+                        partition_obj
+                        and partition_obj.partition_cluster
+                        and partition_obj.partition_cluster != job_cluster
+                    ):
+                        # Partition exists but is for a different cluster:
+                        # use auto-selection
+                        partition = get_best_partition(
+                            self._partitions, job, self.logger
+                        )
+                    else:
+                        partition = job.resources.slurm_partition
                 else:
                     partition = job.resources.slurm_partition
-            else:
-                partition = job.resources.slurm_partition
 
         # If no partition was selected yet, try auto-selection
         if not partition and self._partitions:

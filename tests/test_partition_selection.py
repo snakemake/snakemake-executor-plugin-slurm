@@ -3,12 +3,23 @@ import yaml
 
 import pytest
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from snakemake_interface_common.exceptions import WorkflowError
+from snakemake_executor_plugin_slurm import Executor
 from snakemake_executor_plugin_slurm.partitions import (
     read_partition_file,
     get_best_partition,
 )
+
+
+class _MockResources:
+    def __init__(self, **resources):
+        self._resources = resources
+        for key, value in resources.items():
+            setattr(self, key, value)
+
+    def get(self, key, default=None):
+        return self._resources.get(key, default)
 
 
 class TestPartitionSelection:
@@ -870,3 +881,80 @@ class TestPartitionSelection:
 
         finally:
             temp_path.unlink()
+
+
+class TestNumericGroupPartitionHandling:
+    def test_group_job_numeric_partition_is_recovered(self):
+        """Recover original numeric partition from aggregated group-job value."""
+        executor = Executor.__new__(Executor)
+        executor._partitions = None
+        executor._fallback_partition = None
+        executor.logger = MagicMock()
+
+        job = MagicMock()
+        job.name = "grp"
+        job.is_group.return_value = True
+        job.rules = ["rule_a", "rule_b"]
+        job.resources = _MockResources(slurm_partition=40)
+
+        with patch(
+            "snakemake_executor_plugin_slurm.get_default_partition",
+            return_value="fallback",
+        ) as mocked_default_partition:
+            partition_arg = executor.get_partition_arg(job)
+
+        assert partition_arg == " -p 20"
+        mocked_default_partition.assert_not_called()
+        assert executor.logger.warning.call_count == 1
+        assert "Recovered original partition name as '20'" in str(
+            executor.logger.warning.call_args_list[0][0][0]
+        )
+
+    def test_group_job_numeric_partition_non_divisible_falls_back(self):
+        """Fallback to default partition when aggregated value is not recoverable."""
+        executor = Executor.__new__(Executor)
+        executor._partitions = None
+        executor._fallback_partition = None
+        executor.logger = MagicMock()
+
+        job = MagicMock()
+        job.name = "grp"
+        job.is_group.return_value = True
+        job.rules = ["rule_a", "rule_b"]
+        job.resources = _MockResources(slurm_partition=41)
+
+        with patch(
+            "snakemake_executor_plugin_slurm.get_default_partition",
+            return_value="fallback",
+        ) as mocked_default_partition:
+            partition_arg = executor.get_partition_arg(job)
+
+        assert partition_arg == " -p fallback"
+        mocked_default_partition.assert_called_once_with(job, executor.logger)
+        assert executor.logger.warning.call_count == 1
+        assert "cannot be reliably recovered" in str(
+            executor.logger.warning.call_args_list[0][0][0]
+        )
+
+    def test_non_group_numeric_partition_is_used_as_is(self):
+        """Ensure numeric partition handling does not affect non-group jobs."""
+        executor = Executor.__new__(Executor)
+        executor._partitions = None
+        executor._fallback_partition = None
+        executor.logger = MagicMock()
+
+        job = MagicMock()
+        job.name = "single"
+        job.is_group.return_value = False
+        job.rules = ["rule_a"]
+        job.resources = _MockResources(slurm_partition=20)
+
+        with patch(
+            "snakemake_executor_plugin_slurm.get_default_partition",
+            return_value="fallback",
+        ) as mocked_default_partition:
+            partition_arg = executor.get_partition_arg(job)
+
+        assert partition_arg == " -p 20"
+        mocked_default_partition.assert_not_called()
+        executor.logger.warning.assert_not_called()
