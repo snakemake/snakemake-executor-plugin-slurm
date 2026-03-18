@@ -1164,7 +1164,7 @@ We leave it to SLURM to resume your job(s)"""
                         f"by {num_rules} rules). Falling back to default partition "
                         "selection. Consider using a non-numeric partition alias."
                     )
-                    # if partition remains None it falls through to 
+                    # if partition remains None it falls through to
                     # auto/default selection
             else:
                 # Not a group job (or partition is already a string): use as-is.
