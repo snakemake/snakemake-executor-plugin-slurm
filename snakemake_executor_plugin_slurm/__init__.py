@@ -1138,7 +1138,7 @@ We leave it to SLURM to resume your job(s)"""
 
         # Check if a specific partition is requested
         if job.resources.get("slurm_partition"):
-            # the following code is a potential fix for 
+            # the following code is a potential fix for
             # https://github.com/snakemake/snakemake/issues/3992
             if job.is_group() and isinstance(job.resources.slurm_partition, int):
                 num_rules = len(list(job.rules))
@@ -1164,7 +1164,8 @@ We leave it to SLURM to resume your job(s)"""
                         f"by {num_rules} rules). Falling back to default partition "
                         "selection. Consider using a non-numeric partition alias."
                     )
-                    # if partition remains None it falls through to auto/default selection
+                    # if partition remains None it falls through to 
+                    # auto/default selection
             else:
                 # Not a group job (or partition is already a string): use as-is.
                 # Also check if there's a cluster requirement that might override it.
