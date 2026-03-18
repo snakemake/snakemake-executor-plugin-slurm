@@ -1030,3 +1030,49 @@ Used 100 files
 Job ID: 999000"""
         result = validate_or_get_slurm_job_id("999000", output)
         assert result == "999000"
+
+
+class TestArrayJobsAll(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+    """Integration test: submit 4 copy_number jobs as one array (array_jobs='all').
+
+    Uses the testcases/array_jobs workflow which has exactly 4 SLURM jobs
+    (one copy_number instance per number). With no limit override the default
+    limit (1000) applies, so all 4 tasks land in a single array submission.
+    """
+
+    __test__ = True
+
+    def get_executor(self) -> str:
+        return "slurm"
+
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        return ExecutorSettings(
+            array_jobs="all",
+            init_seconds_before_status_checks=2,
+        )
+
+    def test_array_jobs_all(self, tmp_path):
+        self.run_workflow("array_jobs", tmp_path)
+
+
+class TestArrayJobsAllWithLimit(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+    """Integration test: submit 4 copy_number jobs as two arrays of size 2.
+
+    array_limit=2 means run_array_jobs will chunk the 4 ready jobs into
+    two sbatch submissions of --array=1-2 and --array=3-4.
+    """
+
+    __test__ = True
+
+    def get_executor(self) -> str:
+        return "slurm"
+
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        return ExecutorSettings(
+            array_jobs="all",
+            array_limit=2,
+            init_seconds_before_status_checks=2,
+        )
+
+    def test_array_jobs_all_with_limit(self, tmp_path):
+        self.run_workflow("array_jobs", tmp_path)
