@@ -524,7 +524,7 @@ On certain clusters the amount of scratch/tmpspace on the workernode can be set 
 
 *this depends on the cluser config and is not a default*
 
-You can specify the amount of tmpspace using the `tmpspace` resource:
+You can specify the amount of tmpspace using the `gres` resource:
 
 ```Python
 rule tmpspace_task:
