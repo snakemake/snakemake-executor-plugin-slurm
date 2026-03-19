@@ -380,7 +380,6 @@ To adapt the workflow for an application using `mpiexec`, you can override the `
 ``` console
 $ snakemake --set-resources calc_pi:mpi="mpiexec" ...
 ```
-GPU Jobs
 ##### Resource Specifications for MPI Jobs
 
 When configuring MPI jobs, it's essential to accurately define the resources to match the requirements of your application.
@@ -518,8 +517,8 @@ In this configuration:
 
 By defining these resource specifications in a profile, you maintain a clean and organized workflow, ensuring that resource allocations are consistent and easily adjustable.
 
-### Setting tmpspace with gress
-On certain clusters the amount of scratch/tmpspace on the workernode can be set with: 
+### Setting tmpspace with GRES
+On certain clusters the amount of scratch/tmpspace on the worker node can be set with: 
 `--gres=tmpspace:10G`
 
 *this depends on the cluser config and is not a default*
