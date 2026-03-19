@@ -294,15 +294,15 @@ def set_gres_string(job: JobExecutorInterface) -> str:
                         "and end with ticks or quotation marks). "
                         "Expected format: "
                         "'<name>:<number>' or '<name>:<type>:<number>' or "
-                        "'tmpspace:<number>[TGM]'"
-                        "(e.g., 'gpu:1' or 'gpu:tesla:2') or tmpspace:10G"
+                        "'tmpspace:<number>[TGM]' "
+                        "(e.g., 'gpu:1' or 'gpu:tesla:2') or tmpspace:10G "
                     )
                 else:
                     raise WorkflowError(
                         f"Invalid GRES format: {gres}. Expected format: "
                         "'<name>:<number>' or '<name>:<type>:<number>' "
-                        "or 'tmpspace:<number>[TGM]'"
-                        "(e.g., 'gpu:1' or 'gpu:tesla:2') or tmpspace:10G"
+                        "or 'tmpspace:<number>[TGM]' "
+                        "(e.g., 'gpu:1' or 'gpu:tesla:2') or tmpspace:10G "
                     )
         return f" --gres={job.resources.gres}"
 
