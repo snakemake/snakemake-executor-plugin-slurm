@@ -255,7 +255,7 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     gres_re = re.compile(r"^[a-zA-Z0-9_]+(:[a-zA-Z0-9_\.]+)?:\d+$")
 
     # generic resources (GRES) arguments can be of type
-    # "string:int[TGM]" when a tmpspace is specified. 
+    # "string:int[TGM]" when a tmpspace is specified.
     gres_tmpspace_re = re.compile(r"^tmpspace:\d+[TGM]?$")
     # gpu model arguments can be of type "string"
     # The model string may contain a dot for variants, see
@@ -289,18 +289,19 @@ def set_gres_string(job: JobExecutorInterface) -> str:
         if not gres_re.match(gres):
             if not gres_tmpspace_re.match(gres):
                 if not string_check.match(gres):
-                   raise WorkflowError(
-                       "GRES format should not be a nested string (start "
-                       "and end with ticks or quotation marks). "
+                    raise WorkflowError(
+                        "GRES format should not be a nested string (start "
+                        "and end with ticks or quotation marks). "
                         "Expected format: "
-                        "'<name>:<number>' or '<name>:<type>:<number>' or 'tmpspace:<number>[TGM]'"
+                        "'<name>:<number>' or '<name>:<type>:<number>' or "
+                        "'tmpspace:<number>[TGM]'"
                         "(e.g., 'gpu:1' or 'gpu:tesla:2') or tmpspace:10G"
-                        
-                   )
+                    )
                 else:
                     raise WorkflowError(
                         f"Invalid GRES format: {gres}. Expected format: "
-                        "'<name>:<number>' or '<name>:<type>:<number>' or 'tmpspace:<number>[TGM]'"
+                        "'<name>:<number>' or '<name>:<type>:<number>' "
+                        "or 'tmpspace:<number>[TGM]'"
                         "(e.g., 'gpu:1' or 'gpu:tesla:2') or tmpspace:10G"
                     )
         return f" --gres={job.resources.gres}"
