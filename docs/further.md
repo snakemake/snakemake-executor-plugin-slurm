@@ -380,6 +380,7 @@ To adapt the workflow for an application using `mpiexec`, you can override the `
 ``` console
 $ snakemake --set-resources calc_pi:mpi="mpiexec" ...
 ```
+
 ##### Resource Specifications for MPI Jobs
 
 When configuring MPI jobs, it's essential to accurately define the resources to match the requirements of your application.
@@ -516,28 +517,6 @@ In this configuration:
 - `gres_request_rule` utilizes the `gres` resource to request two rtx3090 GPUs, with six CPUs allocated per GPU.
 
 By defining these resource specifications in a profile, you maintain a clean and organized workflow, ensuring that resource allocations are consistent and easily adjustable.
-
-### Setting tmpspace with GRES
-On certain clusters the amount of scratch/tmpspace on the worker node can be set with: 
-`--gres=tmpspace:10G`
-
-*this depends on the cluser config and is not a default*
-
-You can specify the amount of tmpspace using the `gres` resource:
-
-```Python
-rule tmpspace_task:
-    input:
-        "input_file"
-    output:
-        "output_file"
-    resources:
-         gres="tmpspace:15G"
-    shell:
-        "tmpspace_task --input {input} --output {output}"
-```
-
-
 
 ### Running Jobs locally
 
