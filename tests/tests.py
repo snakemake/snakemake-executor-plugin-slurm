@@ -11,8 +11,8 @@ from snakemake import api
 from snakemake_interface_executor_plugins.settings import ExecutorSettingsBase
 from unittest.mock import MagicMock, patch
 import pytest
-from snakemake_executor_plugin_slurm import Executor, ExecutorSettings
-from snakemake_executor_plugin_slurm.utils import get_slurm_signal_arg, set_gres_string
+from snakemake_executor_plugin_slurm import ExecutorSettings
+from snakemake_executor_plugin_slurm.utils import set_gres_string
 from snakemake_executor_plugin_slurm.submit_string import get_submit_command
 from snakemake_executor_plugin_slurm.validation import (
     validate_slurm_extra,

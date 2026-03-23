@@ -16,9 +16,10 @@ from snakemake_executor_plugin_slurm.validation import validate_slurm_extra
 @pytest.fixture
 def mock_job():
     """Create a mock job with configurable resources and metadata.
-    
+
     Returns a factory function that constructs mock jobs for testing.
     """
+
     def _create_job(name="signal_shell", **resources):
         mock_resources = MagicMock()
         mock_resources.get.side_effect = lambda key, default=None: resources.get(
@@ -71,21 +72,12 @@ class TestSlurmSignalParsing:
     def test_multiple_signals_in_one_setting(self):
         """Multiple rules can have signals in a comma-separated list."""
         setting = "signal_shell:SIGUSR1@30,signal_python:R:SIGTERM@45"
-        assert (
-            get_slurm_signal_arg(setting, "signal_shell")
-            == " --signal=B:10@30"
-        )
-        assert (
-            get_slurm_signal_arg(setting, "signal_python")
-            == " --signal=R:15@45"
-        )
+        assert get_slurm_signal_arg(setting, "signal_shell") == " --signal=B:10@30"
+        assert get_slurm_signal_arg(setting, "signal_python") == " --signal=R:15@45"
 
     def test_all_keyword_applies_to_any_rule(self):
         """The 'all' keyword applies signal to any rule not explicitly configured."""
-        assert (
-            get_slurm_signal_arg("all:SIGUSR1@60", "any_rule")
-            == " --signal=B:10@60"
-        )
+        assert get_slurm_signal_arg("all:SIGUSR1@60", "any_rule") == " --signal=B:10@60"
         assert (
             get_slurm_signal_arg("all:R:SIGTERM@45", "other_rule")
             == " --signal=R:15@45"
@@ -95,15 +87,9 @@ class TestSlurmSignalParsing:
         """An explicit rule setting overrides the 'all' setting."""
         setting = "all:SIGUSR1@60,signal_python:SIGTERM@30"
         # signal_python has explicit config
-        assert (
-            get_slurm_signal_arg(setting, "signal_python")
-            == " --signal=B:15@30"
-        )
+        assert get_slurm_signal_arg(setting, "signal_python") == " --signal=B:15@30"
         # other_rule falls back to 'all'
-        assert (
-            get_slurm_signal_arg(setting, "other_rule")
-            == " --signal=B:10@60"
-        )
+        assert get_slurm_signal_arg(setting, "other_rule") == " --signal=B:10@60"
 
 
 class TestSlurmSignalValidation:
@@ -125,8 +111,7 @@ class TestSlurmSignalValidation:
         """Using R: scope with --slurm-reservation should not raise an error."""
         # Should not raise
         ExecutorSettings(
-            signal="signal_shell:R:SIGTERM@30",
-            reservation="my_reservation"
+            signal="signal_shell:R:SIGTERM@30", reservation="my_reservation"
         )
 
     def test_signal_cannot_be_overridden_via_slurm_extra(self, mock_job):

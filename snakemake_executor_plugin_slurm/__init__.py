@@ -302,17 +302,16 @@ class ExecutorSettings(ExecutorSettingsBase):
         default=None,
         metadata={
             "help": "Send signal to jobs before wall time (SLURM format). "
-                    "Format: --slurm-signal=RULE[:SCOPE]:SIGNAL@TIME. "
-                    "SCOPE: B (batch, default) or R (reservation). "
-                    "SIGNAL: name (SIGTERM) or number (15). TIME: seconds before wall time. "
-                    "Use RULE='all' for all rules. Examples: "
-                    "--slurm-signal=rule1:SIGTERM@30 --slurm-signal=rule2:R:SIGUSR1@60 "
-                    "--slurm-signal=all:15@45",
+            "Format: --slurm-signal=RULE[:SCOPE]:SIGNAL@TIME. "
+            "SCOPE: B (batch, default) or R (reservation). "
+            "SIGNAL: name (SIGTERM) or number (15). TIME: seconds before wall time. "
+            "Use RULE='all' for all rules. Examples: "
+            "--slurm-signal=rule1:SIGTERM@30 --slurm-signal=rule2:R:SIGUSR1@60 "
+            "--slurm-signal=all:15@45",
             "env_var": False,
             "required": False,
         },
     )
-
 
     qos: Optional[str] = field(
         default=None,
