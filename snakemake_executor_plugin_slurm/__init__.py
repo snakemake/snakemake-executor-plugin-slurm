@@ -38,6 +38,7 @@ from .accounts import (
 from .utils import (
     delete_slurm_environment,
     delete_empty_dirs,
+    get_slurm_signal_arg,
     set_gres_string,
 )
 from .job_status_query import (
@@ -292,6 +293,21 @@ class ExecutorSettings(ExecutorSettingsBase):
             "will be performed after the next status check interval. "
             "The default is 5 status attempts before giving up. The maximum "
             "time between status checks is 180 seconds.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
+    signal: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": "Send signal to jobs before wall time (SLURM format). "
+            "Format: --slurm-signal=RULE[:SCOPE]:SIGNAL@TIME. "
+            "SCOPE: B (batch, default) or R (reservation). "
+            "SIGNAL: name (SIGTERM) or number (15). TIME: seconds before wall time. "
+            "Use RULE='all' for all rules. Examples: "
+            "--slurm-signal=rule1:SIGTERM@30 --slurm-signal=rule2:R:SIGUSR1@60 "
+            "--slurm-signal=all:15@45",
             "env_var": False,
             "required": False,
         },
@@ -615,6 +631,11 @@ class Executor(RemoteExecutor):
 
         if self.workflow.executor_settings.reservation:
             call += f" --reservation={self.workflow.executor_settings.reservation}"
+
+        call += get_slurm_signal_arg(
+            self.workflow.executor_settings.signal,
+            job.name,
+        )
 
         # we exclude failed nodes from further job submissions, to avoid
         # repeated failures.
