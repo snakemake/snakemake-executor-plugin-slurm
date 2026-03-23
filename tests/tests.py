@@ -19,7 +19,6 @@ from snakemake_executor_plugin_slurm.validation import (
     validate_or_get_slurm_job_id,
 )
 from snakemake_interface_common.exceptions import WorkflowError
-from .test_jobsignalling import mock_job
 
 
 class TestWorkflows(snakemake.common.tests.TestWorkflowsLocalStorageBase):
