@@ -223,7 +223,8 @@ def validate_executor_settings(settings, logger=None):
     # signal
     parse_slurm_signal_settings(settings.signal)
 
-    # Validate that if any signal uses reservation scope (R:), a reservation is configured
+    # Validate that if any signal uses reservation scope (R:), a reservation is 
+    # configured
     if settings.signal:
         parsed_signals = parse_slurm_signal_settings(settings.signal)
         for rule_name, signal_spec in parsed_signals.items():
@@ -233,7 +234,8 @@ def validate_executor_settings(settings, logger=None):
                     raise WorkflowError(
                         f"Signal for rule '{rule_name}' targets reservation (R:) "
                         "but no --slurm-reservation is configured. "
-                        "Either specify a reservation or change the signal to use batch (B:) scope."
+                        "Either specify a reservation or change the signal to use "
+                        "batch (B:) scope."
                     )
 
     # status_command warnings (optional logger)
