@@ -28,7 +28,7 @@ black = "^23.7.0"
 flake8 = "^6.1.0"
 coverage = "^7.3.1"
 pytest = "^8.3.5"
-snakemake = "^9.6.0"
+snakemake = "^9.17.2"
 pandas = "^2.2.3"
 
 [tool.poetry.scripts]
