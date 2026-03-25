@@ -368,6 +368,20 @@ class TestGresString:
             ):
                 set_gres_string(job)
 
+    def test_tmpspace_gres_10G(self, mock_job):
+        """Test with valid GRES format (simple)."""
+        job = mock_job(gres="tmpspace:10G")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+        assert set_gres_string(job) == " --gres=tmpspace:10G"
+
     def test_both_gres_and_gpu_set(self, mock_job):
         """Test error case when both GRES and GPU are specified."""
         job = mock_job(gres="gpu:1", gpu="2")

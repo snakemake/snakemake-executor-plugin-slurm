@@ -251,8 +251,9 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     based on the resources requested in the job.
     """
     # generic resources (GRES) arguments can be of type
-    # "string:int" or "string:string:int"
-    gres_re = re.compile(r"^[a-zA-Z0-9_]+(:[a-zA-Z0-9_\.]+)?:\d+$")
+    # "string:int" or "string:string:int" with optional postfix 'T' or 'G' or 'M'
+    gres_re = re.compile(r"^[a-zA-Z0-9_]+(:[a-zA-Z0-9_\.]+)?:\d+[TGM]?$")
+
     # gpu model arguments can be of type "string"
     # The model string may contain a dot for variants, see
     # https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/387
@@ -288,14 +289,16 @@ def set_gres_string(job: JobExecutorInterface) -> str:
                     "GRES format should not be a nested string (start "
                     "and end with ticks or quotation marks). "
                     "Expected format: "
-                    "'<name>:<number>' or '<name>:<type>:<number>' "
+                    "'<name>:<number>' or '<name>:<type>:<number>' with an optional "
+                    "'T' 'M' or 'G' postfix "
                     "(e.g., 'gpu:1' or 'gpu:tesla:2')"
                 )
             else:
                 raise WorkflowError(
                     f"Invalid GRES format: {gres}. Expected format: "
-                    "'<name>:<number>' or '<name>:<type>:<number>' "
-                    "(e.g., 'gpu:1' or 'gpu:tesla:2')"
+                    "'<name>:<number>' or '<name>:<type>:<number>' with an optional "
+                    "'T' 'M' or 'G' postfix "
+                    "(e.g., 'gpu:1' or 'gpu:tesla:2') "
                 )
         return f" --gres={job.resources.gres}"
 
