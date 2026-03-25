@@ -1377,7 +1377,7 @@ class Executor(RemoteExecutor):
             cumulative_avg_duration = (
                 self._status_query_total_seconds / self._status_query_calls
             )
-            self.logger.info(
+            self.logger.debug(
                 "Status query timing (cumulative): "
                 f"calls={self._status_query_calls}, "
                 f"failures={self._status_query_failures}, "
