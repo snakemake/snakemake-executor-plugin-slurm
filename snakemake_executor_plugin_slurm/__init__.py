@@ -676,10 +676,10 @@ class Executor(RemoteExecutor):
                 "all" in self.array_jobs or rule_name in self.array_jobs
             )
             # TODO: use more sensible logging information, once finished
-            self.logger.info(
+            self.logger.debug(
                 f"Running jobs for rule: {rule_name}, " f"{same_rule_jobs}"
             )
-            self.logger.info("Current array job settings: " f"{self.array_jobs}")
+            self.logger.debug("Current array job settings: " f"{self.array_jobs}")
 
             if array_selected_for_rule:
                 dag = getattr(self.workflow, "dag", None)
