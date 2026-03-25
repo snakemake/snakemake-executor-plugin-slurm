@@ -832,7 +832,14 @@ $ salloc -A <your SLURM account> -p <your partition> \
 > --time <enough time> \
 > <further arguments, e.g. memory>
 ```
-
 You need to consider the extra waiting time for jobs to start on your cluster, when choosing a value for the `--time` flag.
 
-Note that `salloc` opens a subshell. Exit it before starting another interactive job in the same terminal -- even if the previous job has completed.
+Once the allocation is granted do
+```console
+unset ${!SLURM*}
+srun snakemake ...
+```
+
+.. note:: Unsetting the SLURM variables will get rid of the warning the executor will raise because by running in a SLURM context it cannot ensure a stable run. We still cannot ensure side-effects of certain SLURM- or cluster settings.
+
+.. note:: Note that `salloc` opens a subshell. Exit it before starting another interactive job in the same terminal -- even if the previous job has completed.
