@@ -1053,6 +1053,10 @@ class _LocalTestcasesBase(snakemake.common.tests.TestWorkflowsLocalStorageBase):
     (e.g. tests/testcases/array_jobs/) are found correctly.
     """
 
+    def get_config_settings(self) -> Optional[ConfigSettings]:
+        """Provide default config settings for local testcase workflows."""
+        return None
+
     def run_workflow(self, test_name, tmp_path, deployment_method=frozenset()):
         test_path = Path(__file__).parent / "testcases" / test_name
         if not test_path.exists():
