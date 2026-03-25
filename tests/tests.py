@@ -1032,7 +1032,73 @@ Job ID: 999000"""
         assert result == "999000"
 
 
-class TestArrayJobsAll(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+class _LocalTestcasesBase(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+    """Mixin that resolves testcase paths relative to this plugin's tests/ directory.
+
+    Overrides run_workflow so that testcases not shipped with snakemake itself
+    (e.g. tests/testcases/array_jobs/) are found correctly.
+    """
+
+    def run_workflow(self, test_name, tmp_path, deployment_method=frozenset()):
+        test_path = Path(__file__).parent / "testcases" / test_name
+        if self.omit_tmp:
+            tmp_path = test_path
+        else:
+            tmp_path = Path(tmp_path) / test_name
+            self._copy_test_files(test_path, tmp_path)
+
+        resource_settings = self.get_resource_settings()
+
+        if self._common_settings().local_exec:
+            resource_settings.cores = 3
+            resource_settings.nodes = None
+        else:
+            resource_settings.cores = 1
+            resource_settings.nodes = 3
+
+        with api.SnakemakeApi(
+            settings.OutputSettings(
+                verbose=True,
+                show_failed_logs=True,
+            ),
+        ) as snakemake_api:
+            workflow_api = snakemake_api.workflow(
+                config_settings=self.get_config_settings(),
+                resource_settings=resource_settings,
+                storage_settings=settings.StorageSettings(
+                    default_storage_provider=self.get_default_storage_provider(),
+                    default_storage_prefix=self.get_default_storage_prefix(),
+                    shared_fs_usage=(
+                        settings.SharedFSUsage.all()
+                        if self.get_assume_shared_fs()
+                        else frozenset()
+                    ),
+                ),
+                deployment_settings=self.get_deployment_settings(deployment_method),
+                storage_provider_settings=self.get_default_storage_provider_settings(),
+                workdir=Path(tmp_path),
+                snakefile=tmp_path / "Snakefile",
+            )
+
+            dag_api = workflow_api.dag()
+
+            if self.create_report:
+                dag_api.create_report(
+                    reporter=self.get_reporter(),
+                    report_settings=self.get_report_settings(),
+                )
+            else:
+                dag_api.execute_workflow(
+                    executor=self.get_executor(),
+                    executor_settings=self.get_executor_settings(),
+                    execution_settings=settings.ExecutionSettings(
+                        latency_wait=self.latency_wait,
+                    ),
+                    remote_execution_settings=self.get_remote_execution_settings(),
+                )
+
+
+class TestArrayJobsAll(_LocalTestcasesBase):
     """Integration test: submit 4 copy_number jobs as one array (array_jobs='all').
 
     Uses the testcases/array_jobs workflow which has exactly 4 SLURM jobs
@@ -1055,7 +1121,7 @@ class TestArrayJobsAll(snakemake.common.tests.TestWorkflowsLocalStorageBase):
         self.run_workflow("array_jobs", tmp_path)
 
 
-class TestArrayJobsAllWithLimit(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+class TestArrayJobsAllWithLimit(_LocalTestcasesBase):
     """Integration test: submit 4 copy_number jobs as two arrays of size 2.
 
     array_limit=2 means run_array_jobs will chunk the 4 ready jobs into
