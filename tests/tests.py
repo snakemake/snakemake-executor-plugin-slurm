@@ -1041,6 +1041,9 @@ class _LocalTestcasesBase(snakemake.common.tests.TestWorkflowsLocalStorageBase):
 
     def run_workflow(self, test_name, tmp_path, deployment_method=frozenset()):
         test_path = Path(__file__).parent / "testcases" / test_name
+        if not test_path.exists():
+            return super().run_workflow(test_name, tmp_path, deployment_method)
+
         if self.omit_tmp:
             tmp_path = test_path
         else:
