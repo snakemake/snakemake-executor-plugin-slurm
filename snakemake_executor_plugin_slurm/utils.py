@@ -72,8 +72,34 @@ def get_job_wildcards(job: JobExecutorInterface) -> str:
 
 
 def pending_jobs_for_rule(dag: DAGExecutorInterface, rule_name: str) -> int:
-    """Count pending jobs for a given rule in the DAG."""
-    counts = Counter(job.rule.name for job in dag.needrun_jobs())
+    """Count jobs of a rule that are currently eligible for scheduling.
+
+    Prefer DAG ``ready_jobs`` if available because it reflects jobs that can
+    run now. Fall back to ``needrun_jobs`` for compatibility with interfaces
+    that do not expose ready jobs.
+    """
+    # Previous implementation (kept as requested for reference):
+    # counts = Counter(job.rule.name for job in dag.needrun_jobs())
+    # return counts.get(rule_name, 0)
+
+    jobs = None
+
+    ready_jobs_attr = getattr(dag, "ready_jobs", None)
+    if callable(ready_jobs_attr):
+        jobs = ready_jobs_attr()
+    elif ready_jobs_attr is not None:
+        jobs = ready_jobs_attr
+
+    if jobs is None:
+        needrun_jobs_attr = getattr(dag, "needrun_jobs", None)
+        if callable(needrun_jobs_attr):
+            jobs = needrun_jobs_attr()
+        elif needrun_jobs_attr is not None:
+            jobs = needrun_jobs_attr
+        else:
+            jobs = []
+
+    counts = Counter(job.rule.name for job in jobs)
     return counts.get(rule_name, 0)
 
 
