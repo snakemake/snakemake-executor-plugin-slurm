@@ -59,7 +59,7 @@ from .job_status_query import (
 )
 from .job_cancellation import cancel_slurm_jobs
 from .efficiency_report import create_efficiency_report
-from .submit_string import get_submit_command
+from .submit_string import apply_mem_fudge, get_submit_command
 from .partitions import (
     get_default_partition,
     read_partition_file,
@@ -839,19 +839,6 @@ class Executor(RemoteExecutor):
                 "workdir": self.workflow.workdir_init,
             }
 
-            call = get_submit_command(
-                jobs[0],
-                job_params,
-                settings=self.workflow.executor_settings,
-                failed_nodes=self._failed_nodes,
-            )
-            if self._failed_nodes:
-                self.logger.debug(
-                    "Excluding failed nodes from array job submission: "
-                    f"{','.join(self._failed_nodes)}"
-                )
-            call += set_gres_string(jobs[0])
-
             if not jobs[0].resources.get("runtime"):
                 self.logger.warning(
                     "No wall time information given. This might or might not "
@@ -877,8 +864,20 @@ class Executor(RemoteExecutor):
                 for index, job in enumerate(jobs, start=1)
             }
 
-            # the actual array job call:
+            call = get_submit_command(
+                jobs[0],
+                job_params,
+                settings=self.workflow.executor_settings,
+                failed_nodes=self._failed_nodes,
+            )
+            if self._failed_nodes:
+                self.logger.debug(
+                    "Excluding failed nodes from array job submission: "
+                    f"{','.join(self._failed_nodes)}"
+                )
+            call += set_gres_string(jobs[0])
 
+            # the actual array job call:
             # we need to cycle over all jobs and submit up to `array_limit` jobs per
             # submission, to avoid hitting cluster limits or oversaturating the
             # command line limits
@@ -895,6 +894,11 @@ class Executor(RemoteExecutor):
                 array_execs_payload = base64.b64encode(
                     json.dumps(sub_array_execs).encode("utf-8")
                 ).decode()
+
+                # add memory fudge factor to the base call,
+                # to account for the extra memory needed by the
+                # jobstep process to hold and parse the array execs payload.
+                call = apply_mem_fudge(call, array_execs_payload)
 
                 use_script_submission = (
                     self.workflow.executor_settings.pass_command_as_script
