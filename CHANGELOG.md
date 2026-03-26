@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.6.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.5.4...v2.6.0) (2026-03-26)
+
+
+### Features
+
+* job arrays ([#174](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/174)) ([a51a5bf](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/a51a5bf8d68da22c635661cec115c9f914435d9f))
+* Set tmpspace with help of gres="tmpspace:10G" syntax ([#444](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/444)) ([c6f6658](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/c6f6658e97c85cde68d19cea84e85336cb04105a))
+
+
+### Bug Fixes
+
+* logo ([#439](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/439)) ([c4e3ec3](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/c4e3ec3fec987878495596cd8d9950c16da07bd3))
+
+
+### Documentation
+
+* add admin documentation ([#436](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/436)) ([8f7491f](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/8f7491f947ec9e379f2d9e1c0e92548b60964aa9))
+
 ## [2.5.4](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.5.3...v2.5.4) (2026-03-13)
 
 
