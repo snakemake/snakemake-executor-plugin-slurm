@@ -450,6 +450,18 @@ def get_slurm_signal_arg(signal_settings: Optional[str], rule_name: str) -> str:
 
     Checks for rule-specific signal first, then falls back to 'all' if set.
     """
+    # we need to check the signal settings, first.
+    signal_settings_pattern = (
+        r"^\s*(\w+)(?::[BR])?:\w+@\d+\s*" r"(,\s*\w+(?::[BR])?:\w+@\d+\s*)*$"
+    )
+    if not re.match(signal_settings_pattern, signal_settings):
+        raise WorkflowError(
+            f"Invalid signal specification: '{signal_settings}'. "
+            "Expected format: 'rule[:SCOPE]:SIGNAL@TIME' "
+            "(e.g., 'rule1:SIGTERM@30', 'rule2:R:15@60', "
+            "'all:SIGUSR1@45')."
+        )
+
     parsed = parse_slurm_signal_settings(signal_settings)
     # Check rule-specific first, then fall back to 'all'
     signal_value = parsed.get(rule_name) or parsed.get("all")
