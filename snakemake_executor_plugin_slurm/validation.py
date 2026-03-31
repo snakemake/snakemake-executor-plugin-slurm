@@ -223,7 +223,7 @@ def validate_executor_settings(settings, logger=None):
     # signal
     parse_slurm_signal_settings(settings.signal)
 
-    # Validate that if any signal uses reservation scope (R:), a reservation is 
+    # Validate that if any signal uses reservation scope (R:), a reservation is
     # configured
     if settings.signal:
         parsed_signals = parse_slurm_signal_settings(settings.signal)
