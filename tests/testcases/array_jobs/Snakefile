@@ -1,0 +1,57 @@
+"""
+Testcase workflow for SLURM array job integration tests.
+
+generate_numbers is a localrule that produces 4 input files.
+copy_number runs as a SLURM job for each of the 4 inputs,
+so the test always submits exactly 4 cluster jobs regardless of
+the array-limit setting.
+"""
+
+N = 4
+
+localrules:
+    generate_numbers,
+    collect
+
+
+rule all:
+    input:
+        "results/collected.txt"
+
+
+rule generate_numbers:
+    output:
+        expand("numbers/{i}.txt", i=range(1, N + 1)),
+    shell:
+        """
+        mkdir -p numbers
+        for i in $(seq 1 4); do
+            printf "%s\\n" "$i" > "numbers/$i.txt"
+        done
+        """
+
+
+rule copy_number:
+    input:
+        "numbers/{i}.txt",
+    output:
+        "copied/{i}.txt",
+    resources:
+        runtime=5,
+    shell:
+        """
+        mkdir -p copied
+        cp {input} {output}
+        """
+
+
+rule collect:
+    input:
+        expand("copied/{i}.txt", i=range(1, N + 1)),
+    output:
+        "results/collected.txt",
+    shell:
+        """
+        mkdir -p results
+        cat {input} | sort -n > {output}
+        """

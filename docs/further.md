@@ -332,6 +332,19 @@ This node tracking works regardless of whether the `--slurm-requeue` flag is ena
 - **With `--slurm-requeue`**: SLURM will automatically requeue failed jobs, and they will be retried on different nodes
 - **Without `--slurm-requeue`**: Failed jobs will be reported as errors, but future retries (via `--retries` or other retry mechanisms) will avoid the problematic nodes
 
+#### SLURM Job Arrays
+
+Using `--slurm-array-jobs` SLURM job arrays can be submitted. `--slurm-array-jobs=rule1,rule2,...` lets you select specific rules by name to be selected as an array job. Alternatively, `--slurm-array-jobs=all` will submit all eligible rules as array jobs.
+
+Note: group jobs cannot be array jobs.
+
+.. note:: Using array jobs does impose a synchronization overhead (all jobs of a particular rule need to be ready for execution).
+
+When submitting array jobs, the `--slurm-array-limit` flag defines the
+maximum number of array tasks to be submitted in one job submission.
+If the number of tasks exceeds this limit, multiple array job submissions will be performed. This is useful to avoid hitting cluster limits on the maximum number of array tasks per job. Please obey your cluster limits and set this flag accordingly.
+
+
 #### MPI-specific Resources
 
 Snakemake's SLURM executor plugin supports the execution of MPI ([Message Passing Interface](https://en.wikipedia.org/wiki/Message_Passing_Interface)) jobs.
@@ -836,3 +849,18 @@ $ salloc -A <your SLURM account> -p <your partition> \
 You need to consider the extra waiting time for jobs to start on your cluster, when choosing a value for the `--time` flag.
 
 Note that `salloc` opens a subshell. Exit it before starting another interactive job in the same terminal -- even if the previous job has completed.
+
+### Short Guide for HPC Cluster Administrators
+
+As an HPC cluster administrator, you can help your users to run Snakemake seamlessly on your cluster.
+Consider providing a global Snakemake profile and storing it at `/etc/xdg/snakemake` on login and cluster nodes. 
+Such a configuration will not interfere with other workflow management systems and can always be overwritten by a user - it merely defines sensible defaults.
+
+Cluster-specific profiles consist of two files:
+- the Snakemake-specific partition configuration
+- and a cluster profile which contains information about this SLURM executor, potential file system latency to consider, mount points for temporary files (e.g. a node-local scratch) and more.
+
+To obtain a template for a cluster-specific profile, search at the [Snakemake cluster profiles repository](https://github.com/snakemake/snakemake-cluster-profiles). This repository not only provides configuration templates, but also maintainer contacts and deployment hints.
+
+Your users will install Snakemake by Conda, add this Slurm executor plugin, and source code for their workflows. Alternatively, Snakemake is provided by [Spack](https://packages.spack.io/package.html?name=snakemake) and [Easybuild](https://docs.easybuild.io/version-specific/supported-software/s/snakemake/), which both update regularly.
+

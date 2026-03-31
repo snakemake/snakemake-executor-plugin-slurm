@@ -1,6 +1,7 @@
 from snakemake_interface_common.exceptions import WorkflowError
 from snakemake_executor_plugin_slurm_jobstep import get_cpu_setting
 from types import SimpleNamespace
+import re
 import shlex
 
 
@@ -16,12 +17,69 @@ def safe_quote(value):
     return shlex.quote(str_value)
 
 
-def get_submit_command(job, params):
+def _compute_array_exec_fudge_mb(payload: str) -> int:
+    """
+    Return the estimated extra memory (in MB) that the jobstep process will
+    need in order to hold and parse the array_exec payload
+    (the base64-encoded array-execs argument).
+
+    Within the jobstep the array_exec payload goes through several in-memory
+    representations:
+      1. The raw CLI string           (~1x payload bytes)
+      2. base64-decoded JSON bytes    (~0.75x payload bytes)
+      3. Python dict of hex strings   (~same as the JSON bytes)
+    Together that is roughly 3x the payload size.  We round up to the nearest
+    MiB and always allocate at least 1 MB so we never return 0.
+    """
+    payload_bytes = len(payload)  # payload is pure ASCII, so len == byte count
+    # Integer ceiling of (3 × payload_bytes) / 1 MiB
+    return max(1, -(-payload_bytes * 3 // (1024 * 1024)))
+
+
+def apply_mem_fudge(call: str, payload: str) -> str:
+    """Increase the ``--mem`` or ``--mem-per-cpu`` value already present in
+    *call* by *fudge_mb* MB.
+
+    If neither flag is present (user submitted without memory constraints) a
+    bare ``--mem <fudge_mb>`` is appended.  When *fudge_mb* is 0 or negative
+    the call is returned unchanged.
+    """
+    fudge_mb = _compute_array_exec_fudge_mb(payload)
+
+    # --mem-per-cpu <value>
+    new_call, n = re.subn(
+        r"(--mem-per-cpu\s+)(\d+)",
+        lambda m: f"{m.group(1)}{int(m.group(2)) + fudge_mb}",
+        call,
+        count=1,
+    )
+    if n:
+        return new_call
+
+    # --mem <value>
+    new_call, n = re.subn(
+        r"(--mem\s+)(\d+)",
+        lambda m: f"{m.group(1)}{int(m.group(2)) + fudge_mb}",
+        call,
+        count=1,
+    )
+    if n:
+        return new_call
+
+    # No memory flag present — add one so the fudge is not silently dropped.
+    return call + f" --mem {fudge_mb}"
+
+
+def get_submit_command(
+    job, params, settings=None, failed_nodes=None, array_job=False
+) -> str:
     """
     Return the submit command for the job.
     """
     # Convert params dict to a SimpleNamespace for attribute-style access
     params = SimpleNamespace(**params)
+
+    failed_nodes = failed_nodes or set()
 
     call = (
         "sbatch "
@@ -75,6 +133,20 @@ def get_submit_command(job, params):
 
     if job.resources.get("nodes", False):
         call += f" --nodes={job.resources.get('nodes', 1)}"
+
+    if settings and settings.requeue:
+        call += " --requeue"
+
+    if settings and settings.qos:
+        call += f" --qos={safe_quote(settings.qos)}"
+
+    if settings and settings.reservation:
+        call += f" --reservation={safe_quote(settings.reservation)}"
+
+    # we exclude failed nodes from further job submissions, to avoid
+    # repeated failures.
+    if failed_nodes:
+        call += f" --exclude={','.join(failed_nodes)}"
 
     gpu_job = job.resources.get("gpu") or "gpu" in job.resources.get("gres", "")
     if gpu_job:
