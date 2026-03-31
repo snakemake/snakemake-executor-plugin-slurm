@@ -137,14 +137,18 @@ class TestSlurmSignalInExecutor:
         executor.workflow = MagicMock(
             executor_settings=ExecutorSettings(
                 signal="signal_python:R:SIGTERM@15",
+                reservation="my_reservation",
                 init_seconds_before_status_checks=1,
             ),
             workdir_init=".",
         )
         executor.logger = MagicMock()
         executor._failed_nodes = set()
+        executor._main_event_loop = None
+        executor.slurm_logdir = tmp_path
+        executor.run_uuid = "test-run-uuid"
 
-        job = mock_job("signal_python")
+        job = mock_job("signal_python", slurm_extra="")
         job.threads = 1
         job.resources.get.side_effect = lambda key, default=None: {
             "runtime": 60,
@@ -159,7 +163,17 @@ class TestSlurmSignalInExecutor:
 
             with patch.object(executor, "format_job_exec", return_value="echo test"):
                 with patch.object(executor, "report_job_submission"):
-                    executor.run_job(job)
+                    with patch.object(
+                        executor,
+                        "get_account_arg",
+                        return_value=iter([""]),
+                    ):
+                        with patch.object(
+                            executor,
+                            "get_partition_arg",
+                            return_value="",
+                        ):
+                            executor.run_job(job)
 
             # Verify that --signal was included in the sbatch call
             assert mock_popen.called
@@ -172,14 +186,18 @@ class TestSlurmSignalInExecutor:
         executor.workflow = MagicMock(
             executor_settings=ExecutorSettings(
                 signal="signal_python:R:SIGTERM@15",
+                reservation="my_reservation",
                 init_seconds_before_status_checks=1,
             ),
             workdir_init=".",
         )
         executor.logger = MagicMock()
         executor._failed_nodes = set()
+        executor._main_event_loop = None
+        executor.slurm_logdir = tmp_path
+        executor.run_uuid = "test-run-uuid"
 
-        job = mock_job("other_rule")
+        job = mock_job("other_rule", slurm_extra="")
         job.threads = 1
         job.resources.get.side_effect = lambda key, default=None: {
             "runtime": 60,
@@ -194,7 +212,17 @@ class TestSlurmSignalInExecutor:
 
             with patch.object(executor, "format_job_exec", return_value="echo test"):
                 with patch.object(executor, "report_job_submission"):
-                    executor.run_job(job)
+                    with patch.object(
+                        executor,
+                        "get_account_arg",
+                        return_value=iter([""]),
+                    ):
+                        with patch.object(
+                            executor,
+                            "get_partition_arg",
+                            return_value="",
+                        ):
+                            executor.run_job(job)
 
             # Verify that --signal was NOT included
             assert mock_popen.called
