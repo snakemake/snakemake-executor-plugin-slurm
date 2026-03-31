@@ -368,6 +368,20 @@ class TestGresString:
             ):
                 set_gres_string(job)
 
+    def test_tmpspace_gres_10G(self, mock_job):
+        """Test with valid GRES format (simple)."""
+        job = mock_job(gres="tmpspace:10G")
+
+        # Patch subprocess.Popen to capture the sbatch command
+        with patch("subprocess.Popen") as mock_popen:
+            # Configure the mock to return successful submission
+            process_mock = MagicMock()
+            process_mock.communicate.return_value = ("123", "")
+            process_mock.returncode = 0
+            mock_popen.return_value = process_mock
+
+        assert set_gres_string(job) == " --gres=tmpspace:10G"
+
     def test_both_gres_and_gpu_set(self, mock_job):
         """Test error case when both GRES and GPU are specified."""
         job = mock_job(gres="gpu:1", gpu="2")
@@ -1030,3 +1044,122 @@ Used 100 files
 Job ID: 999000"""
         result = validate_or_get_slurm_job_id("999000", output)
         assert result == "999000"
+
+
+class _LocalTestcasesBase(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+    """Mixin that resolves testcase paths relative to this plugin's tests/ directory.
+
+    Overrides run_workflow so that testcases not shipped with snakemake itself
+    (e.g. tests/testcases/array_jobs/) are found correctly.
+    """
+
+    def get_config_settings(self) -> Optional[ConfigSettings]:
+        """Provide default config settings for local testcase workflows."""
+        return None
+
+    def run_workflow(self, test_name, tmp_path, deployment_method=frozenset()):
+        test_path = Path(__file__).parent / "testcases" / test_name
+        if not test_path.exists():
+            return super().run_workflow(test_name, tmp_path, deployment_method)
+
+        if self.omit_tmp:
+            tmp_path = test_path
+        else:
+            tmp_path = Path(tmp_path) / test_name
+            self._copy_test_files(test_path, tmp_path)
+
+        resource_settings = self.get_resource_settings()
+
+        if self._common_settings().local_exec:
+            resource_settings.cores = 3
+            resource_settings.nodes = None
+        else:
+            resource_settings.cores = 1
+            resource_settings.nodes = 3
+
+        with api.SnakemakeApi(
+            settings.OutputSettings(
+                verbose=True,
+                show_failed_logs=True,
+            ),
+        ) as snakemake_api:
+            workflow_api = snakemake_api.workflow(
+                config_settings=self.get_config_settings(),
+                resource_settings=resource_settings,
+                storage_settings=settings.StorageSettings(
+                    default_storage_provider=self.get_default_storage_provider(),
+                    default_storage_prefix=self.get_default_storage_prefix(),
+                    shared_fs_usage=(
+                        settings.SharedFSUsage.all()
+                        if self.get_assume_shared_fs()
+                        else frozenset()
+                    ),
+                ),
+                deployment_settings=self.get_deployment_settings(deployment_method),
+                storage_provider_settings=self.get_default_storage_provider_settings(),
+                workdir=Path(tmp_path),
+                snakefile=tmp_path / "Snakefile",
+            )
+
+            dag_api = workflow_api.dag()
+
+            if self.create_report:
+                dag_api.create_report(
+                    reporter=self.get_reporter(),
+                    report_settings=self.get_report_settings(),
+                )
+            else:
+                dag_api.execute_workflow(
+                    executor=self.get_executor(),
+                    executor_settings=self.get_executor_settings(),
+                    execution_settings=settings.ExecutionSettings(
+                        latency_wait=self.latency_wait,
+                    ),
+                    remote_execution_settings=self.get_remote_execution_settings(),
+                )
+
+
+class TestArrayJobsAll(_LocalTestcasesBase):
+    """Integration test: submit 4 copy_number jobs as one array (array_jobs='all').
+
+    Uses the testcases/array_jobs workflow which has exactly 4 SLURM jobs
+    (one copy_number instance per number). With no limit override the default
+    limit (1000) applies, so all 4 tasks land in a single array submission.
+    """
+
+    __test__ = True
+
+    def get_executor(self) -> str:
+        return "slurm"
+
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        return ExecutorSettings(
+            array_jobs="all",
+            init_seconds_before_status_checks=2,
+        )
+
+    def test_array_jobs_all(self, tmp_path):
+        self.run_workflow("array_jobs", tmp_path)
+
+
+class TestArrayJobsAllWithLimit(_LocalTestcasesBase):
+    """Integration test: submit 4 copy_number jobs as two arrays of size 2.
+
+    array_limit=2 means run_array_jobs will chunk the 4 ready jobs into
+    two sbatch submissions of --array=1-2 and --array=3-4.
+    """
+
+    __test__ = True
+
+    def get_executor(self) -> str:
+        return "slurm"
+
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        return ExecutorSettings(
+            array_jobs="all",
+            array_limit=2,
+            init_seconds_before_status_checks=2,
+        )
+
+    def test_array_jobs_all_with_limit(self, tmp_path):
+        self.run_workflow("array_jobs", tmp_path)

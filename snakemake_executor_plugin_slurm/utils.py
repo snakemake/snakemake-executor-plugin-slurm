@@ -1,15 +1,106 @@
 # utility functions for the SLURM executor plugin
 
+from collections import Counter
 import math
 import os
+import shlex
+import subprocess
 import re
 from pathlib import Path
 from typing import Union
 
+from snakemake_interface_executor_plugins.dag import DAGExecutorInterface
 from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
 from snakemake_interface_common.exceptions import WorkflowError
+
+
+def get_max_array_size() -> int:
+    """
+    Function to get the maximum array size for SLURM job arrays. This is used
+    to determine how many jobs can be submitted in a single array job.
+
+    Returns:
+        The maximum array size for SLURM job arrays, as an integer.
+        Defaults to 1000 if the SLURM_ARRAY_MAX environment variable is not set
+        or cannot be parsed as an integer.
+    """
+    max_array_size_str = None
+    scontrol_cmd = "scontrol show config"
+    try:
+        res = subprocess.run(
+            shlex.split(scontrol_cmd),
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        out = (res.stdout or "") + (res.stderr or "")
+        m = re.search(r"MaxArraySize\s*=?\s*(\d+)", out, re.IGNORECASE)
+        if m:
+            max_array_size_str = m.group(1)
+    except (subprocess.SubprocessError, OSError):
+        max_array_size_str = None
+
+    try:
+        max_array_size = int(max_array_size_str)
+    except (ValueError, TypeError):
+        max_array_size = 1000
+    # The SLURM_ARRAY_MAX limits to its value -1
+    return max_array_size - 1
+
+
+def get_job_wildcards(job: JobExecutorInterface) -> str:
+    """
+    Function to get the wildcards of a job as a string. This is used to
+    create the job name for the SLURM job submission.
+
+    Args:
+        job: The JobExecutorInterface instance representing the job
+    Returns:
+        A string representation of the job's wildcards, with slashes replaced
+        by underscores.
+    """
+    try:
+        wildcard_str = (
+            "_".join(job.wildcards).replace("/", "_") if job.wildcards else ""
+        )
+    except AttributeError:
+        wildcard_str = ""
+
+    return wildcard_str
+
+
+def pending_jobs_for_rule(dag: DAGExecutorInterface, rule_name: str) -> int:
+    """Count jobs of a rule that are currently eligible for scheduling.
+
+    Prefer DAG ``ready_jobs`` if available because it reflects jobs that can
+    run now. Fall back to ``needrun_jobs`` for compatibility with interfaces
+    that do not expose ready jobs.
+    """
+    # Previous implementation (kept as requested for reference):
+    # counts = Counter(job.rule.name for job in dag.needrun_jobs())
+    # return counts.get(rule_name, 0)
+
+    jobs = None
+
+    ready_jobs_attr = getattr(dag, "ready_jobs", None)
+    if callable(ready_jobs_attr):
+        jobs = ready_jobs_attr()
+    elif ready_jobs_attr is not None:
+        jobs = ready_jobs_attr
+
+    if jobs is None:
+        needrun_jobs_attr = getattr(dag, "needrun_jobs", None)
+        if callable(needrun_jobs_attr):
+            jobs = needrun_jobs_attr()
+        elif needrun_jobs_attr is not None:
+            jobs = needrun_jobs_attr
+        else:
+            jobs = []
+
+    counts = Counter(job.rule.name for job in jobs)
+    return counts.get(rule_name, 0)
 
 
 def round_half_up(n):
@@ -251,8 +342,9 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     based on the resources requested in the job.
     """
     # generic resources (GRES) arguments can be of type
-    # "string:int" or "string:string:int"
-    gres_re = re.compile(r"^[a-zA-Z0-9_]+(:[a-zA-Z0-9_\.]+)?:\d+$")
+    # "string:int" or "string:string:int" with optional postfix 'T' or 'G' or 'M'
+    gres_re = re.compile(r"^[a-zA-Z0-9_]+(:[a-zA-Z0-9_\.]+)?:\d+[TGM]?$")
+
     # gpu model arguments can be of type "string"
     # The model string may contain a dot for variants, see
     # https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/387
@@ -288,14 +380,16 @@ def set_gres_string(job: JobExecutorInterface) -> str:
                     "GRES format should not be a nested string (start "
                     "and end with ticks or quotation marks). "
                     "Expected format: "
-                    "'<name>:<number>' or '<name>:<type>:<number>' "
+                    "'<name>:<number>' or '<name>:<type>:<number>' with an optional "
+                    "'T' 'M' or 'G' postfix "
                     "(e.g., 'gpu:1' or 'gpu:tesla:2')"
                 )
             else:
                 raise WorkflowError(
                     f"Invalid GRES format: {gres}. Expected format: "
-                    "'<name>:<number>' or '<name>:<type>:<number>' "
-                    "(e.g., 'gpu:1' or 'gpu:tesla:2')"
+                    "'<name>:<number>' or '<name>:<type>:<number>' with an optional "
+                    "'T' 'M' or 'G' postfix "
+                    "(e.g., 'gpu:1' or 'gpu:tesla:2') "
                 )
         return f" --gres={job.resources.gres}"
 
