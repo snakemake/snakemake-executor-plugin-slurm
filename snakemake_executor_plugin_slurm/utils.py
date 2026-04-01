@@ -336,23 +336,23 @@ def delete_empty_dirs(path: Path) -> None:
         # Provide more context in the error message
         raise OSError(f"Failed to remove empty directory {path}: {e}") from e
 
-
+# only run this parser once per unique input string
+# chache the results for efficiency.
 @lru_cache(maxsize=None)
 def parse_slurm_signal_settings(signal_settings: Optional[str]) -> dict[str, str]:
     """
-    Parse rule-specific SLURM signal settings (format: rule[:SCOPE]:SIGNAL@TIME).
+    Parse rule-specific SLURM signal settings (format: rule:SIGNAL@TIME).
 
     - rule: rule name or 'all' for all rules
-    - SCOPE: B (batch script, default) or R (reservation)
     - SIGNAL: signal name (SIGTERM, SIGUSR1) or number (15, 10)
     - TIME: seconds before wall time (must be >= 1)
 
     Examples:
-    - rule1:SIGTERM@30 → batch script, SIGTERM at 30 secs
-    - rule2:R:SIGUSR1@60 → reservation, SIGUSR1 at 60 secs
+    - rule1:SIGTERM@30 → SIGTERM at 30 secs
+    - rule2:SIGUSR1@60 → SIGUSR1 at 60 secs
     - all:15@45 → all rules, signal 15 at 45 secs
 
-    Returns dict mapping rule names to SLURM signal specs: [B:|R:]<sig_num>@<time>
+    Returns dict mapping rule names to SLURM signal specs: <signal>@<time>
     """
     if not signal_settings:
         return {}
@@ -392,9 +392,9 @@ def parse_slurm_signal_settings(signal_settings: Optional[str]) -> dict[str, str
         "SIGSYS": 31,
     }
 
-    # Pattern: rule[:SCOPE]:SIGNAL@TIME where SCOPE is optional (B|R)
+    # Pattern: rule:SIGNAL@TIME
     pattern = re.compile(
-        r"^(?P<rule>\w+)(?::(?P<scope>[BR]))?:(?P<signal>\w+)@(?P<seconds>\d+)$"
+        r"^(?P<rule>\w+):(?P<signal>\w+)@(?P<seconds>\d+)$"
     )
 
     for raw_entry in signal_settings.split(","):
@@ -402,15 +402,15 @@ def parse_slurm_signal_settings(signal_settings: Optional[str]) -> dict[str, str
         if not entry:
             raise WorkflowError(
                 "Invalid signal specification: empty entry found. "
-                "Expected 'rule[:SCOPE]:SIGNAL@TIME' (e.g., 'rule1:SIGTERM@30')."
+                "Expected 'rule:SIGNAL@TIME' (e.g., 'rule1:SIGTERM@30')."
             )
 
         match = pattern.fullmatch(entry)
         if match is None:
             raise WorkflowError(
                 f"Invalid signal specification '{entry}'. "
-                "Expected 'rule[:SCOPE]:SIGNAL@TIME' (e.g., 'rule1:SIGTERM@30', "
-                "'rule2:R:15@60', 'all:SIGUSR1@45')."
+                "Expected 'rule:SIGNAL@TIME' (e.g., 'rule1:SIGTERM@30', "
+                "'rule2:15@60', 'all:SIGUSR1@45')."
             )
 
         rule_name = match.group("rule")
@@ -420,7 +420,7 @@ def parse_slurm_signal_settings(signal_settings: Optional[str]) -> dict[str, str
             )
 
         signal_str = match.group("signal")
-        # Convert signal name to number if needed
+        # Validate signal name or number.
         if signal_str.isdigit():
             signal_num = int(signal_str)
             if signal_num < 1 or signal_num > 31:
@@ -439,8 +439,7 @@ def parse_slurm_signal_settings(signal_settings: Optional[str]) -> dict[str, str
         if seconds < 1:
             raise WorkflowError("Signal lead time must be at least 1 second.")
 
-        scope = match.group("scope") or "B"  # Default to batch script
-        parsed_settings[rule_name] = f"{scope}:{signal_num}@{seconds}"
+        parsed_settings[rule_name] = f"{signal_str}@{seconds}"
 
     return parsed_settings
 
@@ -451,14 +450,15 @@ def get_slurm_signal_arg(signal_settings: Optional[str], rule_name: str) -> str:
     Checks for rule-specific signal first, then falls back to 'all' if set.
     """
     # we need to check the signal settings, first.
-    signal_settings_pattern = (
-        r"^\s*(\w+)(?::[BR])?:\w+@\d+\s*" r"(,\s*\w+(?::[BR])?:\w+@\d+\s*)*$"
-    )
+    if not signal_settings:
+        return ""
+
+    signal_settings_pattern = r"^\s*\w+:\w+@\d+\s*(,\s*\w+:\w+@\d+\s*)*$"
     if not re.match(signal_settings_pattern, signal_settings):
         raise WorkflowError(
             f"Invalid signal specification: '{signal_settings}'. "
-            "Expected format: 'rule[:SCOPE]:SIGNAL@TIME' "
-            "(e.g., 'rule1:SIGTERM@30', 'rule2:R:15@60', "
+            "Expected format: 'rule:SIGNAL@TIME' "
+            "(e.g., 'rule1:SIGTERM@30', 'rule2:15@60', "
             "'all:SIGUSR1@45')."
         )
 
