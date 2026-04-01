@@ -203,7 +203,7 @@ class TestSignalWorkflow(snakemake.common.tests.TestWorkflowsLocalStorageBase):
 
     def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
         return ExecutorSettings(
-            signal="signal_shell:SIGUSR1@30,signal_python:R:SIGUSR1@30",
+            signal="signal_shell:SIGUSR1@30,signal_python:SIGUSR1@30",
             init_seconds_before_status_checks=2,
         )
 
