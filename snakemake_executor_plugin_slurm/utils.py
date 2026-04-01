@@ -336,6 +336,7 @@ def delete_empty_dirs(path: Path) -> None:
         # Provide more context in the error message
         raise OSError(f"Failed to remove empty directory {path}: {e}") from e
 
+
 # only run this parser once per unique input string
 # chache the results for efficiency.
 @lru_cache(maxsize=None)
@@ -393,9 +394,7 @@ def parse_slurm_signal_settings(signal_settings: Optional[str]) -> dict[str, str
     }
 
     # Pattern: rule:SIGNAL@TIME
-    pattern = re.compile(
-        r"^(?P<rule>\w+):(?P<signal>\w+)@(?P<seconds>\d+)$"
-    )
+    pattern = re.compile(r"^(?P<rule>\w+):(?P<signal>\w+)@(?P<seconds>\d+)$")
 
     for raw_entry in signal_settings.split(","):
         entry = raw_entry.strip()
