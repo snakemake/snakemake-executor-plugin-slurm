@@ -1590,7 +1590,7 @@ We leave it to SLURM to resume your job(s)"""
             # split the account upon ',' and whitespace, to allow
             # multiple accounts being given
             accounts = [
-                a for a in re.split(r"[,\s]+", job.resources.slurm_account) if a
+                a for a in re.split(r"[,\s]+", str(job.resources.slurm_account)) if a
             ]
             for account in accounts:
                 # here, we check whether the given or guessed account is valid
@@ -1602,7 +1602,7 @@ We leave it to SLURM to resume your job(s)"""
             # contain build-in shell commands - see issue #354
             for account in accounts:
                 test_account(account, self.logger)
-                yield f" -A {shlex.quote(account)}"
+                yield f" -A {shlex.quote(str(account))}"
         else:
             if self._fallback_account_arg is None:
                 self.logger.warning("No SLURM account given, trying to guess.")
@@ -1610,7 +1610,7 @@ We leave it to SLURM to resume your job(s)"""
                 if account:
                     self.logger.warning(f"Guessed SLURM account: {account}")
                     test_account(f"{account}", self.logger)
-                    self._fallback_account_arg = f" -A {shlex.quote(account)}"
+                    self._fallback_account_arg = f" -A {shlex.quote(str(account))}"
                 else:
                     self.logger.warning(
                         "Unable to guess SLURM account. Trying to proceed without."
