@@ -1293,7 +1293,7 @@ class Executor(RemoteExecutor):
         # slurmdbd/accounting hiccups where job states are briefly incomplete.
         for i in range(status_attempts):
             async with self.status_rate_limiter:
-                (status_of_jobs, sacct_query_duration) = await query_job_status(
+                status_of_jobs, sacct_query_duration = await query_job_status(
                     status_command, self.logger
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
@@ -1589,8 +1589,10 @@ We leave it to SLURM to resume your job(s)"""
         if job.resources.get("slurm_account"):
             # split the account upon ',' and whitespace, to allow
             # multiple accounts being given
+            # Note: YAML parsing may convert numeric strings (e.g. "123456") to int.
+            # Ensure we always work with strings for re.split and shlex.quote.
             accounts = [
-                a for a in re.split(r"[,\s]+", job.resources.slurm_account) if a
+                a for a in re.split(r"[,\s]+", str(job.resources.slurm_account)) if a
             ]
             for account in accounts:
                 # here, we check whether the given or guessed account is valid
