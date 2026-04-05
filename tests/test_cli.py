@@ -34,12 +34,11 @@ def _make_executor(jobname_prefix: str):
 def test_jobname_prefix_applied():
     executor = _make_executor("testprefix")
 
-    with patch.object(Executor, "warn_on_jobcontext", return_value=None):
-        with patch(
-            "snakemake_executor_plugin_slurm.uuid.uuid4",
-            return_value=uuid.UUID("00000000-0000-0000-0000-000000000000"),
-        ):
-            executor.__post_init__(test_mode=True)
+    with patch(
+        "snakemake_executor_plugin_slurm.uuid.uuid4",
+        return_value=uuid.UUID("00000000-0000-0000-0000-000000000000"),
+    ):
+        executor.__post_init__(test_mode=True)
 
     assert executor.run_uuid == "testprefix_00000000-0000-0000-0000-000000000000"
 
@@ -47,6 +46,5 @@ def test_jobname_prefix_applied():
 def test_jobname_prefix_validation():
     executor = _make_executor("bad!prefix")
 
-    with patch.object(Executor, "warn_on_jobcontext", return_value=None):
-        with pytest.raises(WorkflowError, match="jobname_prefix"):
-            executor.__post_init__(test_mode=True)
+    with pytest.raises(WorkflowError, match="jobname_prefix"):
+        executor.__post_init__(test_mode=True)

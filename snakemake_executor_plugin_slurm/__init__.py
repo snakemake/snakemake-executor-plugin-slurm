@@ -428,9 +428,22 @@ def _select_logdir(workflow):
 # Required:
 # Implementation of your executor
 class Executor(RemoteExecutor):
+    def __init__(self, workflow, logger):
+        # Must clean SLURM environment BEFORE super().__init__() starts
+        # the wait_thread, otherwise the thread races with __post_init__
+        # and silently dies, causing the pipeline to hang forever.
+        if "SLURM_JOB_ID" in os.environ:
+            logger.warning(
+                "You are running snakemake in a SLURM job context. "
+                "This is not recommended, as it may lead to unexpected "
+                "behavior. "
+                "If possible, please run Snakemake directly on the "
+                "login node."
+            )
+            delete_slurm_environment()
+        super().__init__(workflow, logger)
+
     def __post_init__(self, test_mode: bool = False):
-        # run check whether we are running in a SLURM job context
-        self.warn_on_jobcontext()
         self.test_mode = test_mode
 
         self.run_uuid = str(uuid.uuid4())
@@ -617,19 +630,6 @@ class Executor(RemoteExecutor):
                 f"Could not delete empty directories in {self.slurm_logdir}: {e}"
             )
 
-    def warn_on_jobcontext(self, done=None):
-        if not done:
-            if "SLURM_JOB_ID" in os.environ:
-                self.logger.warning(
-                    "You are running snakemake in a SLURM job context. "
-                    "This is not recommended, as it may lead to unexpected "
-                    "behavior. "
-                    "If possible, please run Snakemake directly on the "
-                    "login node."
-                )
-                time.sleep(5)
-                delete_slurm_environment()
-        done = True
 
     def additional_general_args(self):
         """
