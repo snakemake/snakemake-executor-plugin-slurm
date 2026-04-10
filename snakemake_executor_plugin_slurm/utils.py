@@ -342,35 +342,22 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     based on the resources requested in the job.
     """
     # generic resources (GRES) arguments can be of type
-    # "string:int" or "string:string:int" with optional postfix 'T' or 'G' or 'M'
-    gres_re = re.compile(r"^[a-zA-Z0-9_]+(:[a-zA-Z0-9_\.]+)?:\d+[TGM]?$")
+    # "string", "string:int" or "string:string:int" with optional postfix 'T' or 'G' or 'M'
+    gres_re = re.compile(r"^[a-zA-Z0-9_]+(:[a-zA-Z0-9_\.]+)?(:\d+[TGM]?)?$")
 
     # gpu model arguments can be of type "string"
     # The model string may contain a dot for variants, see
     # https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/387
     gpu_model_re = re.compile(r"^[a-zA-Z0-9_\.]+$")
+
     # any arguments should not start and end with ticks or
     # quotation marks:
     string_check = re.compile(r"^[^'\"].*[^'\"]$")
+
     # The Snakemake resources can be only be of type "int",
     # hence no further regex is needed.
 
-    gpu_string = None
-    if job.resources.get("gpu"):
-        gpu_string = str(job.resources.get("gpu"))
-
-    gpu_model = None
-    if job.resources.get("gpu_model"):
-        gpu_model = job.resources.get("gpu_model")
-
-    # ensure that gres is not set, if gpu and gpu_model are set
-    if job.resources.get("gres") and gpu_string:
-        raise WorkflowError(
-            "GRES and GPU are set. Please only set one of them.", rule=job.rule
-        )
-    elif not job.resources.get("gres") and not gpu_model and not gpu_string:
-        return ""
-
+    gres = ""
     if job.resources.get("gres"):
         # Validate GRES format (e.g., "gpu:1", "gpu:tesla:2")
         gres = job.resources.gres
@@ -391,9 +378,13 @@ def set_gres_string(job: JobExecutorInterface) -> str:
                     "'T' 'M' or 'G' postfix "
                     "(e.g., 'gpu:1' or 'gpu:tesla:2') "
                 )
-        return f" --gres={job.resources.gres}"
+        gres += f" --gres={job.resources.gres}"
 
-    if gpu_model and gpu_string:
+    # Default to 1 GPU
+    gpu_string = str(job.resources.get("gpu", 1))
+    gpu_model = job.resources.get("gpu_model")
+
+    if gpu_model:
         # validate GPU model format
         if not gpu_model_re.match(gpu_model):
             if not string_check.match(gpu_model):
@@ -407,10 +398,10 @@ def set_gres_string(job: JobExecutorInterface) -> str:
                     f"Invalid GPU model format: {gpu_model}."
                     " Expected format: '<name>' (e.g., 'tesla')"
                 )
-        return f" --gpus={gpu_model}:{gpu_string}"
-    elif gpu_model and not gpu_string:
-        raise WorkflowError("GPU model is set, but no GPU number is given")
-    elif gpu_string:
+        gres += f" --gpus={gpu_model}:{gpu_string}"
+    else:
         # we assume here, that the validator ensures that the 'gpu_string'
         # is an integer
-        return f" --gpus={gpu_string}"
+        gres += f" --gpus={gpu_string}"
+
+    return gres
