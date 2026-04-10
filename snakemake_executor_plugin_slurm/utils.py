@@ -341,8 +341,8 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     Function to set the gres string for the SLURM job
     based on the resources requested in the job.
     """
-    # generic resources (GRES) arguments can be of type
-    # "string", "string:int" or "string:string:int" with optional postfix 'T' or 'G' or 'M'
+    # generic resources (GRES) arguments can be of type "string",
+    # "string:int" or "string:string:int" with optional postfix 'T' or 'G' or 'M'
     gres_re = re.compile(r"^[a-zA-Z0-9_]+(:[a-zA-Z0-9_\.]+)?(:\d+[TGM]?)?$")
 
     # gpu model arguments can be of type "string"
