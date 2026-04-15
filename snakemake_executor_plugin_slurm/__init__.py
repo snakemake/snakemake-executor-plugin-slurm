@@ -630,7 +630,6 @@ class Executor(RemoteExecutor):
                 f"Could not delete empty directories in {self.slurm_logdir}: {e}"
             )
 
-
     def additional_general_args(self):
         """
         This function defines additional arguments to be
@@ -1293,7 +1292,7 @@ class Executor(RemoteExecutor):
         # slurmdbd/accounting hiccups where job states are briefly incomplete.
         for i in range(status_attempts):
             async with self.status_rate_limiter:
-                (status_of_jobs, sacct_query_duration) = await query_job_status(
+                status_of_jobs, sacct_query_duration = await query_job_status(
                     status_command, self.logger
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
@@ -1451,14 +1450,12 @@ class Executor(RemoteExecutor):
                             )
                 elif status == "PREEMPTED" and not self._preemption_warning:
                     self._preemption_warning = True
-                    self.logger.warning(
-                        """
+                    self.logger.warning("""
 ===== A Job preemption  occured! =====
 Leave Snakemake running, if possible. Otherwise Snakemake
 needs to restart this job upon a Snakemake restart.
 
-We leave it to SLURM to resume your job(s)"""
-                    )
+We leave it to SLURM to resume your job(s)""")
                     yield j
                 elif status == "UNKNOWN":
                     # the job probably does not exist anymore, but 'sacct' did not work
