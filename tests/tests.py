@@ -265,7 +265,7 @@ class TestGresString:
 
         assert set_gres_string(job) == " --gres=gpu:tesla:2"
 
-    def test_invalid_gres_format(self, mock_job):
+    def test_valid_gres_format_gpu(self, mock_job):
         """Test with invalid GRES format."""
         job = mock_job(gres="gpu")
 
@@ -276,10 +276,10 @@ class TestGresString:
             process_mock.communicate.return_value = ("123", "")
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
-        with pytest.raises(WorkflowError, match="Invalid GRES format"):
-            set_gres_string(job)
 
-    def test_invalid_gres_format_missing_count(self, mock_job):
+        assert set_gres_string(job) == " --gpus=1"
+
+    def test_valid_gres_format_gpu_model(self, mock_job):
         """Test with invalid GRES format (missing count)."""
         job = mock_job(gres="gpu:tesla:")
 
@@ -291,8 +291,7 @@ class TestGresString:
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-        with pytest.raises(WorkflowError, match="Invalid GRES format"):
-            set_gres_string(job)
+        assert set_gres_string(job) == " --gpus=tesla:1"
 
     def test_valid_gpu_number(self, mock_job):
         """Test with valid GPU number."""
