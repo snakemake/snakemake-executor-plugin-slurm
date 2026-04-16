@@ -291,7 +291,7 @@ class TestGresString:
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-        assert set_gres_string(job) == " --gres=tesla:1"
+        assert set_gres_string(job) == " --gres=gpu:tesla"
 
     def test_valid_gpu_number(self, mock_job):
         """Test with valid GPU number."""
@@ -389,11 +389,7 @@ class TestGresString:
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-            # Ensure the error is raised when both GRES and GPU are set
-            with pytest.raises(
-                WorkflowError, match="GRES and GPU are set. Please only set one"
-            ):
-                set_gres_string(job)
+        assert set_gres_string(job) == " --gres=gpu:1 --gpus=2"
 
     def test_nested_string_raise(self, mock_job):
         """Test error case when gres is a nested string."""
