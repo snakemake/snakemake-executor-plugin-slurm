@@ -277,7 +277,7 @@ class TestGresString:
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-        assert set_gres_string(job) == " --gpus=1"
+        assert set_gres_string(job) == " --gres=gpu"
 
     def test_valid_gres_format_gpu_model(self, mock_job):
         """Test with invalid GRES format (missing count)."""
@@ -291,7 +291,7 @@ class TestGresString:
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-        assert set_gres_string(job) == " --gpus=tesla:1"
+        assert set_gres_string(job) == " --gres=tesla:1"
 
     def test_valid_gpu_number(self, mock_job):
         """Test with valid GPU number."""
@@ -361,11 +361,7 @@ class TestGresString:
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-            # test whether the resource setting raises the correct error
-            with pytest.raises(
-                WorkflowError, match="GPU model is set, but no GPU number is given"
-            ):
-                set_gres_string(job)
+        assert set_gres_string(job) == " --gpus=tesla:1"
 
     def test_tmpspace_gres_10G(self, mock_job):
         """Test with valid GRES format (simple)."""

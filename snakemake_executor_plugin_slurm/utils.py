@@ -374,8 +374,8 @@ def set_gres_string(job: JobExecutorInterface) -> str:
             else:
                 raise WorkflowError(
                     f"Invalid GRES format: {job.resources.gres}. Expected format: "
-                    "'<name>:<number>' or '<name>:<type>:<number>' with an optional "
-                    "'T' 'M' or 'G' postfix "
+                    "'<name>', '<name>:<number>' or '<name>:<type>:<number>' "
+                    "with an optional 'T' 'M' or 'G' postfix "
                     "(e.g., 'gpu:1' or 'gpu:tesla:2') "
                 )
         gres += f" --gres={job.resources.gres}"
