@@ -357,6 +357,7 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     # The Snakemake resources can be only be of type "int",
     # hence no further regex is needed.
 
+    # GRES
     gres = ""
     if job.resources.get("gres"):
         # Validate GRES format (e.g., "gpu:1", "gpu:tesla:2")
@@ -379,28 +380,29 @@ def set_gres_string(job: JobExecutorInterface) -> str:
                 )
         gres += f" --gres={job.resources.gres}"
 
-    # Default to 1 GPU
-    gpu_string = str(job.resources.get("gpu", 1))
-    gpu_model = job.resources.get("gpu_model")
-
-    if gpu_model:
-        # validate GPU model format
-        if not gpu_model_re.match(gpu_model):
-            if not string_check.match(gpu_model):
-                raise WorkflowError(
-                    "GPU model format should not be a nested string (start "
-                    "and end with ticks or quotation marks). "
-                    "Expected format: '<name>' (e.g., 'tesla')"
-                )
-            else:
-                raise WorkflowError(
-                    f"Invalid GPU model format: {gpu_model}."
-                    " Expected format: '<name>' (e.g., 'tesla')"
-                )
-        gres += f" --gpus={gpu_model}:{gpu_string}"
-    else:
-        # we assume here, that the validator ensures that the 'gpu_string'
-        # is an integer
-        gres += f" --gpus={gpu_string}"
+    # GPU
+    gpu_string = job.resources.get("gpu")
+    if gpu_string:
+        gpu_string = str(job.resources.gpu)
+        gpu_model = job.resources.get("gpu_model")
+        if gpu_model:
+            # validate GPU model format
+            if not gpu_model_re.match(gpu_model):
+                if not string_check.match(gpu_model):
+                    raise WorkflowError(
+                        "GPU model format should not be a nested string (start "
+                        "and end with ticks or quotation marks). "
+                        "Expected format: '<name>' (e.g., 'tesla')"
+                    )
+                else:
+                    raise WorkflowError(
+                        f"Invalid GPU model format: {gpu_model}."
+                        " Expected format: '<name>' (e.g., 'tesla')"
+                    )
+            gres += f" --gpus={gpu_model}:{gpu_string}"
+        else:
+            # we assume here, that the validator ensures that the 'gpu_string'
+            # is an integer
+            gres += f" --gpus={gpu_string}"
 
     return gres
