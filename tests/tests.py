@@ -281,7 +281,7 @@ class TestGresString:
 
     def test_valid_gres_format_gpu_model(self, mock_job):
         """Test with invalid GRES format (missing count)."""
-        job = mock_job(gres="gpu:tesla:")
+        job = mock_job(gres="gpu:tesla")
 
         # Patch subprocess.Popen to capture the sbatch command
         with patch("subprocess.Popen") as mock_popen:

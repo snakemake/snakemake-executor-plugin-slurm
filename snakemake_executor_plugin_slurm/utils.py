@@ -366,17 +366,17 @@ def set_gres_string(job: JobExecutorInterface) -> str:
                 raise WorkflowError(
                     "GRES format should not be a nested string (start "
                     "and end with ticks or quotation marks). "
-                    "Expected format: "
+                    "Expected format: '<name>', "
                     "'<name>:<number>' or '<name>:<type>:<number>' with an optional "
                     "'T' 'M' or 'G' postfix "
-                    "(e.g., 'gpu:1' or 'gpu:tesla:2')"
+                    "(e.g., 'gpu', 'gpu:2' or 'gpu:tesla:1')"
                 )
             else:
                 raise WorkflowError(
                     f"Invalid GRES format: {job.resources.gres}. Expected format: "
                     "'<name>', '<name>:<number>' or '<name>:<type>:<number>' "
                     "with an optional 'T' 'M' or 'G' postfix "
-                    "(e.g., 'gpu:1' or 'gpu:tesla:2') "
+                    "(e.g., 'gpu', 'gpu:1' or 'gpu:tesla:2') "
                 )
         gres += f" --gres={job.resources.gres}"
 
