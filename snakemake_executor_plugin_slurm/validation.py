@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from snakemake_interface_common.exceptions import WorkflowError
 from .job_status_query import get_min_job_age, is_query_tool_available
+from .utils import parse_slurm_signal_settings
 
 
 def validate_or_get_slurm_job_id(job_id, output):
@@ -99,6 +100,7 @@ def get_forbidden_slurm_options():
         r"--qos[=\s]": "quality of service",
         r"--nodes[=\s]|-N\s": "number of nodes",
         r"--clusters[=\s]": "cluster specification",
+        r"--signal[=\s]": "signal",
         # GPU options
         r"--gres[=\s]": "generic resources (GRES)",
         r"--gpus[=\s]": "GPU allocation",
@@ -218,6 +220,9 @@ def validate_executor_settings(settings, logger=None):
     if settings.delete_logfiles_older_than is not None:
         if not isinstance(settings.delete_logfiles_older_than, int):
             raise WorkflowError("delete-logfiles-older-than must be an integer (days).")
+    # signal
+    parse_slurm_signal_settings(settings.signal)
+
     # status_command warnings (optional logger)
     if logger:
         validate_status_command_settings(settings, logger)

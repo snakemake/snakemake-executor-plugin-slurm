@@ -6,8 +6,9 @@ import os
 import shlex
 import subprocess
 import re
+from functools import lru_cache
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 from snakemake_interface_executor_plugins.dag import DAGExecutorInterface
 from snakemake_interface_executor_plugins.jobs import (
@@ -334,6 +335,138 @@ def delete_empty_dirs(path: Path) -> None:
     except (OSError, FileNotFoundError) as e:
         # Provide more context in the error message
         raise OSError(f"Failed to remove empty directory {path}: {e}") from e
+
+
+# only run this parser once per unique input string
+# chache the results for efficiency.
+@lru_cache(maxsize=None)
+def parse_slurm_signal_settings(signal_settings: Optional[str]) -> dict[str, str]:
+    """
+    Parse rule-specific SLURM signal settings (format: rule:SIGNAL@TIME).
+
+    - rule: rule name or 'all' for all rules
+    - SIGNAL: signal name (SIGTERM, SIGUSR1) or number (15, 10)
+    - TIME: seconds before wall time (must be >= 1)
+
+    Examples:
+    - rule1:SIGTERM@30 → SIGTERM at 30 secs
+    - rule2:SIGUSR1@60 → SIGUSR1 at 60 secs
+    - all:15@45 → all rules, signal 15 at 45 secs
+
+    Returns dict mapping rule names to SLURM signal specs: <signal>@<time>
+    """
+    if not signal_settings:
+        return {}
+
+    parsed_settings = {}
+    # Map signal names to numbers for SLURM
+    signal_map = {
+        "SIGHUP": 1,
+        "SIGINT": 2,
+        "SIGQUIT": 3,
+        "SIGILL": 4,
+        "SIGTRAP": 5,
+        "SIGABRT": 6,
+        "SIGBUS": 7,
+        "SIGFPE": 8,
+        "SIGKILL": 9,
+        "SIGUSR1": 10,
+        "SIGSEGV": 11,
+        "SIGUSR2": 12,
+        "SIGPIPE": 13,
+        "SIGALRM": 14,
+        "SIGTERM": 15,
+        "SIGCHLD": 17,
+        "SIGCONT": 18,
+        "SIGSTOP": 19,
+        "SIGTSTP": 20,
+        "SIGTTIN": 21,
+        "SIGTTOU": 22,
+        "SIGURG": 23,
+        "SIGXCPU": 24,
+        "SIGXFSZ": 25,
+        "SIGVTALRM": 26,
+        "SIGPROF": 27,
+        "SIGWINCH": 28,
+        "SIGIO": 29,
+        "SIGPWR": 30,
+        "SIGSYS": 31,
+    }
+
+    # Pattern: rule:SIGNAL@TIME
+    pattern = re.compile(r"^(?P<rule>\w+):(?P<signal>\w+)@(?P<seconds>\d+)$")
+
+    for raw_entry in signal_settings.split(","):
+        entry = raw_entry.strip()
+        if not entry:
+            raise WorkflowError(
+                "Invalid signal specification: empty entry found. "
+                "Expected 'rule:SIGNAL@TIME' (e.g., 'rule1:SIGTERM@30')."
+            )
+
+        match = pattern.fullmatch(entry)
+        if match is None:
+            raise WorkflowError(
+                f"Invalid signal specification '{entry}'. "
+                "Expected 'rule:SIGNAL@TIME' (e.g., 'rule1:SIGTERM@30', "
+                "'rule2:15@60', 'all:SIGUSR1@45')."
+            )
+
+        rule_name = match.group("rule")
+        if rule_name != "all" and rule_name in parsed_settings:
+            raise WorkflowError(
+                f"Duplicate signal specification for rule '{rule_name}'."
+            )
+
+        signal_str = match.group("signal")
+        # Validate signal name or number.
+        if signal_str.isdigit():
+            signal_num = int(signal_str)
+            if signal_num < 1 or signal_num > 31:
+                raise WorkflowError(
+                    f"Invalid signal number '{signal_num}'. Must be between 1 and 31."
+                )
+        else:
+            if signal_str not in signal_map:
+                raise WorkflowError(
+                    f"Invalid signal name '{signal_str}'. "
+                    f"Valid signals: {', '.join(sorted(signal_map.keys()))}"
+                )
+            signal_num = signal_map[signal_str]
+
+        seconds = int(match.group("seconds"))
+        if seconds < 1:
+            raise WorkflowError("Signal lead time must be at least 1 second.")
+
+        parsed_settings[rule_name] = f"{signal_str}@{seconds}"
+
+    return parsed_settings
+
+
+def get_slurm_signal_arg(signal_settings: Optional[str], rule_name: str) -> str:
+    """Return the sbatch --signal argument for the given rule, if configured.
+
+    Checks for rule-specific signal first, then falls back to 'all' if set.
+    """
+    # we need to check the signal settings, first.
+    if not signal_settings:
+        return ""
+
+    signal_settings_pattern = r"^\s*\w+:\w+@\d+\s*(,\s*\w+:\w+@\d+\s*)*$"
+    if not re.match(signal_settings_pattern, signal_settings):
+        raise WorkflowError(
+            f"Invalid signal specification: '{signal_settings}'. "
+            "Expected format: 'rule:SIGNAL@TIME' "
+            "(e.g., 'rule1:SIGTERM@30', 'rule2:15@60', "
+            "'all:SIGUSR1@45')."
+        )
+
+    parsed = parse_slurm_signal_settings(signal_settings)
+    # Check rule-specific first, then fall back to 'all'
+    signal_value = parsed.get(rule_name) or parsed.get("all")
+    if not signal_value:
+        return ""
+    return f" --signal={signal_value}"
 
 
 def set_gres_string(job: JobExecutorInterface) -> str:
