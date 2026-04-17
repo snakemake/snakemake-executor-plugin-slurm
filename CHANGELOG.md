@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.6.1...v2.6.2) (2026-04-17)
+
+
+### Bug Fixes
+
+* pipeline hangs when submitting from compute nodes ([#450](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/450)) ([a09a027](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/a09a027ff39ff11a37978c77021d61d5d3590104))
+
 ## [2.6.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.6.0...v2.6.1) (2026-04-16)
 
 
