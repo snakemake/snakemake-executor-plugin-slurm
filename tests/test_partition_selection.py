@@ -26,6 +26,7 @@ class TestPartitionSelection:
                 "gpu": {
                     "max_runtime": 720,
                     "max_mem_mb": 256000,
+                    "max_cpus_per_task": 16,
                     "max_gpu": 4,
                     "available_gpu_models": ["a100", "v100"],
                     "supports_mpi": False,

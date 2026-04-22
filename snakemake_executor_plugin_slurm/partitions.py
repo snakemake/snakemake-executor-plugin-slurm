@@ -264,7 +264,7 @@ def get_best_partition(
     for p in candidate_partitions:
         score = p.score_job_fit(job)
         logger.debug(f"Partition '{p.name}' score for job {job.name}: {score}")
-        if score is not None and score > 0:
+        if score is not None:
             scored_partitions.append((p, score))
 
     if scored_partitions:
@@ -545,6 +545,9 @@ class Partition:
                 score += cpu_count / self.limits.max_cpus_per_gpu
 
         gpu_count, gpu_model = parse_gpu_requirements(job)
+        if gpu_count == 0 and self.limits.max_gpu > 0:
+            # Disadvantage gpu partitions for cpu only jobs
+            score -= 1
         if gpu_count > 0:
             if self.limits.max_gpu == 0 or gpu_count > self.limits.max_gpu:
                 return None
