@@ -1,8 +1,7 @@
 """Test suite for SLURM signal handling in job submission.
 
 This module provides fixtures and tests for SLURM pre-timeout signal support.
-Signals can be directed at either the job payload or the batch script controller,
-and are triggered N seconds before the wall time limit.
+Signals are triggered N seconds before the wall time limit.
 """
 
 import pytest
@@ -44,25 +43,18 @@ def mock_job():
 class TestSlurmSignalParsing:
     """Test signal specification parsing and transformation to sbatch arguments."""
 
-    def test_signal_targets_batch_script_by_default(self):
-        """Default behavior: signal targets the batch script (B: prefix)."""
+    def test_signal_name_format(self):
+        """Signal names are passed through to sbatch --signal unchanged."""
         assert (
             get_slurm_signal_arg("signal_shell:SIGTERM@45", "signal_shell")
-            == " --signal=B:15@45"
-        )
-
-    def test_signal_with_reservation_target(self):
-        """When R is specified, signal targets the reservation."""
-        assert (
-            get_slurm_signal_arg("signal_python:R:SIGUSR2@30", "signal_python")
-            == " --signal=R:12@30"
+            == " --signal=SIGTERM@45"
         )
 
     def test_signal_number_format(self):
         """Signals can be specified by number (1-31)."""
         assert (
             get_slurm_signal_arg("signal_shell:15@60", "signal_shell")
-            == " --signal=B:15@60"
+            == " --signal=15@60"
         )
 
     def test_signal_is_ignored_for_other_rules(self):
@@ -71,25 +63,22 @@ class TestSlurmSignalParsing:
 
     def test_multiple_signals_in_one_setting(self):
         """Multiple rules can have signals in a comma-separated list."""
-        setting = "signal_shell:SIGUSR1@30,signal_python:R:SIGTERM@45"
-        assert get_slurm_signal_arg(setting, "signal_shell") == " --signal=B:10@30"
-        assert get_slurm_signal_arg(setting, "signal_python") == " --signal=R:15@45"
+        setting = "signal_shell:SIGUSR1@30,signal_python:SIGTERM@45"
+        assert get_slurm_signal_arg(setting, "signal_shell") == " --signal=SIGUSR1@30"
+        assert get_slurm_signal_arg(setting, "signal_python") == " --signal=SIGTERM@45"
 
     def test_all_keyword_applies_to_any_rule(self):
         """The 'all' keyword applies signal to any rule not explicitly configured."""
-        assert get_slurm_signal_arg("all:SIGUSR1@60", "any_rule") == " --signal=B:10@60"
-        assert (
-            get_slurm_signal_arg("all:R:SIGTERM@45", "other_rule")
-            == " --signal=R:15@45"
-        )
+        assert get_slurm_signal_arg("all:SIGUSR1@60", "any_rule") == " --signal=SIGUSR1@60"
+        assert get_slurm_signal_arg("all:SIGTERM@45", "other_rule") == " --signal=SIGTERM@45"
 
     def test_explicit_rule_takes_precedence_over_all(self):
         """An explicit rule setting overrides the 'all' setting."""
         setting = "all:SIGUSR1@60,signal_python:SIGTERM@30"
         # signal_python has explicit config
-        assert get_slurm_signal_arg(setting, "signal_python") == " --signal=B:15@30"
+        assert get_slurm_signal_arg(setting, "signal_python") == " --signal=SIGTERM@30"
         # other_rule falls back to 'all'
-        assert get_slurm_signal_arg(setting, "other_rule") == " --signal=B:10@60"
+        assert get_slurm_signal_arg(setting, "other_rule") == " --signal=SIGUSR1@60"
 
 
 class TestSlurmSignalValidation:
@@ -100,23 +89,14 @@ class TestSlurmSignalValidation:
         with pytest.raises(WorkflowError, match="Invalid signal specification"):
             ExecutorSettings(signal="signal_shell:SIGTERM")
 
-    def test_reservation_scope_requires_reservation_setting(self):
-        """Using R: scope without --slurm-reservation should raise an error."""
-        with pytest.raises(
-            WorkflowError, match="targets reservation.*no --slurm-reservation"
-        ):
+    def test_scope_prefix_is_rejected(self):
+        """Legacy scope prefixes (R:/B:) are rejected in simplified signal format."""
+        with pytest.raises(WorkflowError, match="Invalid signal specification"):
             ExecutorSettings(signal="signal_shell:R:SIGTERM@30")
-
-    def test_reservation_scope_allowed_with_reservation_setting(self):
-        """Using R: scope with --slurm-reservation should not raise an error."""
-        # Should not raise
-        ExecutorSettings(
-            signal="signal_shell:R:SIGTERM@30", reservation="my_reservation"
-        )
 
     def test_signal_cannot_be_overridden_via_slurm_extra(self, mock_job):
         """Prevent silent override: slurm_extra cannot set --signal."""
-        job = mock_job(slurm_extra="--signal=B:SIGTERM@30")
+        job = mock_job(slurm_extra="--signal=15@30")
 
         with pytest.raises(WorkflowError, match=r"signal.*not allowed"):
             validate_slurm_extra(job)
@@ -136,7 +116,7 @@ class TestSlurmSignalInExecutor:
         executor = Executor.__new__(Executor)
         executor.workflow = MagicMock(
             executor_settings=ExecutorSettings(
-                signal="signal_python:R:SIGTERM@15",
+                signal="signal_python:SIGTERM@15",
                 reservation="my_reservation",
                 init_seconds_before_status_checks=1,
             ),
@@ -178,14 +158,14 @@ class TestSlurmSignalInExecutor:
             # Verify that --signal was included in the sbatch call
             assert mock_popen.called
             call_args = mock_popen.call_args[0][0]
-            assert "--signal=R:15@15" in call_args
+            assert "--signal=SIGTERM@15" in call_args
 
     def test_executor_ignores_signal_for_unrelated_rules(self, tmp_path, mock_job):
         """Executor should not add --signal for rules not in the signal spec."""
         executor = Executor.__new__(Executor)
         executor.workflow = MagicMock(
             executor_settings=ExecutorSettings(
-                signal="signal_python:R:SIGTERM@15",
+                signal="signal_python:SIGTERM@15",
                 reservation="my_reservation",
                 init_seconds_before_status_checks=1,
             ),
