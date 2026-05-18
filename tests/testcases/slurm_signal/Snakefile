@@ -1,0 +1,24 @@
+rule all:
+    input:
+        "results/shell.txt",
+        "results/python.txt"
+
+
+rule signal_shell:
+    output:
+        "results/shell.txt"
+    resources:
+        runtime=1,
+        mem_mb=128
+    shell:
+        "sh ./handle_signal.sh {output}"
+
+
+rule signal_python:
+    output:
+        "results/python.txt"
+    resources:
+        runtime=1,
+        mem_mb=128
+    script:
+        "handle_signal.py"
