@@ -6,6 +6,7 @@ Signals are triggered N seconds before the wall time limit.
 
 import pytest
 from unittest.mock import MagicMock, patch
+import threading
 from snakemake_interface_common.exceptions import WorkflowError
 from snakemake_executor_plugin_slurm import Executor, ExecutorSettings
 from snakemake_executor_plugin_slurm.utils import get_slurm_signal_arg
@@ -86,12 +87,12 @@ class TestSlurmSignalValidation:
 
     def test_invalid_signal_setting_is_rejected(self):
         """Malformed signal specs are rejected at settings initialization."""
-        with pytest.raises(WorkflowError, match="Invalid signal specification"):
+        with pytest.raises(SystemExit, match="Invalid signal specification"):
             ExecutorSettings(signal="signal_shell:SIGTERM")
 
     def test_scope_prefix_is_rejected(self):
         """Legacy scope prefixes (R:/B:) are rejected in simplified signal format."""
-        with pytest.raises(WorkflowError, match="Invalid signal specification"):
+        with pytest.raises(SystemExit, match="Invalid signal specification"):
             ExecutorSettings(signal="signal_shell:R:SIGTERM@30")
 
     def test_signal_cannot_be_overridden_via_slurm_extra(self, mock_job):
@@ -111,8 +112,40 @@ class TestSlurmSignalValidation:
 class TestSlurmSignalInExecutor:
     """Test signal argument injection into the sbatch command during job submission."""
 
+    def test_additional_general_args_with_signal_does_not_crash(self):
+        """Signal settings must not break command construction before submission."""
+        executor = Executor.__new__(Executor)
+        executor.workflow = MagicMock(
+            executor_settings=ExecutorSettings(
+                signal="signal_python:SIGTERM@15",
+                init_seconds_before_status_checks=1,
+            )
+        )
+        executor._jobstep_context = threading.local()
+
+        general_args = executor.additional_general_args()
+
+        assert "--executor slurm-jobstep --jobs 1" in general_args
+        assert "--slurm-jobstep-signal" not in general_args
+
+    def test_additional_general_args_adds_jobstep_signal_for_current_rule(self):
+        """Jobstep signal forwarding is resolved in additional_general_args."""
+        executor = Executor.__new__(Executor)
+        executor.workflow = MagicMock(
+            executor_settings=ExecutorSettings(
+                signal="signal_python:SIGTERM@15",
+                init_seconds_before_status_checks=1,
+            )
+        )
+        executor._jobstep_context = threading.local()
+        executor._jobstep_context.rule_name = "signal_python"
+
+        general_args = executor.additional_general_args()
+
+        assert "--slurm-jobstep-signal=15@15" in general_args
+
     def test_executor_run_job_adds_signal_argument(self, tmp_path, mock_job):
-        """Verify that Executor.run_job includes --signal in the sbatch call."""
+        """Verify that Executor.run_job includes sbatch and jobstep signals."""
         executor = Executor.__new__(Executor)
         executor.workflow = MagicMock(
             executor_settings=ExecutorSettings(
@@ -141,7 +174,11 @@ class TestSlurmSignalInExecutor:
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-            with patch.object(executor, "format_job_exec", return_value="echo test"):
+            with patch.object(
+                executor,
+                "format_job_exec",
+                side_effect=lambda job: executor.additional_general_args() + " echo test",
+            ):
                 with patch.object(executor, "report_job_submission"):
                     with patch.object(
                         executor,
@@ -159,6 +196,7 @@ class TestSlurmSignalInExecutor:
             assert mock_popen.called
             call_args = mock_popen.call_args[0][0]
             assert "--signal=SIGTERM@15" in call_args
+            assert "--slurm-jobstep-signal=15@15" in call_args
 
     def test_executor_ignores_signal_for_unrelated_rules(self, tmp_path, mock_job):
         """Executor should not add --signal for rules not in the signal spec."""

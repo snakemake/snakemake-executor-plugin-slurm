@@ -15,6 +15,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import List, Generator, Optional
@@ -48,6 +49,7 @@ from .utils import (
     delete_slurm_environment,
     delete_empty_dirs,
     get_slurm_signal_arg,
+    get_slurm_jobstep_signal_arg,
     set_gres_string,
 )
 from .job_status_query import (
@@ -499,6 +501,7 @@ class Executor(RemoteExecutor):
         self._status_query_min_seconds = None
         self._status_query_max_seconds = 0.0
         self._status_query_cycle_rows = []
+        self._jobstep_context = threading.local()
         array_job_setting = self.workflow.executor_settings.array_jobs
         if array_job_setting:
             normalized_setting = array_job_setting.replace(";", ",")
@@ -654,11 +657,15 @@ class Executor(RemoteExecutor):
         # need to pass, if passing as script is required
         if self.workflow.executor_settings.pass_command_as_script:
             general_args += " --slurm-jobstep-pass-command-as-script"
-        # need to pass, if signal settings are defined
-        if self.workflow.executor_settings.signal:
-            general_args += " --slurm-jobstep-signal " + shlex.quote(
-                self.workflow.executor_settings.signal
+
+        jobstep_context = getattr(self, "_jobstep_context", None)
+        rule_name = getattr(jobstep_context, "rule_name", None)
+        if rule_name:
+            signal_arg = get_slurm_jobstep_signal_arg(
+                self.workflow.executor_settings.signal, rule_name
             )
+            if signal_arg is not None:
+                general_args += f" --slurm-jobstep-signal={signal_arg}"
         return general_args
 
     def run_jobs(self, jobs: List[JobExecutorInterface]):
@@ -876,12 +883,20 @@ class Executor(RemoteExecutor):
                 )
             # Build a compressed map of array task id -> full execution string
             # for all jobs.
-            array_execs = {
-                index: zlib.compress(
-                    self.format_job_exec(job).encode("utf-8"), level=9
+            array_execs = {}
+            jobstep_context = getattr(self, "_jobstep_context", None)
+            if jobstep_context is None:
+                self._jobstep_context = threading.local()
+                jobstep_context = self._jobstep_context
+            for index, job in enumerate(jobs, start=1):
+                jobstep_context.rule_name = job.rule.name
+                try:
+                    exec_job = self.format_job_exec(job)
+                finally:
+                    jobstep_context.rule_name = None
+                array_execs[index] = zlib.compress(
+                    exec_job.encode("utf-8"), level=9
                 ).hex()
-                for index, job in enumerate(jobs, start=1)
-            }
 
             call = get_submit_command(
                 jobs[0],
@@ -896,6 +911,12 @@ class Executor(RemoteExecutor):
                 )
             call += set_gres_string(jobs[0])
 
+            signal_arg = get_slurm_signal_arg(
+                self.workflow.executor_settings.signal, jobs[0].rule.name
+            )
+            if signal_arg:
+                call += signal_arg
+
             # the actual array job call:
             # we need to cycle over all jobs and submit up to `array_limit` jobs per
             # submission, to avoid hitting cluster limits or oversaturating the
@@ -905,7 +926,15 @@ class Executor(RemoteExecutor):
                 end_index = min(start_index + array_limit - 1, len(jobs))
                 # The first task of each chunk runs via the plain base command.
                 # Remaining tasks are dispatched from --slurm-jobstep-array-execs.
-                exec_job = self.format_job_exec(jobs[start_index - 1])
+                jobstep_context = getattr(self, "_jobstep_context", None)
+                if jobstep_context is None:
+                    self._jobstep_context = threading.local()
+                    jobstep_context = self._jobstep_context
+                jobstep_context.rule_name = jobs[start_index - 1].rule.name
+                try:
+                    exec_job = self.format_job_exec(jobs[start_index - 1])
+                finally:
+                    jobstep_context.rule_name = None
                 sub_array_execs = {
                     str(i): array_execs[i]
                     for i in range(start_index + 1, end_index + 1)
@@ -1108,11 +1137,6 @@ class Executor(RemoteExecutor):
             failed_nodes=self._failed_nodes,
         )
 
-        call += get_slurm_signal_arg(
-            self.workflow.executor_settings.signal,
-            job.name,
-        )
-
         # we exclude failed nodes from further job submissions, to avoid
         # repeated failures.
         if self._failed_nodes:
@@ -1122,6 +1146,12 @@ class Executor(RemoteExecutor):
             )
 
         call += set_gres_string(job)
+
+        signal_arg = get_slurm_signal_arg(
+            self.workflow.executor_settings.signal, job.rule.name
+        )
+        if signal_arg:
+            call += signal_arg
 
         if not job.resources.get("runtime"):
             self.logger.warning(
@@ -1138,7 +1168,15 @@ class Executor(RemoteExecutor):
                 "your cluster."
             )
 
-        exec_job = self.format_job_exec(job)
+        jobstep_context = getattr(self, "_jobstep_context", None)
+        if jobstep_context is None:
+            self._jobstep_context = threading.local()
+            jobstep_context = self._jobstep_context
+        jobstep_context.rule_name = job.rule.name
+        try:
+            exec_job = self.format_job_exec(job)
+        finally:
+            jobstep_context.rule_name = None
 
         if not self.workflow.executor_settings.pass_command_as_script:
             # Escape potential double quotes in wrapped command.
@@ -1696,6 +1734,9 @@ We leave it to SLURM to resume your job(s)""")
             if self._fallback_partition is None:
                 self._fallback_partition = get_default_partition(job, self.logger)
             partition = self._fallback_partition
+            self.logger.warning(
+                f"Falling back to default partition: {partition}"
+            )
         if partition:
             # we have to quote the partition, because it might
             # contain build-in shell commands

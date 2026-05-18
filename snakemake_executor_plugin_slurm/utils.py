@@ -438,10 +438,11 @@ def parse_slurm_signal_settings(signal_settings: Optional[str]) -> dict[str, str
         if seconds < 1:
             raise WorkflowError("Signal lead time must be at least 1 second.")
 
-        parsed_settings[rule_name] = f"{signal_str}@{seconds}"
+        # Keep the user-provided form for sbatch forwarding while validating.
+        parsed_signal = signal_str if signal_str.isdigit() else signal_str
+        parsed_settings[rule_name] = f"{parsed_signal}@{seconds}"
 
     return parsed_settings
-
 
 def get_slurm_signal_arg(signal_settings: Optional[str], rule_name: str) -> str:
     """Return the sbatch --signal argument for the given rule, if configured.
@@ -467,6 +468,59 @@ def get_slurm_signal_arg(signal_settings: Optional[str], rule_name: str) -> str:
     if not signal_value:
         return ""
     return f" --signal={signal_value}"
+
+
+def get_slurm_jobstep_signal_arg(
+    signal_settings: Optional[str], rule_name: str
+) -> Optional[str]:
+    """Return numeric jobstep signal payload (<num>@<seconds>) if configured."""
+    if not signal_settings:
+        return None
+
+    parsed = parse_slurm_signal_settings(signal_settings)
+    signal_value = parsed.get(rule_name) or parsed.get("all")
+    if not signal_value:
+        return None
+
+    signal_token, seconds = signal_value.split("@", 1)
+    if signal_token.isdigit():
+        signal_num = signal_token
+    else:
+        signal_map = {
+            "SIGHUP": 1,
+            "SIGINT": 2,
+            "SIGQUIT": 3,
+            "SIGILL": 4,
+            "SIGTRAP": 5,
+            "SIGABRT": 6,
+            "SIGBUS": 7,
+            "SIGFPE": 8,
+            "SIGKILL": 9,
+            "SIGUSR1": 10,
+            "SIGSEGV": 11,
+            "SIGUSR2": 12,
+            "SIGPIPE": 13,
+            "SIGALRM": 14,
+            "SIGTERM": 15,
+            "SIGCHLD": 17,
+            "SIGCONT": 18,
+            "SIGSTOP": 19,
+            "SIGTSTP": 20,
+            "SIGTTIN": 21,
+            "SIGTTOU": 22,
+            "SIGURG": 23,
+            "SIGXCPU": 24,
+            "SIGXFSZ": 25,
+            "SIGVTALRM": 26,
+            "SIGPROF": 27,
+            "SIGWINCH": 28,
+            "SIGIO": 29,
+            "SIGPWR": 30,
+            "SIGSYS": 31,
+        }
+        signal_num = signal_map[signal_token]
+
+    return f"{signal_num}@{seconds}"
 
 
 def set_gres_string(job: JobExecutorInterface) -> str:
