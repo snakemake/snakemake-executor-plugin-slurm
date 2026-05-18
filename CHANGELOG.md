@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.6.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.6.0...v2.6.1) (2026-04-16)
+
+
+### Bug Fixes
+
+* code refactoring ([#451](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/451)) ([8489b10](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/8489b10ab34d56f29a095bff69c71717d312dbe1))
+* handle integer slurm_account values from YAML parsing ([#448](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/448)) ([263f3a8](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/263f3a8621a603ffd1c96de7bfa1b3f25425e2a9))
+
 ## [2.6.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.5.4...v2.6.0) (2026-03-26)
 
 

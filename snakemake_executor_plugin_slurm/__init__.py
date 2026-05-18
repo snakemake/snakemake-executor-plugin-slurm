@@ -428,9 +428,22 @@ def _select_logdir(workflow):
 # Required:
 # Implementation of your executor
 class Executor(RemoteExecutor):
+    def __init__(self, workflow, logger):
+        # Must clean SLURM environment BEFORE super().__init__() starts
+        # the wait_thread, otherwise the thread races with __post_init__
+        # and silently dies, causing the pipeline to hang forever.
+        if "SLURM_JOB_ID" in os.environ:
+            logger.warning(
+                "You are running snakemake in a SLURM job context. "
+                "This is not recommended, as it may lead to unexpected "
+                "behavior. "
+                "If possible, please run Snakemake directly on the "
+                "login node."
+            )
+            delete_slurm_environment()
+        super().__init__(workflow, logger)
+
     def __post_init__(self, test_mode: bool = False):
-        # run check whether we are running in a SLURM job context
-        self.warn_on_jobcontext()
         self.test_mode = test_mode
 
         self.run_uuid = str(uuid.uuid4())
@@ -616,20 +629,6 @@ class Executor(RemoteExecutor):
             self.logger.error(
                 f"Could not delete empty directories in {self.slurm_logdir}: {e}"
             )
-
-    def warn_on_jobcontext(self, done=None):
-        if not done:
-            if "SLURM_JOB_ID" in os.environ:
-                self.logger.warning(
-                    "You are running snakemake in a SLURM job context. "
-                    "This is not recommended, as it may lead to unexpected "
-                    "behavior. "
-                    "If possible, please run Snakemake directly on the "
-                    "login node."
-                )
-                time.sleep(5)
-                delete_slurm_environment()
-        done = True
 
     def additional_general_args(self):
         """
@@ -1293,7 +1292,7 @@ class Executor(RemoteExecutor):
         # slurmdbd/accounting hiccups where job states are briefly incomplete.
         for i in range(status_attempts):
             async with self.status_rate_limiter:
-                (status_of_jobs, sacct_query_duration) = await query_job_status(
+                status_of_jobs, sacct_query_duration = await query_job_status(
                     status_command, self.logger
                 )
                 if status_of_jobs is None and sacct_query_duration is None:
@@ -1451,14 +1450,12 @@ class Executor(RemoteExecutor):
                             )
                 elif status == "PREEMPTED" and not self._preemption_warning:
                     self._preemption_warning = True
-                    self.logger.warning(
-                        """
+                    self.logger.warning("""
 ===== A Job preemption  occured! =====
 Leave Snakemake running, if possible. Otherwise Snakemake
 needs to restart this job upon a Snakemake restart.
 
-We leave it to SLURM to resume your job(s)"""
-                    )
+We leave it to SLURM to resume your job(s)""")
                     yield j
                 elif status == "UNKNOWN":
                     # the job probably does not exist anymore, but 'sacct' did not work
@@ -1589,8 +1586,10 @@ We leave it to SLURM to resume your job(s)"""
         if job.resources.get("slurm_account"):
             # split the account upon ',' and whitespace, to allow
             # multiple accounts being given
+            # Note: YAML parsing may convert numeric strings (e.g. "123456") to int.
+            # Ensure we always work with strings for re.split and shlex.quote.
             accounts = [
-                a for a in re.split(r"[,\s]+", job.resources.slurm_account) if a
+                a for a in re.split(r"[,\s]+", str(job.resources.slurm_account)) if a
             ]
             for account in accounts:
                 # here, we check whether the given or guessed account is valid

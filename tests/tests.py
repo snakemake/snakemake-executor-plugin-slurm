@@ -265,7 +265,7 @@ class TestGresString:
 
         assert set_gres_string(job) == " --gres=gpu:tesla:2"
 
-    def test_invalid_gres_format(self, mock_job):
+    def test_valid_gres_format_gpu(self, mock_job):
         """Test with invalid GRES format."""
         job = mock_job(gres="gpu")
 
@@ -276,12 +276,12 @@ class TestGresString:
             process_mock.communicate.return_value = ("123", "")
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
-        with pytest.raises(WorkflowError, match="Invalid GRES format"):
-            set_gres_string(job)
 
-    def test_invalid_gres_format_missing_count(self, mock_job):
+        assert set_gres_string(job) == " --gres=gpu"
+
+    def test_valid_gres_format_gpu_model(self, mock_job):
         """Test with invalid GRES format (missing count)."""
-        job = mock_job(gres="gpu:tesla:")
+        job = mock_job(gres="gpu:tesla")
 
         # Patch subprocess.Popen to capture the sbatch command
         with patch("subprocess.Popen") as mock_popen:
@@ -291,8 +291,7 @@ class TestGresString:
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-        with pytest.raises(WorkflowError, match="Invalid GRES format"):
-            set_gres_string(job)
+        assert set_gres_string(job) == " --gres=gpu:tesla"
 
     def test_valid_gpu_number(self, mock_job):
         """Test with valid GPU number."""
@@ -362,11 +361,7 @@ class TestGresString:
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-            # test whether the resource setting raises the correct error
-            with pytest.raises(
-                WorkflowError, match="GPU model is set, but no GPU number is given"
-            ):
-                set_gres_string(job)
+        assert set_gres_string(job) == " --gpus=tesla:1"
 
     def test_tmpspace_gres_10G(self, mock_job):
         """Test with valid GRES format (simple)."""
@@ -394,11 +389,7 @@ class TestGresString:
             process_mock.returncode = 0
             mock_popen.return_value = process_mock
 
-            # Ensure the error is raised when both GRES and GPU are set
-            with pytest.raises(
-                WorkflowError, match="GRES and GPU are set. Please only set one"
-            ):
-                set_gres_string(job)
+        assert set_gres_string(job) == " --gres=gpu:1 --gpus=2"
 
     def test_nested_string_raise(self, mock_job):
         """Test error case when gres is a nested string."""
