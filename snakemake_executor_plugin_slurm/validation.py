@@ -221,7 +221,12 @@ def validate_executor_settings(settings, logger=None):
         if not isinstance(settings.delete_logfiles_older_than, int):
             raise WorkflowError("delete-logfiles-older-than must be an integer (days).")
     # signal
-    parse_slurm_signal_settings(settings.signal)
+    try:
+        parse_slurm_signal_settings(settings.signal)
+    except WorkflowError as e:
+        # Keep signal-setting errors user-facing and concise during
+        # ExecutorSettings initialization.
+        raise SystemExit(str(e)) from None
 
     # status_command warnings (optional logger)
     if logger:
