@@ -70,8 +70,13 @@ class TestSlurmSignalParsing:
 
     def test_all_keyword_applies_to_any_rule(self):
         """The 'all' keyword applies signal to any rule not explicitly configured."""
-        assert get_slurm_signal_arg("all:SIGUSR1@60", "any_rule") == " --signal=SIGUSR1@60"
-        assert get_slurm_signal_arg("all:SIGTERM@45", "other_rule") == " --signal=SIGTERM@45"
+        assert (
+            get_slurm_signal_arg("all:SIGUSR1@60", "any_rule") == " --signal=SIGUSR1@60"
+        )
+        assert (
+            get_slurm_signal_arg("all:SIGTERM@45", "other_rule")
+            == " --signal=SIGTERM@45"
+        )
 
     def test_explicit_rule_takes_precedence_over_all(self):
         """An explicit rule setting overrides the 'all' setting."""
@@ -177,7 +182,8 @@ class TestSlurmSignalInExecutor:
             with patch.object(
                 executor,
                 "format_job_exec",
-                side_effect=lambda job: executor.additional_general_args() + " echo test",
+                side_effect=lambda job: executor.additional_general_args()
+                + " echo test",
             ):
                 with patch.object(executor, "report_job_submission"):
                     with patch.object(

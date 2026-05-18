@@ -444,6 +444,7 @@ def parse_slurm_signal_settings(signal_settings: Optional[str]) -> dict[str, str
 
     return parsed_settings
 
+
 def get_slurm_signal_arg(signal_settings: Optional[str], rule_name: str) -> str:
     """Return the sbatch --signal argument for the given rule, if configured.
 

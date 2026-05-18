@@ -1515,12 +1515,14 @@ class Executor(RemoteExecutor):
                             )
                 elif status == "PREEMPTED" and not self._preemption_warning:
                     self._preemption_warning = True
-                    self.logger.warning("""
+                    self.logger.warning(
+                        """
 ===== A Job preemption  occured! =====
 Leave Snakemake running, if possible. Otherwise Snakemake
 needs to restart this job upon a Snakemake restart.
 
-We leave it to SLURM to resume your job(s)""")
+We leave it to SLURM to resume your job(s)"""
+                    )
                     yield j
                 elif status == "UNKNOWN":
                     # the job probably does not exist anymore, but 'sacct' did not work
@@ -1734,9 +1736,7 @@ We leave it to SLURM to resume your job(s)""")
             if self._fallback_partition is None:
                 self._fallback_partition = get_default_partition(job, self.logger)
             partition = self._fallback_partition
-            self.logger.warning(
-                f"Falling back to default partition: {partition}"
-            )
+            self.logger.warning(f"Falling back to default partition: {partition}")
         if partition:
             # we have to quote the partition, because it might
             # contain build-in shell commands
