@@ -112,7 +112,8 @@ def main():
         except subprocess.CalledProcessError as e:
             print(f"ERROR: poetry lock failed with exit code {e.returncode}")
             print(
-                "Your pyproject.toml has been updated, but the lock file is out of sync."
+                "Your pyproject.toml has been updated,"
+                " but the lock file is out of sync."
             )
             print("Please resolve any conflicts and run 'poetry lock' manually.")
             sys.exit(1)
