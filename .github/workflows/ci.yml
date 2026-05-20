@@ -20,11 +20,6 @@ jobs:
       - name: Install poetry
         run: pip install poetry
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: poetry
-
       - name: Install dependencies
         run: |
           poetry install --sync
@@ -44,11 +39,6 @@ jobs:
 
       - name: Install poetry
         run: pip install poetry
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: poetry
 
       - name: Install dependencies
         run: |
@@ -78,11 +68,6 @@ jobs:
 
       - name: Install poetry
         run: pip install poetry
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: poetry
 
       - name: Install dependencies
         run: |
