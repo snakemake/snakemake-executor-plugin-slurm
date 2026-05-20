@@ -16,6 +16,7 @@ import shlex
 import subprocess
 import sys
 import json
+import shutil
 import tomllib
 from pathlib import Path
 
@@ -31,6 +32,8 @@ def main():
     with open(pyproject_path, "rb") as f:
         data = tomllib.load(f)
 
+    poetry_cmd = shutil.which("poetry")
+
     sections = [
         ("main", data["tool"]["poetry"]["dependencies"], None),
         ("dev", data["tool"]["poetry"]["group"]["dev"]["dependencies"], "dev"),
@@ -40,7 +43,7 @@ def main():
         """Get the resolved version of a package from poetry show."""
         try:
             out = subprocess.check_output(
-                ["poetry", "show", pkg, "--format=json"],
+                [poetry_cmd, "show", pkg, "--format=json"],
                 text=True,
                 stderr=subprocess.DEVNULL,
             )
@@ -78,7 +81,7 @@ def main():
                 print(f"  skip {pkg}: non-semver resolved version {v}")
                 continue
 
-            cmd = ["poetry", "add", f"{pkg}@{rng}"]
+            cmd = [poetry_cmd, "add", f"{pkg}@{rng}"]
             if group:
                 cmd += ["--group", group]
 
@@ -106,7 +109,7 @@ def main():
     else:
         print(f"Upgraded {upgraded_count} dependencies. Running poetry lock...")
         try:
-            subprocess.check_call(["poetry", "lock"])
+            subprocess.check_call([poetry_cmd, "lock"])
             print("Complete. Run 'poetry install' to refresh your environment.")
         except subprocess.CalledProcessError as e:
             print(f"ERROR: poetry lock failed with exit code {e.returncode}")
@@ -116,6 +119,7 @@ def main():
             )
             print("Please resolve any conflicts and run 'poetry lock' manually.")
             sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
