@@ -105,7 +105,6 @@ def main():
         print("  poetry run pytest -q")
     else:
         print(f"Upgraded {upgraded_count} dependencies. Running poetry lock...")
-        print(f"Upgraded {upgraded_count} dependencies. Running poetry lock...")
         try:
             subprocess.check_call(["poetry", "lock"])
             print("Complete. Run 'poetry install' to refresh your environment.")
