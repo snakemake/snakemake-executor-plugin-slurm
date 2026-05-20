@@ -20,17 +20,9 @@ jobs:
       - name: Install poetry
         run: pip install poetry
 
-      - name: Determine dependencies
-        run: poetry lock
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: poetry
-
       - name: Install dependencies
         run: |
-          poetry install
+          poetry install --sync
 
       - name: Check formatting
         run: poetry run black --check .
@@ -48,17 +40,9 @@ jobs:
       - name: Install poetry
         run: pip install poetry
 
-      - name: Determine dependencies
-        run: poetry lock
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: poetry
-
       - name: Install dependencies
         run: |
-          poetry install
+          poetry install --sync
 
       - name: Check code
         run: poetry run flake8
@@ -85,17 +69,9 @@ jobs:
       - name: Install poetry
         run: pip install poetry
 
-      - name: Determine dependencies
-        run: poetry lock
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: poetry
-
       - name: Install dependencies
         run: |
-          poetry install
+          poetry install --sync
 
       - name: Run pytest
         run: poetry run coverage run -m pytest tests/ -sv --tb=short --disable-warnings
