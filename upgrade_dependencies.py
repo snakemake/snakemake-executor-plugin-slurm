@@ -116,8 +116,6 @@ def main():
             )
             print("Please resolve any conflicts and run 'poetry lock' manually.")
             sys.exit(1)
-        print("Complete. Run 'poetry install' to refresh your environment.")
-
 
 if __name__ == "__main__":
     main()
