@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.7.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.6.1...v2.7.0) (2026-05-20)
+
+
+### Features
+
+* cpu jobs skip gpu partitions ([#454](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/454)) ([e81cd16](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/e81cd16f75bc58ef99c6bbc400a691b4008124a7))
+
+
+### Bug Fixes
+
+* [#446](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/446) ([e81cd16](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/e81cd16f75bc58ef99c6bbc400a691b4008124a7))
+* pipeline hangs when submitting from compute nodes ([#450](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/450)) ([a09a027](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/a09a027ff39ff11a37978c77021d61d5d3590104))
+* relaxed dependencies ([#460](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/460)) ([6812052](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/6812052454511ddee480d04c241936b46b610b1b))
+
 ## [2.6.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.6.0...v2.6.1) (2026-04-16)
 
 
