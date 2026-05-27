@@ -276,6 +276,28 @@ class TestRunJobsRouting:
         assert calls[0][0][1] == ready_jobs
 
 
+class TestRunJobErrorHandling:
+    """Tests that single-job submission failures are surfaced to Snakemake."""
+
+    def test_run_job_reports_unhandled_exception(self):
+        """Exceptions in run_job are caught and reported via job_error callback."""
+        executor = _make_executor_stub()
+        job = _make_mock_job(rule_name="myrule")
+
+        def _raise_account_error(_job):
+            raise RuntimeError("account lookup failed")
+
+        executor.get_account_arg = _raise_account_error
+
+        # Should not raise, but report a job error to avoid stalling scheduler.
+        executor.run_job(job)
+
+        executor._report_job_error_threadsafe.assert_called_once()
+        submitted_info, message = executor._report_job_error_threadsafe.call_args[0]
+        assert submitted_info.job == job
+        assert "account lookup failed" in message
+
+
 class TestRunArrayJobs:
     """Tests for run_array_jobs: sbatch command structure, chunking, error handling."""
 
