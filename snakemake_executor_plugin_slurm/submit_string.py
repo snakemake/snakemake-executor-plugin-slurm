@@ -131,7 +131,9 @@ def get_submit_command(
     elif job.resources.get("mem_mb"):
         call += f" --mem {job.resources.mem_mb}"
 
-    call += f" --nodes={job.resources.get('nodes') or 1}"
+    nodes = job.resources.get("nodes")
+    if nodes is not None:
+        call += f" --nodes={nodes}"
 
     if settings and settings.requeue:
         call += " --requeue"
