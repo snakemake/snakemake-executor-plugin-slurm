@@ -1,11 +1,9 @@
 """Unit tests for get_account_arg() method."""
 
-import pytest
 from unittest.mock import MagicMock, patch
 
 from snakemake_executor_plugin_slurm import Executor
 from snakemake_executor_plugin_slurm.accounts import validate_account
-from snakemake_interface_common.exceptions import WorkflowError
 
 
 class _Resources(dict):
