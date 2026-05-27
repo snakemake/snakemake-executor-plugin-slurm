@@ -109,7 +109,7 @@ def get_submit_command(
         or job.resources.get("slurm_cluster")
     )
     if cluster_val:
-        call += f" --cluster {safe_quote(cluster_val)}"
+        call += f" --clusters {safe_quote(cluster_val)}"
 
     if job.resources.get("runtime"):
         call += f" -t {safe_quote(job.resources.runtime)}"
@@ -131,8 +131,7 @@ def get_submit_command(
     elif job.resources.get("mem_mb"):
         call += f" --mem {job.resources.mem_mb}"
 
-    if job.resources.get("nodes", False):
-        call += f" --nodes={job.resources.get('nodes', 1)}"
+    call += f" --nodes={job.resources.get('nodes') or 1}"
 
     if settings and settings.requeue:
         call += " --requeue"
@@ -150,16 +149,13 @@ def get_submit_command(
 
     gpu_job = job.resources.get("gpu") or "gpu" in job.resources.get("gres", "")
     if gpu_job:
-        # fixes #316 - allow unsetting of tasks per gpu
-        # apparently, python's internal process manangement interfers with SLURM
-        # e.g. for pytorch
+        # Set ntasks-per-gpu only when explicitly requested by resources.
+        # Some clusters reject implicit task geometry for batch submissions.
         ntasks_per_gpu = job.resources.get("tasks_per_gpu")
         if ntasks_per_gpu is None:
             ntasks_per_gpu = job.resources.get("tasks")
-        if ntasks_per_gpu is None:
-            ntasks_per_gpu = 1
 
-        if ntasks_per_gpu >= 1:
+        if ntasks_per_gpu is not None and ntasks_per_gpu >= 1:
             call += f" --ntasks-per-gpu={ntasks_per_gpu}"
     else:
         # fixes #40 - set ntasks regardless of mpi, because
