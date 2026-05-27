@@ -799,8 +799,8 @@ class Executor(RemoteExecutor):
             # created before submission.
             if "%A" in str(slurm_logfile.parent) or "%a" in str(slurm_logfile.parent):
                 raise WorkflowError(
-                    "bug: jobid placeholder in logfile directory. This does not work as "
-                    "we need to create the parent dir before submission in order to "
+                    "bug: jobid placeholder in logfile directory. This does not work "
+                    "as we need to create the parent dir before submission in order to "
                     "make sbatch happy. Otherwise we get silent fails without logfiles "
                     "being created."
                 )
@@ -1059,8 +1059,8 @@ class Executor(RemoteExecutor):
             # created before submission.
             if "%j" in str(slurm_logfile.parent):
                 raise WorkflowError(
-                    "bug: jobid placeholder in logfile directory. This does not work as "
-                    "we need to create the parent dir before submission in order to "
+                    "bug: jobid placeholder in logfile directory. This does not work "
+                    "as we need to create the parent dir before submission in order to "
                     "make sbatch happy. Otherwise we get silent fails without logfiles "
                     "being created."
                 )
@@ -1134,7 +1134,8 @@ class Executor(RemoteExecutor):
                 call += f' --wrap="{exec_job_escaped}"'
                 subprocess_stdin = None
             else:
-                # format the job to execute with all the snakemake parameters into a script
+                # format the job to execute with all the snakemake parameters into a
+                # script
                 sbatch_script = "\n".join(["#!/bin/sh", exec_job])
                 self.logger.debug(f"sbatch script:\n{sbatch_script}")
                 # feed the shell script to sbatch via stdin
