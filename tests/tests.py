@@ -1,6 +1,7 @@
 import os
 import re
 import inspect
+import shutil
 from pathlib import Path
 from typing import Optional
 import snakemake.common.tests
@@ -189,6 +190,67 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
                 ), f"Efficiency report {report_path} is empty"
                 break
         assert report_found, "Efficiency report file not found"
+
+
+@pytest.mark.skipif(shutil.which("sbatch") is None, reason="requires sbatch")
+class TestSignalWorkflow(snakemake.common.tests.TestWorkflowsLocalStorageBase):
+    """Workflow fixture for manual cluster-side validation of SLURM signals."""
+
+    __test__ = True
+
+    def get_executor(self) -> str:
+        return "slurm"
+
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        return ExecutorSettings(
+            signal="signal_shell:SIGUSR1@30,signal_python:SIGUSR1@30",
+            init_seconds_before_status_checks=2,
+        )
+
+    def run_workflow(self, test_name, tmp_path, deployment_method=frozenset()):
+        test_path = Path(__file__).parent / "testcases" / test_name
+        tmp_path = Path(tmp_path) / test_name
+        self._copy_test_files(test_path, tmp_path)
+
+        resource_settings = self.get_resource_settings()
+        resource_settings.cores = 1
+        resource_settings.nodes = 3
+
+        with api.SnakemakeApi(
+            settings.OutputSettings(
+                verbose=True,
+                show_failed_logs=True,
+            ),
+        ) as snakemake_api:
+            workflow_api = snakemake_api.workflow(
+                config_settings=self.get_config_settings(),
+                resource_settings=resource_settings,
+                storage_settings=settings.StorageSettings(
+                    default_storage_provider=self.get_default_storage_provider(),
+                    default_storage_prefix=self.get_default_storage_prefix(),
+                    shared_fs_usage=(
+                        settings.SharedFSUsage.all()
+                        if self.get_assume_shared_fs()
+                        else frozenset()
+                    ),
+                ),
+                deployment_settings=self.get_deployment_settings(deployment_method),
+                storage_provider_settings=self.get_default_storage_provider_settings(),
+                workdir=Path(tmp_path),
+                snakefile=tmp_path / "Snakefile",
+            )
+
+            workflow_api.dag().execute_workflow(
+                executor=self.get_executor(),
+                executor_settings=self.get_executor_settings(),
+                execution_settings=settings.ExecutionSettings(
+                    latency_wait=self.latency_wait,
+                ),
+                remote_execution_settings=self.get_remote_execution_settings(),
+            )
+
+    def test_signal_workflow(self, tmp_path):
+        self.run_workflow("slurm_signal", tmp_path)
 
 
 class TestWorkflowsRequeue(TestWorkflows):

@@ -278,9 +278,9 @@ def get_best_partition(
     else:
         logger.warning(
             f"No suitable partition found for job {job.name} based on "
-            f"resource requirements. Falling back to default behavior."
+            f"resource requirements. Falling back to default partition."
         )
-        return None
+        return get_default_partition(job, logger)
 
 
 def parse_gpu_requirements(job: JobExecutorInterface) -> tuple[int, Optional[str]]:

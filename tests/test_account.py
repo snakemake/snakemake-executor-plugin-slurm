@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock, patch
 
 from snakemake_executor_plugin_slurm import Executor
+from snakemake_executor_plugin_slurm.accounts import get_account
 
 
 class _Resources(dict):
@@ -79,3 +80,16 @@ class TestGetAccountArg:
         job = _make_mock_job(slurm_account="acc1,acc2 acc3")
         results = list(executor.get_account_arg(job))
         assert results == [" -A acc1", " -A acc2", " -A acc3"]
+
+
+class TestGetAccount:
+    """Tests for get_account() helper parsing sacct output."""
+
+    @patch("snakemake_executor_plugin_slurm.accounts.subprocess.check_output")
+    def test_get_account_uses_last_nonempty_line(self, mock_check_output):
+        mock_check_output.return_value = "acc1\n(null)\nacc2\n"
+        logger = MagicMock()
+
+        result = get_account(logger)
+
+        assert result == "acc2"

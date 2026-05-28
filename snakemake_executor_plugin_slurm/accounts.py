@@ -61,12 +61,19 @@ def get_account(logger):
     tries to deduce the account from recent jobs,
     returns None, if none is found
     """
-    cmd = f'sacct -nu "{getpass.getuser()}" -o Account%256 | tail -1'
+    cmd = f'sacct -n -u "{getpass.getuser()}" -o Account%256 --noheader'
     cmd = shlex.split(cmd)
     try:
         sacct_out = subprocess.check_output(cmd, text=True, stderr=subprocess.PIPE)
-        possible_account = sacct_out.replace("(null)", "").strip()
-        if possible_account == "none":  # some clusters may not use an account
+        possible_account = next(
+            (
+                line.strip()
+                for line in reversed(sacct_out.splitlines())
+                if line.strip() and line.strip() != "(null)"
+            ),
+            "",
+        )
+        if possible_account in {"", "none"}:  # some clusters may not use an account
             return None
     except subprocess.CalledProcessError as e:
         logger.warning(
