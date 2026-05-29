@@ -752,7 +752,8 @@ class TestSLURMResources(TestWorkflows):
 
     def test_gpu_defaults_keep_gpus_and_cpus_per_task(self, mock_job):
         """GPU jobs keep --gpus and --cpus-per-task while omitting implicit ntasks-per-gpu."""
-        job = mock_job(gpu=2)
+        job = mock_job(gpu=2, tasks_per_gpu=-1)
+        job.threads = 1
         params = {
             "run_uuid": "test_run",
             "slurm_logfile": "test_logfile",
@@ -760,6 +761,8 @@ class TestSLURMResources(TestWorkflows):
             "account": None,
             "partition": None,
             "workdir": ".",
+            "gpu": 2,
+            "threads": 1,
         }
 
         sbatch_command = get_submit_command(job, params)
@@ -770,7 +773,7 @@ class TestSLURMResources(TestWorkflows):
         assert "--ntasks-per-gpu" not in sbatch_command
 
     def test_nodes_set_for_unset_nodes(self, mock_job):
-        """Test that nodes are set to 1 when unset."""
+        """Test that nodes flag is omitted when nodes resource is unset."""
         job = mock_job(nodes=None)
         params = {
             "run_uuid": "test_run",
@@ -781,7 +784,7 @@ class TestSLURMResources(TestWorkflows):
             "workdir": ".",
         }
 
-        assert "--nodes=1" in get_submit_command(job, params)
+        assert "--nodes=" not in get_submit_command(job, params)
 
     def test_nodes_set_from_resource(self, mock_job):
         """Test that explicit nodes resource is included in sbatch command."""
@@ -796,6 +799,42 @@ class TestSLURMResources(TestWorkflows):
         }
 
         assert "--nodes=3" in get_submit_command(job, params)
+
+    def test_nodes_zero_raises(self, mock_job):
+        """Test that nodes=0 is rejected."""
+        job = mock_job(nodes=0)
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+        }
+
+        with pytest.raises(
+            WorkflowError,
+            match="If provided, 'nodes' must be an integer greater than or equal to 1.",
+        ):
+            get_submit_command(job, params)
+
+    def test_nodes_non_integral_raises(self, mock_job):
+        """Test that non-integral nodes values are rejected."""
+        job = mock_job(nodes=1.5)
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+        }
+
+        with pytest.raises(
+            WorkflowError,
+            match="If provided, 'nodes' must be an integer greater than or equal to 1.",
+        ):
+            get_submit_command(job, params)
 
 
 class TestWildcardsWithSlashes(snakemake.common.tests.TestWorkflowsLocalStorageBase):
