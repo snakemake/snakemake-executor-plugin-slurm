@@ -1,6 +1,7 @@
 from snakemake_interface_common.exceptions import WorkflowError
 from snakemake_executor_plugin_slurm_jobstep import get_cpu_setting
 from types import SimpleNamespace
+from numbers import Integral
 import re
 import shlex
 
@@ -131,7 +132,13 @@ def get_submit_command(
     elif job.resources.get("mem_mb"):
         call += f" --mem {job.resources.mem_mb}"
 
-    call += f" --nodes={job.resources.get('nodes') or 1}"
+    nodes = job.resources.get("nodes")
+    if nodes is not None:
+        if isinstance(nodes, bool) or not isinstance(nodes, Integral) or nodes < 1:
+            raise WorkflowError(
+                "If provided, 'nodes' must be an integer greater than or equal to 1."
+            )
+        call += f" --nodes={nodes}"
 
     if settings and settings.requeue:
         call += " --requeue"
