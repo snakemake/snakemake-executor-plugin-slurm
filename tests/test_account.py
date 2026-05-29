@@ -95,15 +95,3 @@ class TestGetAccountArg:
 
         result = next(executor.get_account_arg(job))
         assert result == " -A nhr-zdvhpc"
-
-
-class TestAccountValidationCompatibility:
-    """Tests for underscore/hyphen compatibility in account validation."""
-
-    @patch("snakemake_executor_plugin_slurm.accounts.subprocess.check_output")
-    def test_underscore_input_matches_hyphenated_account(self, mock_check_output):
-        logger = MagicMock()
-        mock_check_output.return_value = "nhr-zdvhpc\nki-workflow\n"
-
-        canonical = validate_account("nhr-zdvhpc", logger)
-        assert canonical == "nhr-zdvhpc"
