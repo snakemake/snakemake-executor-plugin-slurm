@@ -1,6 +1,10 @@
 """Unit tests for get_account_arg() method."""
 
+import subprocess
 from unittest.mock import MagicMock, patch
+
+import pytest
+from snakemake_interface_common.exceptions import WorkflowError
 
 from snakemake_executor_plugin_slurm import Executor
 from snakemake_executor_plugin_slurm.accounts import validate_account
@@ -95,3 +99,40 @@ class TestGetAccountArg:
 
         result = next(executor.get_account_arg(job))
         assert result == " -A nhr-zdvhpc"
+
+
+class TestValidateAccount:
+    @patch("snakemake_executor_plugin_slurm.accounts.subprocess.check_output")
+    def test_validate_account_accepts_existing_account(self, mock_check_output):
+        logger = MagicMock()
+        mock_check_output.return_value = "nhr-zdvhpc\nki-workflow\n"
+
+        assert validate_account("nhr-zdvhpc", logger) == "nhr-zdvhpc"
+
+    @patch("snakemake_executor_plugin_slurm.accounts.subprocess.check_output")
+    def test_validate_account_falls_back_to_sshare(self, mock_check_output):
+        logger = MagicMock()
+        mock_check_output.side_effect = [
+            subprocess.CalledProcessError(1, ["sacctmgr"], stderr="boom"),
+            "nhr-zdvhpc\nki-workflow\n",
+        ]
+
+        assert validate_account("ki-workflow", logger) == "ki-workflow"
+
+    @patch("snakemake_executor_plugin_slurm.accounts.subprocess.check_output")
+    def test_validate_account_rejects_unknown_account(self, mock_check_output):
+        logger = MagicMock()
+        mock_check_output.return_value = "nhr-zdvhpc\nki-workflow\n"
+
+        with pytest.raises(WorkflowError, match="appears to be invalid"):
+            validate_account("does-not-exist", logger)
+
+    @patch("snakemake_executor_plugin_slurm.accounts.subprocess.check_output")
+    def test_validate_account_returns_empty_string_when_no_accounts_exist(
+        self, mock_check_output
+    ):
+        logger = MagicMock()
+        mock_check_output.return_value = "\n"
+
+        assert validate_account("anything", logger) == ""
+        logger.warning.assert_called_once()
