@@ -1632,6 +1632,11 @@ We leave it to SLURM to resume your job(s)""")
                 if account:
                     self.logger.warning(f"Guessed SLURM account: {account}")
                     canonical_account = validate_account(f"{account}", self.logger)
+                    if (
+                        not isinstance(canonical_account, str)
+                        or not canonical_account
+                    ):
+                        canonical_account = str(account)
                     self._fallback_account_arg = f" -A {shlex.quote(canonical_account)}"
                 else:
                     self.logger.warning(
