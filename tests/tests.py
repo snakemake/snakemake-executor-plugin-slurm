@@ -751,7 +751,10 @@ class TestSLURMResources(TestWorkflows):
         assert "--ntasks-per-gpu" not in get_submit_command(job, params)
 
     def test_gpu_defaults_keep_gpus_and_cpus_per_task(self, mock_job):
-        """GPU jobs keep --gpus and --cpus-per-task while omitting implicit ntasks-per-gpu."""
+        """
+        GPU jobs keep --gpus and --cpus-per-task while omitting 
+        implicit ntasks-per-gpu.
+        """
         job = mock_job(gpu=2, tasks_per_gpu=-1)
         job.threads = 1
         params = {
