@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.7.0...v2.7.1) (2026-06-01)
+
+
+### Bug Fixes
+
+* gpu submission ([#464](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/464)) ([18fb815](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/18fb815450d570289252efd8d8a8049c65383a8c))
+
 ## [2.7.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.6.1...v2.7.0) (2026-05-20)
 
 
