@@ -37,7 +37,7 @@ from snakemake_interface_executor_plugins.jobs import (
 from snakemake_interface_common.exceptions import WorkflowError
 
 from .accounts import (
-    test_account,
+    validate_account,
     get_account,
 )
 
@@ -793,18 +793,17 @@ class Executor(RemoteExecutor):
             # this behavior has been fixed in slurm 23.02, but there might be
             # plenty of older versions around, hence we should rather be
             # conservative here.
-            assert "%A" not in str(self.slurm_logdir), (
-                "bug: jobid placeholder in parent dir of logfile. This does not "
-                "work as we have to create that dir before submission in order to "
-                "make sbatch happy. Otherwise we get silent fails without "
-                "logfiles being created."
-            )
-            assert r"%a" not in str(self.slurm_logdir), (
-                "bug: jobid placeholder in parent dir of logfile. This does not "
-                "work as we have to create that dir before submission in order to "
-                "make sbatch happy. Otherwise we get silent fails without "
-                "logfiles being created."
-            )
+            # Placeholders in the filename are expected for array jobs
+            # (e.g. %A_%a.log) and are replaced by SLURM. We only reject
+            # placeholders in the directory path because parent dirs must be
+            # created before submission.
+            if "%A" in str(slurm_logfile.parent) or "%a" in str(slurm_logfile.parent):
+                raise WorkflowError(
+                    "bug: jobid placeholder in logfile directory. This does not work "
+                    "as we need to create the parent dir before submission in order to "
+                    "make sbatch happy. Otherwise we get silent fails without logfiles "
+                    "being created."
+                )
 
             # generic part of a submission string:
             # we use a run_uuid as the job-name, to allow `--name`-based
@@ -1041,168 +1040,187 @@ class Executor(RemoteExecutor):
                 )
 
     def run_job(self, job: JobExecutorInterface):
-        group_or_rule = f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
-
-        wildcard_str = get_job_wildcards(job)
-
-        self.slurm_logdir.mkdir(parents=True, exist_ok=True)
-        slurm_logfile = self.slurm_logdir / group_or_rule / wildcard_str / "%j.log"
-        slurm_logfile.parent.mkdir(parents=True, exist_ok=True)
-        # this behavior has been fixed in slurm 23.02, but there might be
-        # plenty of older versions around, hence we should rather be
-        # conservative here.
-        assert "%j" not in str(self.slurm_logdir), (
-            "bug: jobid placeholder in parent dir of logfile. This does not "
-            "work as we have to create that dir before submission in order to "
-            "make sbatch happy. Otherwise we get silent fails without "
-            "logfiles being created."
-        )
-
-        # generic part of a submission string:
-        # we use a run_uuid as the job-name, to allow `--name`-based
-        # filtering in the job status checks (`sacct --name` and
-        # `squeue --name`)
-        if wildcard_str == "":
-            comment_str = f"rule_{job.name}"
-        else:
-            comment_str = f"rule_{job.name}_wildcards_{wildcard_str}"
-        # check whether the 'slurm_extra' parameter is used correctly
-        # prior to putatively setting in the sbatch call
-        validate_slurm_extra(job)
-
-        # NOTE removed partition from below, such that partition
-        # selection can benefit from resource checking as the call is built up.
-        job_params = {
-            "run_uuid": self.run_uuid,
-            "slurm_logfile": slurm_logfile,
-            "comment_str": comment_str,
-            "account": next(self.get_account_arg(job)),
-            "partition": self.get_partition_arg(job),
-            "workdir": self.workflow.workdir_init,
-        }
-
-        call = get_submit_command(
-            job,
-            job_params,
-            settings=self.workflow.executor_settings,
-            failed_nodes=self._failed_nodes,
-        )
-
-        if self._failed_nodes:
-            self.logger.debug(
-                "Excluding failed nodes from job submission: "
-                f"{','.join(self._failed_nodes)}"
-            )
-
-        call += set_gres_string(job)
-
-        if not job.resources.get("runtime"):
-            self.logger.warning(
-                "No wall time information given. This might or might not "
-                "work on your cluster. "
-                "If not, specify the resource runtime in your rule or as "
-                "a reasonable default via --default-resources."
-            )
-
-        if not job.resources.get("mem_mb_per_cpu") and not job.resources.get("mem_mb"):
-            self.logger.warning(
-                "No job memory information ('mem_mb' or 'mem_mb_per_cpu') is "
-                "given - submitting without. This might or might not work on "
-                "your cluster."
-            )
-
-        exec_job = self.format_job_exec(job)
-
-        if not self.workflow.executor_settings.pass_command_as_script:
-            # Escape potential double quotes in wrapped command.
-            # Otherwise sbatch throws:
-            # sbatch: error: script arguments not permitted with --wrap option
-            # See:
-            # https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/29
-            exec_job_escaped = exec_job.replace('"', '\\"')
-
-            # and finally wrap the job to execute with all the snakemake parameters
-            call += f' --wrap="{exec_job_escaped}"'
-            subprocess_stdin = None
-        else:
-            # format the job to execute with all the snakemake parameters into a script
-            sbatch_script = "\n".join(["#!/bin/sh", exec_job])
-            self.logger.debug(f"sbatch script:\n{sbatch_script}")
-            # feed the shell script to sbatch via stdin
-            call += " /dev/stdin"
-            subprocess_stdin = sbatch_script
-
-        self.logger.debug(f"sbatch call: {call}")
-        time.sleep(5)
         try:
-            process = subprocess.Popen(
-                call,
-                shell=True,
-                text=True,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+            group_or_rule = (
+                f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
             )
-            out, err = process.communicate(
-                input=subprocess_stdin  # feed the sbatch shell script through stdin
-            )
-            if process.returncode != 0:
-                raise subprocess.CalledProcessError(
-                    process.returncode, call, output=err
+
+            wildcard_str = get_job_wildcards(job)
+
+            self.slurm_logdir.mkdir(parents=True, exist_ok=True)
+            slurm_logfile = self.slurm_logdir / group_or_rule / wildcard_str / "%j.log"
+            slurm_logfile.parent.mkdir(parents=True, exist_ok=True)
+            # this behavior has been fixed in slurm 23.02, but there might be
+            # plenty of older versions around, hence we should rather be
+            # conservative here.
+            # Placeholders in the filename are expected for regular jobs
+            # (e.g. %j.log) and are replaced by SLURM. We only reject
+            # placeholders in the directory path because parent dirs must be
+            # created before submission.
+            if "%j" in str(slurm_logfile.parent):
+                raise WorkflowError(
+                    "bug: jobid placeholder in logfile directory. This does not work "
+                    "as we need to create the parent dir before submission in order to "
+                    "make sbatch happy. Otherwise we get silent fails without logfiles "
+                    "being created."
                 )
-        except subprocess.CalledProcessError as e:
+
+            # generic part of a submission string:
+            # we use a run_uuid as the job-name, to allow `--name`-based
+            # filtering in the job status checks (`sacct --name` and
+            # `squeue --name`)
+            if wildcard_str == "":
+                comment_str = f"rule_{job.name}"
+            else:
+                comment_str = f"rule_{job.name}_wildcards_{wildcard_str}"
+            # check whether the 'slurm_extra' parameter is used correctly
+            # prior to putatively setting in the sbatch call
+            validate_slurm_extra(job)
+
+            # NOTE removed partition from below, such that partition
+            # selection can benefit from resource checking as the call is built up.
+            job_params = {
+                "run_uuid": self.run_uuid,
+                "slurm_logfile": slurm_logfile,
+                "comment_str": comment_str,
+                "account": next(self.get_account_arg(job)),
+                "partition": self.get_partition_arg(job),
+                "workdir": self.workflow.workdir_init,
+            }
+
+            call = get_submit_command(
+                job,
+                job_params,
+                settings=self.workflow.executor_settings,
+                failed_nodes=self._failed_nodes,
+            )
+
+            if self._failed_nodes:
+                self.logger.debug(
+                    "Excluding failed nodes from job submission: "
+                    f"{','.join(self._failed_nodes)}"
+                )
+
+            call += set_gres_string(job)
+
+            if not job.resources.get("runtime"):
+                self.logger.warning(
+                    "No wall time information given. This might or might not "
+                    "work on your cluster. "
+                    "If not, specify the resource runtime in your rule or as "
+                    "a reasonable default via --default-resources."
+                )
+
+            if not job.resources.get("mem_mb_per_cpu") and not job.resources.get(
+                "mem_mb"
+            ):
+                self.logger.warning(
+                    "No job memory information ('mem_mb' or 'mem_mb_per_cpu') is "
+                    "given - submitting without. This might or might not work on "
+                    "your cluster."
+                )
+
+            exec_job = self.format_job_exec(job)
+
+            if not self.workflow.executor_settings.pass_command_as_script:
+                # Escape potential double quotes in wrapped command.
+                # Otherwise sbatch throws:
+                # sbatch: error: script arguments not permitted with --wrap option
+                # See:
+                # https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/29
+                exec_job_escaped = exec_job.replace('"', '\\"')
+
+                # and finally wrap the job to execute with all the snakemake parameters
+                call += f' --wrap="{exec_job_escaped}"'
+                subprocess_stdin = None
+            else:
+                # format the job to execute with all the snakemake parameters into a
+                # script
+                sbatch_script = "\n".join(["#!/bin/sh", exec_job])
+                self.logger.debug(f"sbatch script:\n{sbatch_script}")
+                # feed the shell script to sbatch via stdin
+                call += " /dev/stdin"
+                subprocess_stdin = sbatch_script
+
+            self.logger.debug(f"sbatch call: {call}")
+            try:
+                process = subprocess.Popen(
+                    call,
+                    shell=True,
+                    text=True,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                out, err = process.communicate(
+                    input=subprocess_stdin  # feed the sbatch shell script through stdin
+                )
+                if process.returncode != 0:
+                    raise subprocess.CalledProcessError(
+                        process.returncode, call, output=err
+                    )
+            except subprocess.CalledProcessError as e:
+                self._report_job_error_threadsafe(
+                    SubmittedJobInfo(job),
+                    (
+                        "SLURM sbatch failed. "
+                        f"The error message was '{e.output.strip()}'.\n"
+                        f"    sbatch call:\n        {call}\n"
+                        + (
+                            f"    sbatch script:\n{sbatch_script}\n"
+                            if subprocess_stdin is not None
+                            else ""
+                        )
+                    ),
+                )
+                return
+            # any other error message indicating failure?
+            if "submission failed" in err:
+                raise WorkflowError(
+                    f"SLURM job submission failed. The error message was {err}"
+                )
+
+            # multicluster submissions yield submission infos like
+            # "Submitted batch job <id> on cluster <name>" by default, but with the
+            # --parsable option it simply yields "<id>;<name>".
+            # To extract the job id we split by semicolon and take the first
+            # element (this also works if no cluster name was provided)
+            slurm_jobid = out.strip().split(";")[0]
+            # this slurm_jobid might be wrong: some cluster admin give convoluted
+            # sbatch outputs. So we need to validate it properly (and replace it
+            # if necessary).
+            slurm_jobid = validate_or_get_slurm_job_id(slurm_jobid, out)
+            slurm_logfile = slurm_logfile.with_name(
+                slurm_logfile.name.replace("%j", slurm_jobid)
+            )
+            self.logger.info(
+                f"Job {job.jobid} has been submitted with SLURM jobid "
+                f"{slurm_jobid} (log: {slurm_logfile})."
+            )
+            # Track cluster specification for later use in cancel_jobs
+            cluster_val = (
+                job.resources.get("cluster")
+                or job.resources.get("clusters")
+                or job.resources.get("slurm_cluster")
+            )
+            if cluster_val:
+                self._submitted_job_clusters.add(cluster_val)
+            self._report_job_submission_threadsafe(
+                SubmittedJobInfo(
+                    job,
+                    external_jobid=slurm_jobid,
+                    aux={"slurm_logfile": slurm_logfile},
+                )
+            )
+        except Exception as e:
+            self.logger.error(
+                f"Exception in run_job for rule {job.rule.name}: {e}",
+                exc_info=True,
+            )
             self._report_job_error_threadsafe(
                 SubmittedJobInfo(job),
-                (
-                    "SLURM sbatch failed. "
-                    f"The error message was '{e.output.strip()}'.\n"
-                    f"    sbatch call:\n        {call}\n"
-                    + (
-                        f"    sbatch script:\n{sbatch_script}\n"
-                        if subprocess_stdin is not None
-                        else ""
-                    )
-                ),
+                f"Job submission failed with exception: {e}",
             )
-            return
-        # any other error message indicating failure?
-        if "submission failed" in err:
-            raise WorkflowError(
-                f"SLURM job submission failed. The error message was {err}"
-            )
-
-        # multicluster submissions yield submission infos like
-        # "Submitted batch job <id> on cluster <name>" by default, but with the
-        # --parsable option it simply yields "<id>;<name>".
-        # To extract the job id we split by semicolon and take the first
-        # element (this also works if no cluster name was provided)
-        slurm_jobid = out.strip().split(";")[0]
-        # this slurm_jobid might be wrong: some cluster admin give convoluted
-        # sbatch outputs. So we need to validate it properly (and replace it
-        # if necessary).
-        slurm_jobid = validate_or_get_slurm_job_id(slurm_jobid, out)
-        slurm_logfile = slurm_logfile.with_name(
-            slurm_logfile.name.replace("%j", slurm_jobid)
-        )
-        self.logger.info(
-            f"Job {job.jobid} has been submitted with SLURM jobid "
-            f"{slurm_jobid} (log: {slurm_logfile})."
-        )
-        # Track cluster specification for later use in cancel_jobs
-        cluster_val = (
-            job.resources.get("cluster")
-            or job.resources.get("clusters")
-            or job.resources.get("slurm_cluster")
-        )
-        if cluster_val:
-            self._submitted_job_clusters.add(cluster_val)
-        self._report_job_submission_threadsafe(
-            SubmittedJobInfo(
-                job,
-                external_jobid=slurm_jobid,
-                aux={"slurm_logfile": slurm_logfile},
-            )
-        )
 
     async def check_active_jobs(
         self, active_jobs: List[SubmittedJobInfo]
@@ -1591,25 +1609,32 @@ We leave it to SLURM to resume your job(s)""")
             accounts = [
                 a for a in re.split(r"[,\s]+", str(job.resources.slurm_account)) if a
             ]
+            canonical_accounts = []
             for account in accounts:
-                # here, we check whether the given or guessed account is valid
+                # here, we check whether the given account is valid
                 # if not, a WorkflowError is raised
-                test_account(account, self.logger)
+                canonical_account = validate_account(account, self.logger)
+                # Keep the original account when validation does not provide a
+                # canonical value (or in tests where the validator is mocked).
+                if not isinstance(canonical_account, str) or not canonical_account:
+                    canonical_account = account
+                canonical_accounts.append(canonical_account)
             # sbatch only allows one account per submission
             # yield one after the other, if multiple were given
             # we have to quote the account, because it might
             # contain build-in shell commands - see issue #354
-            for account in accounts:
-                test_account(account, self.logger)
-                yield f" -A {shlex.quote(account)}"
+            for canonical_account in canonical_accounts:
+                yield f" -A {shlex.quote(canonical_account)}"
         else:
             if self._fallback_account_arg is None:
                 self.logger.warning("No SLURM account given, trying to guess.")
                 account = get_account(self.logger)
                 if account:
                     self.logger.warning(f"Guessed SLURM account: {account}")
-                    test_account(f"{account}", self.logger)
-                    self._fallback_account_arg = f" -A {shlex.quote(account)}"
+                    canonical_account = validate_account(f"{account}", self.logger)
+                    if not isinstance(canonical_account, str) or not canonical_account:
+                        canonical_account = str(account)
+                    self._fallback_account_arg = f" -A {shlex.quote(canonical_account)}"
                 else:
                     self.logger.warning(
                         "Unable to guess SLURM account. Trying to proceed without."

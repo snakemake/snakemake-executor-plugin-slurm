@@ -5,7 +5,7 @@ import subprocess
 from snakemake_interface_common.exceptions import WorkflowError
 
 
-def test_account(account, logger):
+def validate_account(account, logger):
     """
     tests whether the given account is registered, raises an error, if not
     """
@@ -54,6 +54,10 @@ def test_account(account, logger):
             f"The given account {account} appears to be invalid. Available "
             f"accounts:\n{', '.join(accounts)}"
         )
+    else:
+        # we return the account once more to cover all tests. And we need to test
+        # to ensure the account has not been tinkered with for futher versions.
+        return account
 
 
 def get_account(logger):

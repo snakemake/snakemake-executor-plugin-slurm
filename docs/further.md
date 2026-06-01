@@ -223,7 +223,8 @@ These are the available options, and the SLURM `sbatch` command line arguments t
 | `cpus_per_task`      | number of CPUs per task (in case of | `--cpus-per-task`   |
 |                      | SMP, rather use `threads`)          |                     |
 | `mem_mb_per_cpu`     | memory per reserved CPU             | `--mem-per-cpu`     |
-| `nodes`              | number of nodes                     | `--nodes`           |
+| `nodes`              | number of nodes (integer >= 1, only | `--nodes`           |
+|                      | passed through when explicitly set) |                     |
 | `slurm_account`      | account for resource usage tracking | `--account`         |
 | `slurm_partition`    | partition/queue to submit job(s) to | `--partition`       |
 | `slurm_requeue`      | handle `--retries` with SLURM       | `--requeue`                    |
