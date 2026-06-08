@@ -229,6 +229,20 @@ class ExecutorSettings(ExecutorSettingsBase):
         },
     )
 
+    node_local_dir: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": "A cluster specific node local local global directory. "
+            "Similar to '.remote_job_local_storage_prefix' of the fs-storage "
+            "plugin. Used to ensure stage-in when input is flagged for random "
+            "or mixed access patterns - see https://jgu.to/kwenq ."
+            "Other than the fs-storage plugin, this function only works to "
+            "stage-in input files (no stage-out) but supports transferring "
+            "onto all nodes of the SLURM job. For big files (> 2GB)'ssh' from "
+            "node to node must be enabled."
+        },
+    )
+
     init_seconds_before_status_checks: Optional[int] = field(
         default=40,
         metadata={
@@ -1468,12 +1482,14 @@ class Executor(RemoteExecutor):
                             )
                 elif status == "PREEMPTED" and not self._preemption_warning:
                     self._preemption_warning = True
-                    self.logger.warning("""
+                    self.logger.warning(
+                        """
 ===== A Job preemption  occured! =====
 Leave Snakemake running, if possible. Otherwise Snakemake
 needs to restart this job upon a Snakemake restart.
 
-We leave it to SLURM to resume your job(s)""")
+We leave it to SLURM to resume your job(s)"""
+                    )
                     yield j
                 elif status == "UNKNOWN":
                     # the job probably does not exist anymore, but 'sacct' did not work
