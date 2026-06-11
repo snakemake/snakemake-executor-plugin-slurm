@@ -855,10 +855,10 @@ class Executor(RemoteExecutor):
                     "your cluster."
                 )
             # Build a compressed map of array task id -> full execution string
-            # for all jobs.
+            # for all jobs. Export attempt state for each job.
             array_execs = {
                 index: zlib.compress(
-                    self.format_job_exec(job).encode("utf-8"), level=9
+                    f"export SNAKEMAKE_ATTEMPT={job.attempt}; {self.format_job_exec(job)}".encode("utf-8"), level=9
                 ).hex()
                 for index, job in enumerate(jobs, start=1)
             }
@@ -885,7 +885,9 @@ class Executor(RemoteExecutor):
                 end_index = min(start_index + array_limit - 1, len(jobs))
                 # The first task of each chunk runs via the plain base command.
                 # Remaining tasks are dispatched from --slurm-jobstep-array-execs.
-                exec_job = self.format_job_exec(jobs[start_index - 1])
+                # Export attempt state for the first task as well.
+                first_job = jobs[start_index - 1]
+                exec_job = f"export SNAKEMAKE_ATTEMPT={first_job.attempt}; {self.format_job_exec(first_job)}"
                 sub_array_execs = {
                     str(i): array_execs[i]
                     for i in range(start_index + 1, end_index + 1)
