@@ -636,7 +636,8 @@ class Executor(RemoteExecutor):
         passed to `exec_job`.
         """
         general_args = "--executor slurm-jobstep --jobs 1"
-        # need to pass
+        # Pass attempt state to nested executor for resource calculation
+        general_args += " --envvars SNAKEMAKE_ATTEMPT"
         if self.workflow.executor_settings.pass_command_as_script:
             general_args += " --slurm-jobstep-pass-command-as-script"
         return general_args
@@ -1121,6 +1122,8 @@ class Executor(RemoteExecutor):
                 )
 
             exec_job = self.format_job_exec(job)
+            # Export attempt state for nested executor
+            exec_job = f"export SNAKEMAKE_ATTEMPT={job.attempt}; {exec_job}"
 
             if not self.workflow.executor_settings.pass_command_as_script:
                 # Escape potential double quotes in wrapped command.
