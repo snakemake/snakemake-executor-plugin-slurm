@@ -782,7 +782,7 @@ class Executor(RemoteExecutor):
         try:
             # Set inherited attempt for nested executor (use first job's attempt)
             self.workflow.executor_settings._inherited_attempt = jobs[0].attempt
-            
+
             self.logger.debug(
                 f"Preparing to submit array job for rule {jobs[0].rule.name} "
                 f"with {len(jobs)} tasks."
@@ -1060,7 +1060,7 @@ class Executor(RemoteExecutor):
         try:
             # Set inherited attempt for nested executor
             self.workflow.executor_settings._inherited_attempt = job.attempt
-            
+
             group_or_rule = (
                 f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
             )
