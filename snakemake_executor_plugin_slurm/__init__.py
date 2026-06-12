@@ -165,6 +165,17 @@ def _status_lookup_ids(external_jobid: str) -> List[str]:
 class ExecutorSettings(ExecutorSettingsBase):
     """Settings for the SLURM executor plugin."""
 
+    _inherited_attempt: int = field(
+        default=0,
+        metadata={
+            "help": "Internal field for passing attempt state to nested executors",
+            "env_var": False,
+            "required": False,
+        },
+        init=False,
+        repr=False,
+    )
+
     array_jobs: Optional[str] = field(
         default=None,
         metadata={
@@ -636,8 +647,6 @@ class Executor(RemoteExecutor):
         passed to `exec_job`.
         """
         general_args = "--executor slurm-jobstep --jobs 1"
-        # Pass attempt state to nested executor for resource calculation
-        general_args += " --envvars SNAKEMAKE_ATTEMPT"
         if self.workflow.executor_settings.pass_command_as_script:
             general_args += " --slurm-jobstep-pass-command-as-script"
         return general_args
@@ -771,6 +780,9 @@ class Executor(RemoteExecutor):
 
     def run_array_jobs(self, jobs: List[JobExecutorInterface]):
         try:
+            # Set inherited attempt for nested executor (use first job's attempt)
+            self.workflow.executor_settings._inherited_attempt = jobs[0].attempt
+            
             self.logger.debug(
                 f"Preparing to submit array job for rule {jobs[0].rule.name} "
                 f"with {len(jobs)} tasks."
@@ -855,10 +867,10 @@ class Executor(RemoteExecutor):
                     "your cluster."
                 )
             # Build a compressed map of array task id -> full execution string
-            # for all jobs. Export attempt state for each job.
+            # for all jobs.
             array_execs = {
                 index: zlib.compress(
-                    f"export SNAKEMAKE_ATTEMPT={job.attempt}; {self.format_job_exec(job)}".encode("utf-8"), level=9
+                    self.format_job_exec(job).encode("utf-8"), level=9
                 ).hex()
                 for index, job in enumerate(jobs, start=1)
             }
@@ -885,9 +897,8 @@ class Executor(RemoteExecutor):
                 end_index = min(start_index + array_limit - 1, len(jobs))
                 # The first task of each chunk runs via the plain base command.
                 # Remaining tasks are dispatched from --slurm-jobstep-array-execs.
-                # Export attempt state for the first task as well.
                 first_job = jobs[start_index - 1]
-                exec_job = f"export SNAKEMAKE_ATTEMPT={first_job.attempt}; {self.format_job_exec(first_job)}"
+                exec_job = self.format_job_exec(first_job)
                 sub_array_execs = {
                     str(i): array_execs[i]
                     for i in range(start_index + 1, end_index + 1)
@@ -1041,9 +1052,15 @@ class Executor(RemoteExecutor):
                     SubmittedJobInfo(job),
                     f"Array job submission failed with exception: {e}",
                 )
+        finally:
+            # Clean up inherited attempt
+            self.workflow.executor_settings._inherited_attempt = 0
 
     def run_job(self, job: JobExecutorInterface):
         try:
+            # Set inherited attempt for nested executor
+            self.workflow.executor_settings._inherited_attempt = job.attempt
+            
             group_or_rule = (
                 f"group_{job.name}" if job.is_group() else f"rule_{job.name}"
             )
@@ -1124,8 +1141,6 @@ class Executor(RemoteExecutor):
                 )
 
             exec_job = self.format_job_exec(job)
-            # Export attempt state for nested executor
-            exec_job = f"export SNAKEMAKE_ATTEMPT={job.attempt}; {exec_job}"
 
             if not self.workflow.executor_settings.pass_command_as_script:
                 # Escape potential double quotes in wrapped command.
@@ -1226,6 +1241,9 @@ class Executor(RemoteExecutor):
                 SubmittedJobInfo(job),
                 f"Job submission failed with exception: {e}",
             )
+        finally:
+            # Clean up inherited attempt
+            self.workflow.executor_settings._inherited_attempt = 0
 
     async def check_active_jobs(
         self, active_jobs: List[SubmittedJobInfo]
