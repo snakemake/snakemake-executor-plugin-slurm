@@ -24,6 +24,11 @@ jobs:
         run: |
           poetry install --sync
 
+      - name: Debug black environment
+        run: |
+          poetry run black --version
+          poetry run black --check --diff .
+
       - name: Check formatting
         run: poetry run black --check .
 
