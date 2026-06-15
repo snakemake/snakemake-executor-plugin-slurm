@@ -72,7 +72,10 @@ def get_job_wildcards(job: JobExecutorInterface) -> str:
 
 
 _DEFERRED_ENVVAR_PATTERN = re.compile(
-    r"(?<!\\)\$(?:\{(?P<braced>[A-Za-z_][A-Za-z0-9_]*)\}|(?P<bare>[A-Za-z_][A-Za-z0-9_]*))"
+    r"(?<!\\)\$(?:"
+    r"\{(?P<braced>[A-Za-z_][A-Za-z0-9_]*)\}"
+    r"|(?P<bare>[A-Za-z_][A-Za-z0-9_]*)"
+    r")"
 )
 
 
