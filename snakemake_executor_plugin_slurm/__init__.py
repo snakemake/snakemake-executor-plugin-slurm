@@ -44,6 +44,7 @@ from .accounts import (
 from .utils import (
     get_max_array_size,
     get_job_wildcards,
+    encode_deferred_envvars,
     pending_jobs_for_rule,
     delete_slurm_environment,
     delete_empty_dirs,
@@ -229,7 +230,7 @@ class ExecutorSettings(ExecutorSettingsBase):
         },
     )
 
-    node_local_dir: Optional[str] = field(
+    node_local_prefix: Optional[str] = field(
         default=None,
         metadata={
             "help": "A cluster specific node local local global directory. "
@@ -653,6 +654,11 @@ class Executor(RemoteExecutor):
         # need to pass
         if self.workflow.executor_settings.pass_command_as_script:
             general_args += " --slurm-jobstep-pass-command-as-script"
+        if self.workflow.executor_settings.node_local_prefix:
+            ld = self.workflow.executor_settings.node_local_prefix
+            # self.logger.debug(f"Using node local directory prefix for staging: {ld}")
+            ld = encode_deferred_envvars(ld)
+            general_args += f" --slurm-jobstep-node-local-prefix={shlex.quote(ld)}"
         return general_args
 
     def run_jobs(self, jobs: List[JobExecutorInterface]):

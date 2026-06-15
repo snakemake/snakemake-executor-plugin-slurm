@@ -71,6 +71,26 @@ def get_job_wildcards(job: JobExecutorInterface) -> str:
     return wildcard_str
 
 
+_DEFERRED_ENVVAR_PATTERN = re.compile(
+    r"(?<!\\)\$(?:\{(?P<braced>[A-Za-z_][A-Za-z0-9_]*)\}|(?P<bare>[A-Za-z_][A-Za-z0-9_]*))"
+)
+
+
+def encode_deferred_envvars(value: str) -> str:
+    """Replace shell-style env variables with neutral markers.
+
+    The marker keeps submit-time shell quoting safe. The matching jobstep-side
+    code can expand ``__ENV_NAME__`` back from ``os.environ`` once the job is
+    running in its real job context.
+    """
+
+    def replace(match: re.Match[str]) -> str:
+        name = match.group("braced") or match.group("bare")
+        return f"__ENV_{name}__"
+
+    return _DEFERRED_ENVVAR_PATTERN.sub(replace, value)
+
+
 def pending_jobs_for_rule(dag: DAGExecutorInterface, rule_name: str) -> int:
     """Count jobs of a rule that are currently eligible for scheduling.
 
