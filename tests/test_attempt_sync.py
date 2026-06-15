@@ -86,11 +86,11 @@ class TestRunJobAttemptSync:
         try:
             pass  # Simulate job execution
         finally:
-            # Cleanup by setting to None (field can't be deleted due to init=False)
-            mock_executor.workflow.executor_settings._inherited_attempt = None
+            # Cleanup by resetting to 0 (matches actual implementation)
+            mock_executor.workflow.executor_settings._inherited_attempt = 0
 
-        # Should be cleaned up (set to None)
-        assert mock_executor.workflow.executor_settings._inherited_attempt is None
+        # Should be cleaned up (reset to 0)
+        assert mock_executor.workflow.executor_settings._inherited_attempt == 0
 
     def test_multiple_jobs_update_inherited_attempt(self, mock_executor, mock_job):
         """Verify _inherited_attempt updates correctly for sequential jobs."""
@@ -126,11 +126,11 @@ class TestRunArrayJobsAttemptSync:
         try:
             pass  # Simulate array execution
         finally:
-            # Cleanup by setting to None (field can't be deleted due to init=False)
-            mock_executor.workflow.executor_settings._inherited_attempt = None
+            # Cleanup by resetting to 0 (matches actual implementation)
+            mock_executor.workflow.executor_settings._inherited_attempt = 0
 
-        # Should be cleaned up (set to None)
-        assert mock_executor.workflow.executor_settings._inherited_attempt is None
+        # Should be cleaned up (reset to 0)
+        assert mock_executor.workflow.executor_settings._inherited_attempt == 0
 
 
 class TestNoEnvironmentVariableUsage:
