@@ -1,0 +1,57 @@
+import os
+from setuptools import setup, find_packages, Extension
+from Cython.Build import cythonize
+import toml
+
+# Parse pyproject.toml for metadata
+pyproject_path = os.path.join(os.path.dirname(__file__), "pyproject.toml")
+with open(pyproject_path, "r") as f:
+    pyproject = toml.load(f)
+
+project = pyproject.get("tool", {}).get("poetry", {})
+dependencies = pyproject.get("tool", {}).get("poetry", {}).get("dependencies", {}).copy()
+
+# Remove python version constraint from dependencies
+dependencies.pop("python", None)
+dependencies.pop("Cython", None)
+
+# Collect all .py files in snakemake_executor_plugin_slurm directory for Cython compilation
+base_dir = "snakemake_executor_plugin_slurm"
+py_files = []
+
+for filename in os.listdir(base_dir):
+    if filename.endswith(".py"):
+        file_path = os.path.join(base_dir, filename)
+        py_files.append(file_path)
+
+# Create a single Extension with all Python files
+extensions = [
+    Extension(
+        'snakemake_executor_plugin_slurm._core',
+        py_files
+    )
+]
+
+# gcc arguments for optimization
+os.environ["CFLAGS"] = "-O3"
+
+setup(
+    name=project.get("name", "snakemake-executor-plugin-slurm"),
+    version=project.get("version", "2.1.0"),
+    description=project.get("description", ""),
+    author=", ".join(project.get("authors", [])),
+    license=project.get("license", ""),
+    url=project.get("repository", ""),
+    py_modules=[],
+    ext_modules=cythonize(extensions, language_level=3, compiler_directives={"linetrace": True}),
+    install_requires=list(dependencies.keys()),
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
+)
+
+
+
+

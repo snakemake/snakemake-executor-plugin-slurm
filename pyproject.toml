@@ -20,12 +20,11 @@ snakemake-interface-executor-plugins = ">=9.4.0,<10"
 snakemake-executor-plugin-slurm-jobstep = ">=0.6.0,<1"
 pandas = ">=2.3.3,<4"
 numpy = ">=2.4.5,<3"
-throttler = ">=1.2.3,<2"
+throttler = ">=1.2.2,<2"
 pyyaml = ">=6.0.3,<7"
 
 [tool.poetry.group.dev.dependencies]
-black = "==26.3.1"
-flake8 = ">=6.1.0,<7"
+ruff = ">=0.10.0,<0.11"
 coverage = ">=7.14.0,<8"
 pytest = ">=9.0.3,<10"
 snakemake = ">=9.21.0,<10"
@@ -37,9 +36,16 @@ generate-slurm-partition-config = "snakemake_executor_plugin_slurm.cli:main"
 [tool.coverage.run]
 omit = [".*", "*/site-packages/*", "Snakefile"]
 
-[tool.black]
+[tool.ruff]
 line-length = 88
-extend-exclude = 'tests/test_scontrol_parsing\.py'
+target-version = "py311"
+extend-exclude = ["tests/test_scontrol_parsing.py"]
+
+[tool.ruff.lint]
+ignore = ["E203"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/test_scontrol_parsing.py" = ["E501"]
 
 [tool.pytest.ini_options]
 python_files = ["test_*.py", "tests.py"]
