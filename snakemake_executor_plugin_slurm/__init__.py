@@ -706,11 +706,12 @@ class Executor(RemoteExecutor):
                         if size is not None and size > 100:
                             self.logger.warning(
                                 f"Job '{job.name}' has input file '{inp.path}' with "
-                                f"random or mixed access pattern and size {size} bytes. "
-                                "Snakemake will attempt to stage in this file to the node "
-                                "local directory specified by "
+                                f"random or mixed access pattern and size {size} "
+                                "bytes. Snakemake will attempt to stage in this file "
+                                "to the node local directory specified by "
                                 f"{self.workflow.executor_settings.node_local_prefix}. "
-                                "However, for files of this size the process might be slow."
+                                "However, for files of this size the process might be "
+                                "slow."
                             )
 
         if self._main_event_loop is None:
