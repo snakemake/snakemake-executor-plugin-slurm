@@ -695,24 +695,24 @@ class Executor(RemoteExecutor):
             and self.workflow.executor_settings.node_local_prefix
         ):
             for job in jobs:
-                for inp in job.input:
-                    if isinstance(
-                        inp.flags.get(STORE_KEY), AccessPattern
-                    ) and inp.flags[STORE_KEY] in {
-                        AccessPattern.RANDOM,
-                        AccessPattern.MIXED,
-                    }:
-                        size = get_file_size(inp.path)
-                        if size is not None and size > 100:
-                            self.logger.warning(
-                                f"Job '{job.name}' has input file '{inp.path}' with "
-                                f"random or mixed access pattern and size {size} "
-                                "bytes. Snakemake will attempt to stage in this file "
-                                "to the node local directory specified by "
-                                f"{self.workflow.executor_settings.node_local_prefix}. "
-                                "However, for files of this size the process might be "
-                                "slow."
-                            )
+                has_random_or_mixed = any(
+                    isinstance(inp.flags.get(STORE_KEY), AccessPattern)
+                    and inp.flags[STORE_KEY]
+                    in {AccessPattern.RANDOM, AccessPattern.MIXED}
+                    for inp in job.input
+                )
+                if has_random_or_mixed:
+                    size = get_file_size(inp.path)
+                    if size is not None and size > 100:
+                        self.logger.warning(
+                            f"Job '{job.name}' has input file '{inp.path}' with "
+                            f"random or mixed access pattern and size {size} "
+                            "bytes. Snakemake will attempt to stage in this file "
+                            "to the node local directory specified by "
+                            f"{self.workflow.executor_settings.node_local_prefix}. "
+                            "However, for files of this size the process might be "
+                            "slow."
+                        )
 
         if self._main_event_loop is None:
             try:
@@ -1534,12 +1534,14 @@ class Executor(RemoteExecutor):
                             )
                 elif status == "PREEMPTED" and not self._preemption_warning:
                     self._preemption_warning = True
-                    self.logger.warning("""
+                    self.logger.warning(
+                        """
 ===== A Job preemption  occured! =====
 Leave Snakemake running, if possible. Otherwise Snakemake
 needs to restart this job upon a Snakemake restart.
 
-We leave it to SLURM to resume your job(s)""")
+We leave it to SLURM to resume your job(s)"""
+                    )
                     yield j
                 elif status == "UNKNOWN":
                     # the job probably does not exist anymore, but 'sacct' did not work
