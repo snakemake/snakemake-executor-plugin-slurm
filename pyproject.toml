@@ -39,6 +39,7 @@ omit = [".*", "*/site-packages/*", "Snakefile"]
 
 [tool.black]
 line-length = 88
+target-version = ["py311"]
 extend-exclude = 'tests/test_scontrol_parsing\.py'
 
 [tool.pytest.ini_options]

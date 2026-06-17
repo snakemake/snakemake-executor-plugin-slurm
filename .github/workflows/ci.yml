@@ -28,10 +28,10 @@ jobs:
         continue-on-error: true
         run: |
           poetry run black --version
-          poetry run black --check --diff .
+          poetry run black --check --diff --target-version py311 .
 
       - name: Check formatting
-        run: poetry run black --check .
+        run: poetry run black --check --target-version py311 .
 
   linting:
     runs-on: ubuntu-latest
