@@ -695,12 +695,13 @@ class Executor(RemoteExecutor):
             and self.workflow.executor_settings.node_local_prefix
         ):
             for job in jobs:
-                has_random_or_mixed = any(
-                    isinstance(inp.flags.get(STORE_KEY), AccessPattern)
-                    and inp.flags[STORE_KEY]
-                    in {AccessPattern.RANDOM, AccessPattern.MIXED}
-                    for inp in job.input
-                )
+                for inp in job.input:
+                    has_random_or_mixed = any(
+                        isinstance(inp.flags.get(STORE_KEY), AccessPattern)
+                        and inp.flags[STORE_KEY]
+                        in {AccessPattern.RANDOM, AccessPattern.MIXED}
+                        for inp in job.input
+                    )
                 if has_random_or_mixed:
                     size = get_file_size(inp.path)
                     if size is not None and size > 100:
