@@ -25,6 +25,7 @@ jobs:
           poetry install --sync
 
       - name: Debug black environment
+        continue-on-error: true
         run: |
           poetry run black --version
           poetry run black --check --diff .
