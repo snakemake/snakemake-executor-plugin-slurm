@@ -34,6 +34,10 @@ from snakemake_interface_executor_plugins.settings import (
 from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
+from snakemake.io.flags.access_patterns import (
+    AccessPattern,
+    STORE_KEY,
+)
 from snakemake_interface_common.exceptions import WorkflowError
 
 from .accounts import (
@@ -49,6 +53,7 @@ from .utils import (
     delete_slurm_environment,
     delete_empty_dirs,
     set_gres_string,
+    get_file_size,
 )
 from .job_status_query import (
     get_min_job_age,
@@ -241,6 +246,18 @@ class ExecutorSettings(ExecutorSettingsBase):
             "stage-in input files (no stage-out) but supports transferring "
             "onto all nodes of the SLURM job. For big files (> 2GB)'ssh' from "
             "node to node must be enabled."
+        },
+    )
+    suppress_auto_stagein: bool = field(
+        default=False,
+        metadata={
+            "help": "By default, when node_local_prefix is set, Snakemake will "
+            "automatically stage in input files with random or mixed access "
+            "patterns to the node local directory. Setting this flag will "
+            "suppress this behavior, so that no automatic staging will be "
+            "performed.",
+            "env_var": False,
+            "required": False,
         },
     )
 
@@ -651,12 +668,15 @@ class Executor(RemoteExecutor):
         passed to `exec_job`.
         """
         general_args = "--executor slurm-jobstep --jobs 1"
-        # need to pass
+        # switch for passing a command as script vs using `sbatch --wrap`
         if self.workflow.executor_settings.pass_command_as_script:
             general_args += " --slurm-jobstep-pass-command-as-script"
-        if self.workflow.executor_settings.node_local_prefix:
+        # attempt auto stage-in if not suppressed and node_local_prefix is set
+        if (
+            self.workflow.executor_settings.node_local_prefix
+            and not self.workflow.executor_settings.suppress_auto_stagein
+        ):
             ld = self.workflow.executor_settings.node_local_prefix
-            # self.logger.debug(f"Using node local directory prefix for staging: {ld}")
             ld = encode_deferred_envvars(ld)
             general_args += f" --slurm-jobstep-node-local-prefix={shlex.quote(ld)}"
         return general_args
@@ -668,6 +688,31 @@ class Executor(RemoteExecutor):
         - `run_array_jobs` for array job submission, or
         - `run_pool_jobs` for pool job submission (to be implemented in the future).
         """
+        # check whether current jobs are using random or multi access patters
+        # and node_local_prefix is set
+        if (
+            not self.workflow.executor_settings.suppress_auto_stagein
+            and self.workflow.executor_settings.node_local_prefix
+        ):
+            for job in jobs:
+                for inp in job.input:
+                    if isinstance(
+                        inp.flags.get(STORE_KEY), AccessPattern
+                    ) and inp.flags[STORE_KEY] in {
+                        AccessPattern.RANDOM,
+                        AccessPattern.MIXED,
+                    }:
+                        size = get_file_size(inp.path)
+                        if size is not None and size > 100:
+                            self.logger.warning(
+                                f"Job '{job.name}' has input file '{inp.path}' with "
+                                f"random or mixed access pattern and size {size} bytes. "
+                                "Snakemake will attempt to stage in this file to the node "
+                                "local directory specified by "
+                                f"{self.workflow.executor_settings.node_local_prefix}. "
+                                "However, for files of this size the process might be slow."
+                            )
+
         if self._main_event_loop is None:
             try:
                 self._main_event_loop = asyncio.get_running_loop()
@@ -1488,12 +1533,14 @@ class Executor(RemoteExecutor):
                             )
                 elif status == "PREEMPTED" and not self._preemption_warning:
                     self._preemption_warning = True
-                    self.logger.warning("""
+                    self.logger.warning(
+                        """
 ===== A Job preemption  occured! =====
 Leave Snakemake running, if possible. Otherwise Snakemake
 needs to restart this job upon a Snakemake restart.
 
-We leave it to SLURM to resume your job(s)""")
+We leave it to SLURM to resume your job(s)"""
+                    )
                     yield j
                 elif status == "UNKNOWN":
                     # the job probably does not exist anymore, but 'sacct' did not work
