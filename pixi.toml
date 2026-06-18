@@ -25,3 +25,6 @@ format = "ruff format"
 lint = "ruff check"
 test = "coverage run -m pytest tests/ -sv --tb=short --disable-warnings"
 coverage-report = "coverage report -m"
+
+[system-requirements]
+linux = "4.18"
