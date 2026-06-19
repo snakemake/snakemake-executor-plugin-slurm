@@ -29,7 +29,7 @@ jobs:
         uses: prefix-dev/setup-pixi@v0
 
       - name: Check code
-        run: poetry run lint
+        run: pixi run lint
 
   testing:
     runs-on: ubuntu-latest
@@ -49,20 +49,8 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0
 
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install poetry
-        run: pip install poetry
-
-      - name: Install dependencies
-        run: |
-          poetry install --sync
-
       - name: Run pytest
-        run: poetry run coverage run -m pytest tests/ -sv --tb=short --disable-warnings
+        run: pixi run test
 
       - name: Run Coverage
-        run: poetry run coverage report -m
+        run: pixi run coverage-report
