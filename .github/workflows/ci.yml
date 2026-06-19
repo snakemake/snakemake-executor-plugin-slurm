@@ -11,41 +11,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install poetry
-        run: pip install poetry
-
-      - name: Install dependencies
-        run: |
-          poetry install --sync
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixiv0
 
       - name: Check formatting
-        run: poetry run black --check .
+        run: pixi run format --check .
 
   linting:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install poetry
-        run: pip install poetry
-
-      - name: Install dependencies
-        run: |
-          poetry install --sync
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixiv0
 
       - name: Check code
-        run: poetry run flake8
+        run: poetry run lint
 
   testing:
     runs-on: ubuntu-latest
@@ -58,9 +42,13 @@ jobs:
           - "8888:3306"
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: koesterlab/setup-slurm-action@v1
+
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixiv0
+
 
       - uses: actions/setup-python@v5
         with:
