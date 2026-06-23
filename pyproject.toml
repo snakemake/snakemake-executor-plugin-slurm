@@ -1,37 +1,90 @@
-[tool.poetry]
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
 name = "snakemake-executor-plugin-slurm"
 version = "2.7.1"
 description = "A Snakemake executor plugin for submitting jobs to a SLURM cluster."
-authors = [
-    "Christian Meesters <meesters@uni-mainz.de>",
-    "David Lähnemann <david.laehnemann@dkfz-heidelberg.de>",
-    "Johannes Koester <johannes.koester@uni-due.de>",
-]
 readme = "README.md"
+requires-python = ">=3.11"
 license = "MIT"
-repository = "https://github.com/snakemake/snakemake-executor-plugin-slurm"
-documentation = "https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html"
+authors = [
+    { name = "Christian Meesters", email = "meesters@uni-mainz.de" },
+    { name = "David Lähnemann", email = "david.laehnemann@dkfz-heidelberg.de" },
+    { name = "Johannes Koester", email = "johannes.koester@uni-due.de" },
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Science/Research",
+  "Natural Language :: English",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering",
+]
+  
 keywords = ["snakemake", "plugin", "executor", "cluster", "slurm"]
+dependencies = [
+    "snakemake-interface-common>=1.23.0,<2",
+    "snakemake-interface-executor-plugins>=9.4.0,<10",
+    "snakemake-executor-plugin-slurm-jobstep>=0.6.0,<1",
+    "pandas>=2.3.3,<4",
+    "numpy>=2.4.5,<3",
+    "throttler>=1.2.2,<2",
+    "pyyaml>=6.0.3,<7",
+]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-snakemake-interface-common = ">=1.23.0,<2"
-snakemake-interface-executor-plugins = ">=9.4.0,<10"
-snakemake-executor-plugin-slurm-jobstep = ">=0.6.0,<1"
-pandas = ">=2.3.3,<4"
-numpy = ">=2.4.5,<3"
-throttler = ">=1.2.2,<2"
-pyyaml = ">=6.0.3,<7"
+[project.urls]
+Repository = "https://github.com/snakemake/snakemake-executor-plugin-slurm"
+Documentation = "https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html"
 
-[tool.poetry.group.dev.dependencies]
-ruff = ">=0.10.0,<0.11"
-coverage = ">=7.14.0,<8"
-pytest = ">=9.0.3,<10"
-snakemake = ">=9.21.0,<10"
-pandas = ">=2.3.3,<4"
-
-[tool.poetry.scripts]
+[project.scripts]
 generate-slurm-partition-config = "snakemake_executor_plugin_slurm.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["snakemake_executor_plugin_slurm*"]
+
+
+[tool.codespell]
+# Ref: https://github.com/codespell-project/codespell#using-a-config-file
+skip = '.git,*.pdf,*.svg,versioneer.py,*.css,test_*'
+check-hidden = true
+
+####################################################################
+# Pixi Configuration
+####################################################################
+[tool.pixi.workspace]
+name = "snakemake-executor-plugin-slurm"
+channels = ["conda-forge", "bioconda"]
+platforms = ["linux-64"]
+
+[tool.pixi.dependencies]
+python = ">=3.11,<3.14"
+
+[tool.pixi.pypi-dependencies]
+snakemake-executor-plugin-slurm = { path = ".", editable = true }
+
+[tool.pixi.environments]
+dev = { features = ["test", "style"] }
+
+[tool.pixi.feature.test.pypi-dependencies]
+pytest = ">=9.0.3,<10"
+coverage = ">=7.14.0,<8"
+snakemake = ">=9.21.0,<10"
+
+[tool.pixi.feature.test.tasks]
+test = { cmd = "pytest" }
+coverage-report = { cmd = "coverage run -m pytest && coverage report -m" }
+
+[tool.pixi.feature.style.pypi-dependencies]
+ruff = ">=0.10.0,<0.11"
+
+[tool.pixi.feature.style.tasks]
+format = { cmd = "ruff format" }
+lint = { cmd = "ruff check ." }
 
 [tool.coverage.run]
 omit = [".*", "*/site-packages/*", "Snakefile"]
@@ -46,7 +99,3 @@ ignore = ["E203"]
 
 [tool.pytest.ini_options]
 python_files = ["test_*.py", "tests.py"]
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
