@@ -7,7 +7,7 @@ name = "snakemake-executor-plugin-slurm"
 version = "2.7.1"
 description = "A Snakemake executor plugin for submitting jobs to a SLURM cluster."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<4"
 license = "MIT"
 authors = [
     { name = "Christian Meesters", email = "meesters@uni-mainz.de" },
@@ -63,6 +63,12 @@ platforms = ["linux-64"]
 
 [tool.pixi.dependencies]
 python = ">=3.11,<3.14"
+pip = ">=24,<26"
+packaging = ">=24,<26"
+poetry = ">=2.4.1" # for local use
+
+[tool.pixi.tasks]
+install = { cmd = "poetry install" }
 
 [tool.pixi.pypi-dependencies]
 snakemake-executor-plugin-slurm = { path = ".", editable = true }
