@@ -75,6 +75,8 @@ snakemake-executor-plugin-slurm = { path = ".", editable = true }
 
 [tool.pixi.environments]
 dev = { features = ["test", "style"] }
+quality = { features = ["style"] }
+publish = { features = ["build"] }
 
 [tool.pixi.feature.test.pypi-dependencies]
 pytest = ">=9.0.3,<10"
@@ -91,6 +93,13 @@ ruff = ">=0.10.0,<0.11"
 [tool.pixi.feature.style.tasks]
 format = { cmd = "ruff format" }
 lint = { cmd = "ruff check ." }
+
+[tool.pixi.feature.build.pypi-dependencies]
+build = "*"
+twine = "*"
+
+[tool.pixi.feature.build.tasks]
+build-check = { cmd = "python -m build && twine check dist/*" }
 
 [tool.coverage.run]
 omit = [".*", "*/site-packages/*", "Snakefile"]
