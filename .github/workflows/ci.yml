@@ -17,7 +17,7 @@ jobs:
         uses: prefix-dev/setup-pixi@v0
 
       - name: Check formatting
-        run: pixi run format --check .
+        run: pixi run --environment quality format --check .
 
   linting:
     runs-on: ubuntu-latest
@@ -29,7 +29,7 @@ jobs:
         uses: prefix-dev/setup-pixi@v0
 
       - name: Check code
-        run: pixi run lint
+        run: pixi run --environment quality lint
 
   testing:
     runs-on: ubuntu-latest
@@ -49,8 +49,11 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0
 
+      - name: Install package for plugin discovery
+        run: pixi run --environment dev python -m pip install -e .
+
       - name: Run pytest
-        run: pixi run test
+        run: pixi run --environment dev test
 
       - name: Run Coverage
-        run: pixi run coverage-report
+        run: pixi run --environment dev coverage-report
