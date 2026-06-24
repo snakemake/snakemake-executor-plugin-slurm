@@ -44,6 +44,9 @@ Documentation = "https://snakemake.github.io/snakemake-plugin-catalog/plugins/ex
 [project.scripts]
 generate-slurm-partition-config = "snakemake_executor_plugin_slurm.cli:main"
 
+[project.entry-points."snakemake executor plugins"]
+slurm = "snakemake_executor_plugin_slurm:ExecutorPlugin"
+
 [tool.setuptools.packages.find]
 include = ["snakemake_executor_plugin_slurm*"]
 
