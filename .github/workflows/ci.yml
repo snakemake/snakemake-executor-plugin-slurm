@@ -55,8 +55,8 @@ jobs:
         with:
           environments: dev
 
-      - name: Install plugin package (non-editable)
-        run: pixi run --environment dev python -m pip install --no-deps --force-reinstall .
+      - name: Install plugin package
+        run: pixi run --environment dev python -m pip install -e.
 
       - name: Run pytest
         run: pixi run --environment dev test
