@@ -1,13 +1,8 @@
-# ----------------------------------------------------------------------
-# Build system
-# ----------------------------------------------------------------------
 [build-system]
 requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
-# ----------------------------------------------------------------------
-# PEP‑621 project metadata (used by pip / setuptools)
-# ----------------------------------------------------------------------
+
 [project]
 name = "snakemake-executor-plugin-slurm"
 version = "2.7.1"
@@ -17,8 +12,8 @@ requires-python = ">=3.11,<4"
 license = {text = "MIT"}
 authors = [
     {name = "Christian Meesters", email = "meesters@uni-mainz.de"},
-    {name = "David Lähnemann", email = "david.laehnemann@dkfz-heidelberg.de"},
-    {name = "Johannes Koester", email = "johannes.koester@uni-due.de"},
+    {name = "David Lähnemann",   email = "david.laehnemann@dkfz-heidelberg.de"},
+    {name = "Johannes Koester",  email = "johannes.koester@uni-due.de"},
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -41,92 +36,24 @@ dependencies = [
     "throttler>=1.2.2,<2",
     "pyyaml>=6.0.3,<7",
 ]
+
 [project.urls]
-Repository = "https://github.com/snakemake/snakemake-executor-plugin-slurm"
+Repository    = "https://github.com/snakemake/snakemake-executor-plugin-slurm"
 Documentation = "https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html"
 
 [project.scripts]
 generate-slurm-partition-config = "snakemake_executor_plugin_slurm.cli:main"
 
-[project.entry-points."snakemake executor plugins"]
+[python-entrypoint-group."snakemake executor plugins"]
 slurm = "snakemake_executor_plugin_slurm:ExecutorPlugin"
 
 # ----------------------------------------------------------------------
-# Setuptools helper
-# ----------------------------------------------------------------------
-[tool.setuptools.packages.find]
-include = ["snakemake_executor_plugin_slurm*"]
-
-# ----------------------------------------------------------------------
-# Codespell configuration (optional, unrelated to Pixi)
+# Misc. developer tools (codespell, coverage, ruff, pytest) – unchanged
 # ----------------------------------------------------------------------
 [tool.codespell]
 skip = ".git,*.pdf,*.svg,versioneer.py,*.css,test_*"
 check-hidden = true
 
-# ----------------------------------------------------------------------
-# Pixi configuration (new schema – version 0.8+)
-# ----------------------------------------------------------------------
-[tool.pixi]
-name = "snakemake-executor-plugin-slurm"
-channels = ["conda-forge", "bioconda"]
-platforms = ["linux-64"]
-
-# Conda‑only dependencies (python, pip, packaging)
-[tool.pixi.dependencies]
-python = ">=3.11,<3.14"
-pip = ">=24,<26"
-packaging = ">=24,<26"
-
-# The plugin itself – installed in editable mode for the CI tests
-[tool.pixi.pypi-dependencies]
-snakemake-executor-plugin-slurm = { path = ".", editable = true }
-
-# ----------------------------------------------------------------------
-# Environments (used by `pixi install -e <name>`)
-# ----------------------------------------------------------------------
-[tool.pixi.environment.dev]
-features = ["test", "style"]
-
-[tool.pixi.environment.quality]
-features = ["style"]
-
-[tool.pixi.environment.publish]
-features = ["build"]
-
-# ----------------------------------------------------------------------
-# Feature definitions
-# ----------------------------------------------------------------------
-# ---- Test -------------------------------------------------------------
-[tool.pixi.feature.test.pypi-dependencies]
-pytest = ">=9.0.3,<10"
-coverage = ">=7.14.0,<8"
-snakemake = ">=9.21.0,<10"
-
-[tool.pixi.feature.test.tasks]
-test = {cmd = "pytest"}
-coverage-report = {cmd = "coverage run -m pytest && coverage report -m"}
-
-# ---- Style ------------------------------------------------------------
-[tool.pixi.feature.style.pypi-dependencies]
-black = ">=24.2,<25"
-ruff = ">=0.10.0,<0.11"
-
-[tool.pixi.feature.style.tasks]
-format = {cmd = "ruff format"}
-lint   = {cmd = "ruff check ."}
-
-# ---- Build ------------------------------------------------------------
-[tool.pixi.feature.build.pypi-dependencies]
-build = "*"
-twine = "*"
-
-[tool.pixi.feature.build.tasks]
-build-check = {cmd = "python -m build && twine check dist/*"}
-
-# ----------------------------------------------------------------------
-# Coverage, Ruff, Pytest configuration (unchanged)
-# ----------------------------------------------------------------------
 [tool.coverage.run]
 omit = [".*", "*/site-packages/*", "Snakefile"]
 
@@ -140,3 +67,58 @@ ignore = ["E203"]
 
 [tool.pytest.ini_options]
 python_files = ["test_*.py", "tests.py"]
+
+
+[tool.pixi]
+
+# Workspace table (required for preview features)
+[tool.pixi.workspace]
+preview = ["pixi-build"]
+channels = ["conda-forge", "bioconda"]
+platforms = ["linux-64"]
+
+# Conda-only dependencies (must be a table)
+[tool.pixi.dependencies]
+python    = ">=3.11,<3.14"
+pip       = ">=24,<26"
+packaging = ">=24,<26"
+
+# Pip-only dependencies (install the plugin from local path)
+[tool.pixi.pypi-dependencies]
+snakemake-executor-plugin-slurm = { path = "." }
+
+# Environments (must be a single mapping under the plural key)
+[tool.pixi.environments]
+dev     = { features = ["test", "style"] }
+quality = { features = ["style"] }
+publish = { features = ["build"] }
+
+# Feature definitions (unchanged)
+[tool.pixi.feature.test.pypi-dependencies]
+pytest    = ">=9.0.3,<10"
+coverage  = ">=7.14.0,<8"
+snakemake = ">=9.21.0,<10"
+
+[tool.setuptools.packages.find]
+include = ["snakemake_executor_plugin_slurm*"]
+# Exclude the `pr_logo` directory (and any sub‑files) from the packaged source
+exclude = ["pr_logo*"]
+
+[tool.pixi.feature.test.tasks]
+test            = {cmd = "pytest"}
+coverage-report = {cmd = "coverage run -m pytest && coverage report -m"}
+
+[tool.pixi.feature.style.pypi-dependencies]
+black = ">=24.2,<25"
+ruff  = ">=0.10.0,<0.11"
+
+[tool.pixi.feature.style.tasks]
+format = {cmd = "ruff format"}
+lint   = {cmd = "ruff check ."}
+
+[tool.pixi.feature.build.pypi-dependencies]
+build = "*"
+twine = "*"
+
+[tool.pixi.feature.build.tasks]
+build-check = {cmd = "python -m build && twine check dist/*"}
