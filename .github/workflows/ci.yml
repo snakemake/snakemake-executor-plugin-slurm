@@ -59,7 +59,9 @@ jobs:
         run: pixi run --environment dev python -m pip install -e .
 
       - name: Run pytest
-        run: pixi run --environment dev test
+        run: |
+            pixi run --environment dev \
+            python -m pytest -vv --capture=no tests
 
       - name: Run Coverage
         run: pixi run --environment dev coverage-report
