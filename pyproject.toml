@@ -101,7 +101,7 @@ exclude = ["pr_logo*"]
 
 [tool.pixi.feature.test.tasks]
 test            = {cmd = "pytest"}
-coverage-report = {cmd = "coverage run -m pytest && coverage report -m"}
+coverage-report = {cmd = "coverage run -m pytest -vv --capture=no && coverage report -m"}
 
 [tool.pixi.feature.style.pypi-dependencies]
 black = ">=24.2,<25"
