@@ -8,34 +8,43 @@ name: release-please
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
     steps:
-
-      - uses: googleapis/release-please-action@v5.0
+      - uses: googleapis/release-please-action@v4
         id: release
         with:
           release-type: python
           token: ${{ secrets.RELEASE_PLEASE_PR_CI_TOKEN }}
 
-      - uses: actions/checkout@v6.0
-        if: ${{ steps.release.outputs.release_created }}
-        with:
-          fetch-depth: 0
+  publish:
+    runs-on: ubuntu-latest
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Set up Pixi
-        if: ${{ steps.release.outputs.release_created }}
-        uses: prefix-dev/setup-pixi@v0.9.6
+      - uses: actions/setup-python@v5
         with:
-          environments: quality
-          cache: true
+          python-version: "3.11"
 
-      - name: Build and check package
-        if: ${{ steps.release.outputs.release_created }}
+      - name: Install poetry
+        run: pip install poetry
+
+      - name: Determine dependencies
+        run: poetry lock
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: poetry
+
+      - name: Install dependencies
         run: |
-          pixi run --environment publish build-check
+          poetry install
 
-      - name: Publish to PyPI
-        if: ${{ steps.release.outputs.release_created }}
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
+      - name: Publish to PyPi
+        env:
+          PYPI_USERNAME: __token__
+          PYPI_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: poetry publish --build --username $PYPI_USERNAME --password $PYPI_PASSWORD
