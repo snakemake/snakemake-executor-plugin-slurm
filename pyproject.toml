@@ -47,9 +47,6 @@ generate-slurm-partition-config = "snakemake_executor_plugin_slurm.cli:main"
 [python-entrypoint-group."snakemake executor plugins"]
 slurm = "snakemake_executor_plugin_slurm:ExecutorPlugin"
 
-# ----------------------------------------------------------------------
-# Misc. developer tools (codespell, coverage, ruff, pytest) – unchanged
-# ----------------------------------------------------------------------
 [tool.codespell]
 skip = ".git,*.pdf,*.svg,versioneer.py,*.css,test_*"
 check-hidden = true
@@ -87,13 +84,11 @@ packaging = ">=24,<26"
 [tool.pixi.pypi-dependencies]
 snakemake-executor-plugin-slurm = { path = "." }
 
-# Environments (must be a single mapping under the plural key)
 [tool.pixi.environments]
 dev     = { features = ["test", "style"] }
 quality = { features = ["style"] }
 publish = { features = ["build"] }
 
-# Feature definitions (unchanged)
 [tool.pixi.feature.test.pypi-dependencies]
 pytest    = ">=9.0.3,<10"
 coverage  = ">=7.14.0,<8"
