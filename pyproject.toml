@@ -56,12 +56,8 @@ line-length = 88
 target-version = "py311"
 extend-exclude = ["tests/test_scontrol_parsing.py"]
 
-[tool.ruff.lint]
-ignore = ["E203"]
-
 [tool.pytest.ini_options]
 python_files = ["test_*.py", "tests.py"]
-
 
 [tool.pixi]
 
