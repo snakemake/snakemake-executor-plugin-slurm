@@ -44,9 +44,6 @@ Documentation = "https://snakemake.github.io/snakemake-plugin-catalog/plugins/ex
 [project.scripts]
 generate-slurm-partition-config = "snakemake_executor_plugin_slurm.cli:main"
 
-[python-entrypoint-group."snakemake executor plugins"]
-slurm = "snakemake_executor_plugin_slurm:ExecutorPlugin"
-
 [tool.codespell]
 skip = ".git,*.pdf,*.svg,versioneer.py,*.css,test_*"
 check-hidden = true
