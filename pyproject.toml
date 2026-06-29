@@ -96,7 +96,6 @@ test            = {cmd = "pytest"}
 coverage-report = {cmd = "coverage run -m pytest -vv --capture=no && coverage report -m"}
 
 [tool.pixi.feature.style.pypi-dependencies]
-black = ">=24.2,<25"
 ruff  = ">=0.10.0,<0.11"
 
 [tool.pixi.feature.style.tasks]
