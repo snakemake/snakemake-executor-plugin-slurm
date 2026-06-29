@@ -52,7 +52,6 @@ check-hidden = true
 omit = [".*", "*/site-packages/*", "Snakefile"]
 
 [tool.ruff]
-line-length = 88
 target-version = "py311"
 extend-exclude = ["tests/test_scontrol_parsing.py"]
 
@@ -63,7 +62,7 @@ python_files = ["test_*.py", "tests.py"]
 
 # Workspace table (required for preview features)
 [tool.pixi.workspace]
-preview = ["pixi-build"]
+#preview = ["pixi-build"]
 channels = ["conda-forge", "bioconda"]
 platforms = ["linux-64"]
 
