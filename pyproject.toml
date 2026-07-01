@@ -91,6 +91,9 @@ include = ["snakemake_executor_plugin_slurm*"]
 # Exclude the `pr_logo` directory (and any sub‑files) from the packaged source
 exclude = ["pr_logo*"]
 
+[dependency-groups]
+dev = ["snakemake"]
+
 [tool.pixi.feature.test.tasks]
 test            = {cmd = "pytest"}
 coverage-report = {cmd = "coverage run -m pytest -vv --capture=no && coverage report -m"}
