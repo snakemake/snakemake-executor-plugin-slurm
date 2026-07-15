@@ -142,6 +142,8 @@ def get_submit_command(
 
     if settings and settings.requeue:
         call += " --requeue"
+    elif settings and settings.no_requeue:
+        call += " --no-requeue"
 
     if settings and settings.qos:
         call += f" --qos={safe_quote(settings.qos)}"
