@@ -174,6 +174,16 @@ class TestArrayJobsSettings:
 class TestRunJobsRouting:
     """Tests that run_jobs dispatches to run_job or run_array_jobs correctly."""
 
+    def test_emits_job_info_once_for_each_submitted_job(self):
+        """Every submitted job logs its standard JOB_INFO metadata first."""
+        executor = _make_executor_stub(array_jobs="myrule")
+        jobs = [_make_mock_job(rule_name="myrule", jobid=i) for i in range(3)]
+
+        executor.run_jobs(jobs)
+
+        for job in jobs:
+            job.log_info.assert_called_once()
+
     def test_single_non_array_job_uses_run_job(self):
         """One job with no array setting → run_job is enqueued."""
         executor = _make_executor_stub()
@@ -270,6 +280,8 @@ class TestRunJobsRouting:
         executor.run_jobs(ready_jobs)
 
         assert executor._job_submission_executor.submit.call_count == 0
+        for job in ready_jobs:
+            job.log_info.assert_not_called()
 
     def test_array_rule_submits_at_chunk_size_even_if_more_eligible_in_dag(self):
         """

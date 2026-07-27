@@ -160,3 +160,6 @@ cython_debug/
 #.idea/
 
 .aider*
+# pixi environments
+.pixi/*
+!.pixi/config.toml
