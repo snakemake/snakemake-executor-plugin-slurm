@@ -665,7 +665,7 @@ class Executor(RemoteExecutor):
                         "submitted as an array job. "
                         "Submitting it as a regular job instead."
                     )
-                self._job_submission_executor.submit(self.run_job, job)
+                self._submit_job(job)
             else:
                 ready_jobs_by_rule.setdefault(job.rule.name, []).append(job)
 
@@ -700,9 +700,7 @@ class Executor(RemoteExecutor):
                             "but only one pending job is available; submitting "
                             "as a regular job."
                         )
-                        self._job_submission_executor.submit(
-                            self.run_job, same_rule_jobs[0]
-                        )
+                        self._submit_job(same_rule_jobs[0])
                     else:
                         self.logger.debug(
                             "Array job collection incomplete for rule "
@@ -726,9 +724,7 @@ class Executor(RemoteExecutor):
                         f"{rule_name}: {len(same_rule_jobs)} ready, "
                         f"{eligible_jobs} eligible, chunk_size={chunk_size}."
                     )
-                    self._job_submission_executor.submit(
-                        self.run_array_jobs, same_rule_jobs
-                    )
+                    self._submit_array_jobs(same_rule_jobs)
                 continue
             # Non-array mode: submit all ready jobs individually.
             elif len(same_rule_jobs) == 1:
@@ -736,7 +732,7 @@ class Executor(RemoteExecutor):
                     f"Submitting single job for rule {rule_name} as "
                     "array mode is disabled."
                 )
-                self._job_submission_executor.submit(self.run_job, same_rule_jobs[0])
+                self._submit_job(same_rule_jobs[0])
                 continue
             else:
                 self.logger.debug(
@@ -744,7 +740,18 @@ class Executor(RemoteExecutor):
                     f"{rule_name} individually (array mode disabled)."
                 )
                 for job in same_rule_jobs:
-                    self._job_submission_executor.submit(self.run_job, job)
+                    self._submit_job(job)
+
+    def _submit_job(self, job: JobExecutorInterface):
+        """Emit standard job metadata before submitting one Slurm job."""
+        self.run_job_pre(job)
+        self._job_submission_executor.submit(self.run_job, job)
+
+    def _submit_array_jobs(self, jobs: List[JobExecutorInterface]):
+        """Emit metadata for every array member before one array submission."""
+        for job in jobs:
+            self.run_job_pre(job)
+        self._job_submission_executor.submit(self.run_array_jobs, jobs)
 
     def _report_job_submission_threadsafe(self, job_info: SubmittedJobInfo):
         if self._main_event_loop is not None:
