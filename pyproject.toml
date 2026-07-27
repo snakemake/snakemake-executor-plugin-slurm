@@ -57,9 +57,9 @@ python_files = ["test_*.py", "tests.py"]
 channels = ["conda-forge", "bioconda"]
 platforms = ["linux-64"]
 
-# Pip-only dependencies (install the plugin from local path)
 [tool.pixi.pypi-dependencies]
 snakemake-executor-plugin-slurm = { path = "." }
+#snakemake-executor-plugin-slurm-jobstep = { path = "../snakemake-executor-plugin-slurm-jobstep", editable = true}
 
 [tool.pixi.environments]
 dev     = { features = ["test", "style"] }
