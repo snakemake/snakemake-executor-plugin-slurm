@@ -153,6 +153,32 @@ def parse_scontrol_partition_output(scontrol_output: str) -> Dict[str, Dict]:
     return partitions
 
 
+def parse_tres_memory_to_mb(mem_value: str) -> Optional[int]:
+    """
+    Parse a SLURM memory token (e.g. ``180600000M`` or ``176G``) into MB.
+
+    Returns None if the value cannot be parsed.
+    """
+    if not mem_value:
+        return None
+
+    token = str(mem_value).strip()
+    match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)([KMGTP])?", token, flags=re.I)
+    if not match:
+        return None
+
+    value = float(match.group(1))
+    unit = (match.group(2) or "M").upper()
+    unit_factor_to_mb = {
+        "K": 1.0 / 1024.0,
+        "M": 1.0,
+        "G": 1024.0,
+        "T": 1024.0 * 1024.0,
+        "P": 1024.0 * 1024.0 * 1024.0,
+    }
+    return int(value * unit_factor_to_mb[unit])
+
+
 def extract_partition_limits(partition_data: Dict[str, str]) -> Dict:
     """
     Extract partition limits from scontrol output data.
@@ -197,10 +223,25 @@ def extract_partition_limits(partition_data: Dict[str, str]) -> Dict:
         except ValueError:
             pass
 
+    # MaxMemPerNode -> max_mem_mb
+    # If UNLIMITED, do not set this limit.
+    if "MaxMemPerNode" in partition_data:
+        max_mem_per_node = partition_data["MaxMemPerNode"]
+        if max_mem_per_node != "UNLIMITED":
+            mem_mb = parse_tres_memory_to_mb(max_mem_per_node)
+            if mem_mb is not None:
+                config["max_mem_mb"] = mem_mb
+
     # Check for GPU support in TRES
     if "TRES" in partition_data:
         tres = partition_data["TRES"]
         # TRES format: cpu=...,mem=...,gres/gpu=N
+        mem_match = re.search(r"(?:^|,)mem=([^,]+)", tres)
+        if mem_match and "max_mem_mb" not in config:
+            mem_mb = parse_tres_memory_to_mb(mem_match.group(1))
+            if mem_mb is not None:
+                config["max_mem_mb"] = mem_mb
+
         if "gres/gpu" in tres:
             gpu_match = re.search(r"gres/gpu=(\d+)", tres)
             if gpu_match:

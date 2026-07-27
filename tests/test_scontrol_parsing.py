@@ -6,6 +6,7 @@ from snakemake_executor_plugin_slurm.partitions import (
     parse_scontrol_partition_output,
     extract_partition_limits,
     generate_partitions_from_scontrol,
+    parse_tres_memory_to_mb,
 )
 
 
@@ -35,7 +36,7 @@ PartitionName=parallel
    OverTimeLimit=NONE PreemptMode=OFF
    State=UP TotalCPUs=71808 TotalNodes=561 SelectTypeParameters=NONE
    JobDefaults=(null)
-   DefMemPerNode=248000 MaxMemPerNode=UNLIMITED
+    DefMemPerNode=248000 MaxMemPerNode=248000
    TRES=cpu=71808,mem=180600000M,node=561,billing=248175
    TRESBillingWeights=cpu=1,mem=1.0G
 
@@ -85,6 +86,8 @@ def test_extract_partition_limits():
     assert standard_limits["max_nodes"] == 1
     assert "max_mem_mb_per_cpu" in standard_limits
     assert standard_limits["max_mem_mb_per_cpu"] == 1930
+    assert "max_mem_mb" in standard_limits
+    assert standard_limits["max_mem_mb"] == 180600000
     assert "max_threads" in standard_limits
     # 71808 / 561 = 128
     assert standard_limits["max_threads"] == 128
@@ -93,6 +96,37 @@ def test_extract_partition_limits():
     gpu_limits = extract_partition_limits(partitions["gpu"])
     assert "max_gpu" in gpu_limits
     assert gpu_limits["max_gpu"] == 40
+    assert "max_mem_mb" in gpu_limits
+    assert gpu_limits["max_mem_mb"] == 10160000
+
+    # Check partition with finite MaxMemPerNode.
+    # This must override the aggregate TRES mem value.
+    parallel_limits = extract_partition_limits(partitions["parallel"])
+    assert "max_mem_mb" in parallel_limits
+    assert parallel_limits["max_mem_mb"] == 248000
+
+
+def test_parse_tres_memory_to_mb_units():
+    """Test TRES memory conversion for common units."""
+    assert parse_tres_memory_to_mb("1024K") == 1
+    assert parse_tres_memory_to_mb("500M") == 500
+    assert parse_tres_memory_to_mb("2G") == 2048
+    assert parse_tres_memory_to_mb("1T") == 1048576
+    assert parse_tres_memory_to_mb("0.5G") == 512
+    assert parse_tres_memory_to_mb("180600000M") == 180600000
+    assert parse_tres_memory_to_mb("not-a-size") is None
+
+
+def test_max_mem_per_node_unlimited_is_ignored():
+    """UNLIMITED MaxMemPerNode must not create a max_mem_mb limit."""
+    limits = extract_partition_limits(
+        {
+            "MaxMemPerNode": "UNLIMITED",
+            "TRES": "cpu=1,mem=1000M,node=1,billing=1",
+        }
+    )
+    # TRES fallback is used when MaxMemPerNode is UNLIMITED.
+    assert limits["max_mem_mb"] == 1000
 
 
 def test_extract_partition_limits_with_cluster():
@@ -128,6 +162,7 @@ def test_generate_partitions_from_scontrol_mock(monkeypatch):
     assert "test-cluster_standard" in config["partitions"]
     assert config["partitions"]["test-cluster_standard"]["cluster"] == "test-cluster"
     assert config["partitions"]["test-cluster_standard"]["max_nodes"] == 1
+    assert config["partitions"]["test-cluster_standard"]["max_mem_mb"] == 180600000
 
 
 def test_generate_slurm_partition_config_strips_cluster_prefix(monkeypatch, capsys):
@@ -171,3 +206,24 @@ def test_generate_slurm_partition_config_strips_cluster_prefix(monkeypatch, caps
     # Should NOT have the prefixed keys
     assert "test-cluster_standard:" not in captured.out
     assert "test-cluster_gpu:" not in captured.out
+
+
+def test_generate_slurm_partition_config_outputs_max_mem_mb(monkeypatch, capsys):
+    """Test that CLI output includes max_mem_mb derived from TRES mem values."""
+    from snakemake_executor_plugin_slurm.cli import main
+    import snakemake_executor_plugin_slurm.partitions as partitions_module
+
+    # Use the real generation path and only mock scontrol query.
+    # This verifies parse + generate + CLI write in one test.
+    def mock_query(cluster=None):  # noqa: ARG001
+        return SCONTROL_OUTPUT
+
+    monkeypatch.setattr(partitions_module, "query_scontrol_partitions", mock_query)
+    monkeypatch.setattr("sys.argv", ["generate-slurm-partition-config"])
+
+    main()
+    captured = capsys.readouterr()
+
+    # YAML should include max_mem_mb values extracted from TRES=...mem=...
+    assert "max_mem_mb: 180600000" in captured.out
+    assert "max_mem_mb: 10160000" in captured.out
