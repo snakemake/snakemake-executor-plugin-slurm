@@ -667,15 +667,18 @@ class Executor(RemoteExecutor):
         passed to `exec_job`.
         """
         general_args = "--executor slurm-jobstep --jobs 1"
+        suppress_auto_stagein = getattr(
+            self.workflow.executor_settings, "suppress_auto_stagein", False
+        )
+        node_local_prefix = getattr(
+            self.workflow.executor_settings, "node_local_prefix", None
+        )
         # switch for passing a command as script vs using `sbatch --wrap`
         if self.workflow.executor_settings.pass_command_as_script:
             general_args += " --slurm-jobstep-pass-command-as-script"
         # attempt auto stage-in if not suppressed and node_local_prefix is set
-        if (
-            self.workflow.executor_settings.node_local_prefix
-            and not self.workflow.executor_settings.suppress_auto_stagein
-        ):
-            ld = self.workflow.executor_settings.node_local_prefix
+        if node_local_prefix and not suppress_auto_stagein:
+            ld = node_local_prefix
             ld = encode_deferred_envvars(ld)
             general_args += f" --slurm-jobstep-node-local-prefix={shlex.quote(ld)}"
         return general_args
@@ -689,30 +692,33 @@ class Executor(RemoteExecutor):
         """
         # check whether current jobs are using random or multi access patters
         # and node_local_prefix is set
-        if (
-            not self.workflow.executor_settings.suppress_auto_stagein
-            and self.workflow.executor_settings.node_local_prefix
-        ):
+        suppress_auto_stagein = getattr(
+            self.workflow.executor_settings, "suppress_auto_stagein", False
+        )
+        node_local_prefix = getattr(
+            self.workflow.executor_settings, "node_local_prefix", None
+        )
+        if not suppress_auto_stagein and node_local_prefix:
             for job in jobs:
                 for inp in job.input:
-                    has_random_or_mixed = any(
-                        isinstance(inp.flags.get(STORE_KEY), AccessPattern)
-                        and inp.flags[STORE_KEY]
-                        in {AccessPattern.RANDOM, AccessPattern.MIXED}
-                        for inp in job.input
-                    )
-                if has_random_or_mixed:
-                    size = get_file_size(inp.path)
-                    if size is not None and size > 100:
-                        self.logger.warning(
-                            f"Job '{job.name}' has input file '{inp.path}' with "
-                            f"random or mixed access pattern and size {size} "
-                            "bytes. Snakemake will attempt to stage in this file "
-                            "to the node local directory specified by "
-                            f"{self.workflow.executor_settings.node_local_prefix}. "
-                            "However, for files of this size the process might be "
-                            "slow."
-                        )
+                    has_random_or_mixed = isinstance(
+                        inp.flags.get(STORE_KEY), AccessPattern
+                    ) and inp.flags[STORE_KEY] in {
+                        AccessPattern.RANDOM,
+                        AccessPattern.MIXED,
+                    }
+                    if has_random_or_mixed:
+                        size = get_file_size(inp.path)
+                        if size is not None and size > 100:
+                            self.logger.warning(
+                                f"Job '{job.name}' has input file '{inp.path}' with "
+                                f"random or mixed access pattern and size {size} "
+                                "bytes. Snakemake will attempt to stage in this file "
+                                "to the node local directory specified by "
+                                f"{node_local_prefix}. "
+                                "However, for files of this size the process might be "
+                                "slow."
+                            )
 
         if self._main_event_loop is None:
             try:
