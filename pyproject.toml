@@ -1,6 +1,6 @@
 [project]
 name = "snakemake-executor-plugin-slurm"
-version = "2.7.1"
+version = "2.7.2"
 description = "A Snakemake executor plugin for submitting jobs to a SLURM cluster."
 readme = "README.md"
 requires-python = ">=3.11,<4"

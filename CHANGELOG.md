@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.2](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.7.1...v2.7.2) (2026-07-27)
+
+
+### Bug Fixes
+
+* emit job metadata via run_job_pre before Slurm submission ([#478](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/478)) ([fc7aa48](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/fc7aa48e8f1f73ffb3069e76820a8ecc6b805ea5))
+
 ## [2.7.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.7.0...v2.7.1) (2026-06-01)
 
 
