@@ -826,6 +826,63 @@ class TestPartitionSelection:
         finally:
             temp_path.unlink()
 
+    def test_default_partition_preferred_when_eligible(
+        self, temp_yaml_file, mock_job, mock_logger
+    ):
+        """If a default partition fits, it must be preferred."""
+        config = {
+            "partitions": {
+                "nondefault-tight": {
+                    "max_runtime": 120,
+                    "max_threads": 64,
+                },
+                "default-roomy": {
+                    "default": True,
+                    "max_runtime": 1000,
+                    "max_threads": 256,
+                },
+            }
+        }
+        temp_path = temp_yaml_file(config)
+
+        try:
+            partitions = read_partition_file(temp_path)
+            job = mock_job(threads=4, runtime=60)
+            selected_partition = get_best_partition(partitions, job, mock_logger)
+            assert selected_partition == "default-roomy"
+        finally:
+            temp_path.unlink()
+
+    def test_lower_billing_weight_preferred(
+        self, temp_yaml_file, mock_job, mock_logger
+    ):
+        """Among eligible partitions, choose lower billing cost."""
+        config = {
+            "partitions": {
+                "expensive": {
+                    "max_threads": 128,
+                    "max_mem_mb": 512000,
+                    "billing_weight_cpu": 1.0,
+                    "billing_weight_mem_gb": 2.8,
+                },
+                "cheap": {
+                    "max_threads": 128,
+                    "max_mem_mb": 512000,
+                    "billing_weight_cpu": 1.0,
+                    "billing_weight_mem_gb": 1.0,
+                },
+            }
+        }
+        temp_path = temp_yaml_file(config)
+
+        try:
+            partitions = read_partition_file(temp_path)
+            job = mock_job(threads=4, mem_mb=1024)
+            selected_partition = get_best_partition(partitions, job, mock_logger)
+            assert selected_partition == "cheap"
+        finally:
+            temp_path.unlink()
+
     def test_multicluster_with_max_threads(self, temp_yaml_file, mock_job, mock_logger):
         """Test combined cluster and max_threads constraints."""
         config = {

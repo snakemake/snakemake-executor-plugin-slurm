@@ -7,6 +7,7 @@ from snakemake_executor_plugin_slurm.partitions import (
     extract_partition_limits,
     generate_partitions_from_scontrol,
     parse_tres_memory_to_mb,
+    parse_tres_billing_weights,
 )
 
 
@@ -98,6 +99,10 @@ def test_extract_partition_limits():
     assert gpu_limits["max_gpu"] == 40
     assert "max_mem_mb" in gpu_limits
     assert gpu_limits["max_mem_mb"] == 10160000
+    assert "billing_weight_cpu" in gpu_limits
+    assert gpu_limits["billing_weight_cpu"] == 1.0
+    assert "billing_weight_mem_gb" in gpu_limits
+    assert gpu_limits["billing_weight_mem_gb"] == 1.5
 
     # Check partition with finite MaxMemPerNode.
     # This must override the aggregate TRES mem value.
@@ -115,6 +120,13 @@ def test_parse_tres_memory_to_mb_units():
     assert parse_tres_memory_to_mb("0.5G") == 512
     assert parse_tres_memory_to_mb("180600000M") == 180600000
     assert parse_tres_memory_to_mb("not-a-size") is None
+
+
+def test_parse_tres_billing_weights():
+    """Test parsing of TRES billing weights."""
+    parsed = parse_tres_billing_weights("cpu=1.0,mem=2.8G")
+    assert parsed["billing_weight_cpu"] == 1.0
+    assert parsed["billing_weight_mem_gb"] == 2.8
 
 
 def test_max_mem_per_node_unlimited_is_ignored():
@@ -155,6 +167,11 @@ def test_generate_partitions_from_scontrol_mock(monkeypatch):
     import snakemake_executor_plugin_slurm.partitions as partitions_module
 
     monkeypatch.setattr(partitions_module, "query_scontrol_partitions", mock_query)
+    monkeypatch.setattr(
+        partitions_module,
+        "query_default_partitions",
+        lambda cluster=None: "standard",  # noqa: ARG005
+    )
 
     config = generate_partitions_from_scontrol(cluster="test-cluster")
 
@@ -163,6 +180,7 @@ def test_generate_partitions_from_scontrol_mock(monkeypatch):
     assert config["partitions"]["test-cluster_standard"]["cluster"] == "test-cluster"
     assert config["partitions"]["test-cluster_standard"]["max_nodes"] == 1
     assert config["partitions"]["test-cluster_standard"]["max_mem_mb"] == 180600000
+    assert config["partitions"]["test-cluster_standard"]["default"] is True
 
 
 def test_generate_slurm_partition_config_strips_cluster_prefix(monkeypatch, capsys):
@@ -219,6 +237,11 @@ def test_generate_slurm_partition_config_outputs_max_mem_mb(monkeypatch, capsys)
         return SCONTROL_OUTPUT
 
     monkeypatch.setattr(partitions_module, "query_scontrol_partitions", mock_query)
+    monkeypatch.setattr(
+        partitions_module,
+        "query_default_partitions",
+        lambda cluster=None: "standard",  # noqa: ARG005
+    )
     monkeypatch.setattr("sys.argv", ["generate-slurm-partition-config"])
 
     main()
@@ -227,3 +250,5 @@ def test_generate_slurm_partition_config_outputs_max_mem_mb(monkeypatch, capsys)
     # YAML should include max_mem_mb values extracted from TRES=...mem=...
     assert "max_mem_mb: 180600000" in captured.out
     assert "max_mem_mb: 10160000" in captured.out
+    assert "default: true" in captured.out
+    assert "billing_weight_mem_gb: 1.0" in captured.out
