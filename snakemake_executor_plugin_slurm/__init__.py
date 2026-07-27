@@ -510,8 +510,7 @@ class Executor(RemoteExecutor):
                 "the array_limit setting to enable array job submission."
             )
             raise WorkflowError(
-                "Array job submission is effectively disabled due to "
-                "low array_limit."
+                "Array job submission is effectively disabled due to low array_limit."
             )
         self.slurm_logdir = _select_logdir(self.workflow)
         # Check the environment variable "SNAKEMAKE_SLURM_PARTITIONS",
@@ -675,10 +674,8 @@ class Executor(RemoteExecutor):
                 "all" in self.array_jobs or rule_name in self.array_jobs
             )
             # TODO: use more sensible logging information, once finished
-            self.logger.debug(
-                f"Running jobs for rule: {rule_name}, " f"{same_rule_jobs}"
-            )
-            self.logger.debug("Current array job settings: " f"{self.array_jobs}")
+            self.logger.debug(f"Running jobs for rule: {rule_name}, {same_rule_jobs}")
+            self.logger.debug(f"Current array job settings: {self.array_jobs}")
 
             if array_selected_for_rule:
                 dag = getattr(self.workflow, "dag", None)

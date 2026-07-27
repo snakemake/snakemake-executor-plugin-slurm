@@ -1,49 +1,95 @@
-[tool.poetry]
+[project]
 name = "snakemake-executor-plugin-slurm"
 version = "2.7.1"
 description = "A Snakemake executor plugin for submitting jobs to a SLURM cluster."
-authors = [
-    "Christian Meesters <meesters@uni-mainz.de>",
-    "David Lähnemann <david.laehnemann@dkfz-heidelberg.de>",
-    "Johannes Koester <johannes.koester@uni-due.de>",
-]
 readme = "README.md"
-license = "MIT"
-repository = "https://github.com/snakemake/snakemake-executor-plugin-slurm"
-documentation = "https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html"
+requires-python = ">=3.11,<4"
+license = {text = "MIT"}
+authors = [
+    {name = "Christian Meesters", email = "meesters@uni-mainz.de"},
+    {name = "David Lähnemann",   email = "david.laehnemann@dkfz-heidelberg.de"},
+    {name = "Johannes Koester",  email = "johannes.koester@uni-due.de"},
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+]
 keywords = ["snakemake", "plugin", "executor", "cluster", "slurm"]
+dependencies = [
+    "snakemake-interface-common>=1.23.0,<2",
+    "snakemake-interface-executor-plugins>=9.4.0,<10",
+    "snakemake-executor-plugin-slurm-jobstep>=0.6.0,<1",
+    "pandas>=2.3.3,<4",
+    "numpy>=2.4.5,<3",
+    "throttler>=1.2.2,<2",
+    "pyyaml>=6.0.3,<7",
+]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-snakemake-interface-common = ">=1.23.0,<2"
-snakemake-interface-executor-plugins = ">=9.4.0,<10"
-snakemake-executor-plugin-slurm-jobstep = ">=0.6.0,<1"
-pandas = ">=2.3.3,<4"
-numpy = ">=2.4.5,<3"
-throttler = ">=1.2.3,<2"
-pyyaml = ">=6.0.3,<7"
+[project.urls]
+Repository    = "https://github.com/snakemake/snakemake-executor-plugin-slurm"
+Documentation = "https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html"
 
-[tool.poetry.group.dev.dependencies]
-black = "==26.3.1"
-flake8 = ">=6.1.0,<7"
-coverage = ">=7.14.0,<8"
-pytest = ">=9.0.3,<10"
-snakemake = ">=9.21.0,<10"
-pandas = ">=2.3.3,<4"
-
-[tool.poetry.scripts]
+[project.scripts]
 generate-slurm-partition-config = "snakemake_executor_plugin_slurm.cli:main"
+
+[tool.codespell]
+skip = ".git,*.pdf,*.svg,versioneer.py,*.css,test_*"
+check-hidden = true
 
 [tool.coverage.run]
 omit = [".*", "*/site-packages/*", "Snakefile"]
 
-[tool.black]
-line-length = 88
-extend-exclude = 'tests/test_scontrol_parsing\.py'
+[tool.ruff]
+target-version = "py311"
+extend-exclude = ["tests/test_scontrol_parsing.py"]
 
 [tool.pytest.ini_options]
 python_files = ["test_*.py", "tests.py"]
 
+[tool.pixi.workspace]
+channels = ["conda-forge", "bioconda"]
+platforms = ["linux-64"]
+
+[tool.pixi.pypi-dependencies]
+snakemake-executor-plugin-slurm = { path = "." }
+#snakemake-executor-plugin-slurm-jobstep = { path = "../snakemake-executor-plugin-slurm-jobstep", editable = true}
+
+[tool.pixi.environments]
+dev     = { features = ["test", "style"] }
+quality = { features = ["style"] }
+test = { features = ["test"] }
+publish = { features = ["build"] }
+
+[tool.pixi.feature.test.pypi-dependencies]
+pytest    = ">=9.0.3,<10"
+coverage  = ">=7.14.0,<8"
+snakemake = ">=9.21.0,<10"
+
+[tool.pixi.feature.test.tasks]
+test            = {cmd = "pytest", default-environment = "test"}
+coverage-report = {cmd = "coverage run -m pytest -vv --capture=no && coverage report -m", default-environment = "test"}
+
+[tool.pixi.feature.style.pypi-dependencies]
+ruff  = ">=0.10.0,<0.11"
+
+[tool.pixi.feature.style.tasks]
+format = {cmd = "ruff format", default-environment = "quality"}
+lint   = {cmd = "ruff check .", default-environment = "quality"}
+
+[tool.pixi.feature.build.pypi-dependencies]
+build = "*"
+twine = "*"
+
+[tool.pixi.feature.build.tasks]
+build-check = {cmd = "python -m build && twine check dist/*"}
+
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+build-backend = "hatchling.build"
+requires = ["hatchling"]
