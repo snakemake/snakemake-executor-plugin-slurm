@@ -152,9 +152,10 @@ def query_default_partitions(cluster=None) -> Optional[str]:
     except subprocess.CalledProcessError as e:
         raise WorkflowError(
             f"Failed to query default partitions with sinfo: {e.stderr}"
-        )
-    except Exception as e:
-        raise WorkflowError(f"Error querying default partitions: {e}")
+        ) from e
+    except OSError:
+        # sinfo unavailable: default detection is optional, degrade gracefully.
+        return None
 
 
 def parse_scontrol_partition_output(scontrol_output: str) -> Dict[str, Dict]:
