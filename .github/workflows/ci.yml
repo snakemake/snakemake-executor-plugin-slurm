@@ -19,12 +19,6 @@ jobs:
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
-      - name: Debug black environment
-        continue-on-error: true
-        run: |
-          poetry run black --version
-          poetry run black --check --diff --target-version py311 .
-
       - name: Check formatting
         run: pixi run format --check .
 
