@@ -16,10 +16,11 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0
         with:
-          environments: dev
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
       - name: Check formatting
-        run: pixi run --environment dev format --check .
+        run: pixi run format --check .
 
   linting:
     runs-on: ubuntu-latest
@@ -30,10 +31,11 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0
         with:
-          environments: dev
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
       - name: Check code
-        run: pixi run --environment dev lint
+        run: pixi run lint
 
   testing:
     runs-on: ubuntu-latest
@@ -53,15 +55,9 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0
         with:
-          environments: dev
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
-      - name: Install plugin package
-        run: pixi run --environment dev python -m pip install -e .
-
-      - name: Run pytest
+      - name: Run pytest and coverage report
         run: |
-            pixi run --environment dev \
-            python -m pytest -vv --capture=no tests
-
-      - name: Run Coverage
-        run: pixi run --environment dev coverage-report
+            pixi run coverage-report
