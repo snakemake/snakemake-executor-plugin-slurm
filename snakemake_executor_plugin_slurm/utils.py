@@ -71,6 +71,33 @@ def get_job_wildcards(job: JobExecutorInterface) -> str:
     return wildcard_str
 
 
+_DEFERRED_ENVVAR_PATTERN = re.compile(
+    r"""
+    (?<!\\)\$
+    (?:
+        \{(?P<braced>[A-Za-z_][A-Za-z0-9_]*)\}
+        |(?P<bare>[A-Za-z_][A-Za-z0-9_]*)
+    )
+    """,
+    re.VERBOSE,
+)
+
+
+def encode_deferred_envvars(value: str) -> str:
+    """Replace shell-style env variables with neutral markers.
+
+    The marker keeps submit-time shell quoting safe. The matching jobstep-side
+    code can expand ``__ENV_NAME__`` back from ``os.environ`` once the job is
+    running in its real job context.
+    """
+
+    def replace(match: re.Match[str]) -> str:
+        name = match.group("braced") or match.group("bare")
+        return f"__ENV_{name}__"
+
+    return _DEFERRED_ENVVAR_PATTERN.sub(replace, value)
+
+
 def pending_jobs_for_rule(dag: DAGExecutorInterface, rule_name: str) -> int:
     """Count jobs of a rule that are currently eligible for scheduling.
 
@@ -406,3 +433,29 @@ def set_gres_string(job: JobExecutorInterface) -> str:
         gres += f" --gpus={gpu_string}"
 
     return gres
+
+
+def get_file_size(job: JobExecutorInterface) -> int:
+    """
+    Function to get the file size of the input files for a job. This is used
+    to determine the resources needed for the job.
+
+    Args:
+        job: The JobExecutorInterface instance representing the job
+    Returns:
+        The total file size of the input files for the job, in GB.
+    """
+    total_size_bytes = 0
+    for input_file in job.input_files:
+        if os.path.isfile(input_file):
+            total_size_bytes += os.path.getsize(input_file)
+        elif os.path.isdir(input_file):
+            for dirpath, _, filenames in os.walk(input_file):
+                for filename in filenames:
+                    file_path = os.path.join(dirpath, filename)
+                    if os.path.isfile(file_path):
+                        total_size_bytes += os.path.getsize(file_path)
+
+    # Convert bytes to GB
+    total_size_gb = total_size_bytes / (1024**3)
+    return round_half_up(total_size_gb)  # implicit conversion to int

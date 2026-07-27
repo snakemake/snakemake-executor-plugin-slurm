@@ -190,6 +190,30 @@ The scoring algorithm calculates a score by summing the ratios of requested reso
 
 If no suitable partition is found based on the job's resource requirements, the plugin falls back to the default SLURM behavior, which typically uses the cluster's default partition or any partition specified explicitly in the job's resources.
 
+#### Automatic Stage-In
+
+In HPC we stage-in files from global parallel file system onto node local storage. This serves a number of purposes:
+
+- avoiding random I/O which throttles performance tremendously and may occur, for instance, when several SLURM jobs with the same program attempt to use the same reference files (e.g. with alignment programs)
+- minimizing latency for repeated file access, since local storage (e.g., SSD or NVMe) typically offers much lower access times than network-attached parallel filesystems.
+- improving fault tolerance and resilience during job execution — if the parallel filesystem experiences transient issues, locally staged files remain accessible.
+
+to name a few.
+
+To enable automatic stage-in of files a workflow rule needs to designate either the [`random` access file pattern or the `multi` access pattern](https://snakemake.readthedocs.io/en/stable/snakefiles/storage.html#access-pattern-annotation). Furthermore a flag `--slurm-node-local-prefix` can be used to indicate a node local directory available for usage within a SLURM job. As always with Snakemake, we may use the flag on the command line and in a configuration file, e.g.:
+
+```yaml
+slurm-node-local-prefix: /localscratch/$SLURM_JOB_ID
+```
+
+Environment variables may just be written as literals - even if the environment variable in only set within a cluster job.
+
+If the automatic stage-in process is not desirable, `--slurm-suppress-auto-stagein` will turn it off.
+
+Stage-in processes will be performed on all nodes of a job. Using `sbcast` for files <= 4GB and `scp` for files > 4GB. Note that stage-in processes with `scp` cross-node `ssh` needs to be working on your cluster.
+
+.. note:: Currently, there is no distinction between different node local files systems, e.g. `/tmpfs`, `nvme`s on SSD or dedicated ramdisks. Only one node local directory prefix is allowed. 
+
 
 #### Standard Resources
 

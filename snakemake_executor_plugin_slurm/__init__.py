@@ -34,6 +34,10 @@ from snakemake_interface_executor_plugins.settings import (
 from snakemake_interface_executor_plugins.jobs import (
     JobExecutorInterface,
 )
+from snakemake.io.flags.access_patterns import (
+    AccessPattern,
+    STORE_KEY,
+)
 from snakemake_interface_common.exceptions import WorkflowError
 
 from .accounts import (
@@ -44,10 +48,12 @@ from .accounts import (
 from .utils import (
     get_max_array_size,
     get_job_wildcards,
+    encode_deferred_envvars,
     pending_jobs_for_rule,
     delete_slurm_environment,
     delete_empty_dirs,
     set_gres_string,
+    get_file_size,
 )
 from .job_status_query import (
     get_min_job_age,
@@ -226,6 +232,32 @@ class ExecutorSettings(ExecutorSettingsBase):
             "best leave the default log directory unaltered. "
             "Setting this flag allows to change this behaviour. "
             "If set to <=0, no old files will be deleted.",
+        },
+    )
+
+    node_local_prefix: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": "A cluster specific node local local global directory. "
+            "Similar to '.remote_job_local_storage_prefix' of the fs-storage "
+            "plugin. Used to ensure stage-in when input is flagged for random "
+            "or mixed access patterns - see https://jgu.to/kwenq ."
+            "Other than the fs-storage plugin, this function only works to "
+            "stage-in input files (no stage-out) but supports transferring "
+            "onto all nodes of the SLURM job. For big files (> 2GB)'ssh' from "
+            "node to node must be enabled."
+        },
+    )
+    suppress_auto_stagein: bool = field(
+        default=False,
+        metadata={
+            "help": "By default, when node_local_prefix is set, Snakemake will "
+            "automatically stage in input files with random or mixed access "
+            "patterns to the node local directory. Setting this flag will "
+            "suppress this behavior, so that no automatic staging will be "
+            "performed.",
+            "env_var": False,
+            "required": False,
         },
     )
 
@@ -635,9 +667,20 @@ class Executor(RemoteExecutor):
         passed to `exec_job`.
         """
         general_args = "--executor slurm-jobstep --jobs 1"
-        # need to pass
+        suppress_auto_stagein = getattr(
+            self.workflow.executor_settings, "suppress_auto_stagein", False
+        )
+        node_local_prefix = getattr(
+            self.workflow.executor_settings, "node_local_prefix", None
+        )
+        # switch for passing a command as script vs using `sbatch --wrap`
         if self.workflow.executor_settings.pass_command_as_script:
             general_args += " --slurm-jobstep-pass-command-as-script"
+        # attempt auto stage-in if not suppressed and node_local_prefix is set
+        if node_local_prefix and not suppress_auto_stagein:
+            ld = node_local_prefix
+            ld = encode_deferred_envvars(ld)
+            general_args += f" --slurm-jobstep-node-local-prefix={shlex.quote(ld)}"
         return general_args
 
     def run_jobs(self, jobs: List[JobExecutorInterface]):
@@ -647,6 +690,36 @@ class Executor(RemoteExecutor):
         - `run_array_jobs` for array job submission, or
         - `run_pool_jobs` for pool job submission (to be implemented in the future).
         """
+        # check whether current jobs are using random or multi access patters
+        # and node_local_prefix is set
+        suppress_auto_stagein = getattr(
+            self.workflow.executor_settings, "suppress_auto_stagein", False
+        )
+        node_local_prefix = getattr(
+            self.workflow.executor_settings, "node_local_prefix", None
+        )
+        if not suppress_auto_stagein and node_local_prefix:
+            for job in jobs:
+                for inp in job.input:
+                    has_random_or_mixed = isinstance(
+                        inp.flags.get(STORE_KEY), AccessPattern
+                    ) and inp.flags[STORE_KEY] in {
+                        AccessPattern.RANDOM,
+                        AccessPattern.MIXED,
+                    }
+                    if has_random_or_mixed:
+                        size = get_file_size(inp.path)
+                        if size is not None and size > 100:
+                            self.logger.warning(
+                                f"Job '{job.name}' has input file '{inp.path}' with "
+                                f"random or mixed access pattern and size {size} "
+                                "bytes. Snakemake will attempt to stage in this file "
+                                "to the node local directory specified by "
+                                f"{node_local_prefix}. "
+                                "However, for files of this size the process might be "
+                                "slow."
+                            )
+
         if self._main_event_loop is None:
             try:
                 self._main_event_loop = asyncio.get_running_loop()
