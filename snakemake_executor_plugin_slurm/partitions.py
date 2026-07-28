@@ -14,6 +14,66 @@ from snakemake_interface_executor_plugins.logging import LoggerExecutorInterface
 from .utils import parse_time_to_minutes
 
 
+CPU_THRESHOLD_RE = re.compile(r"^(<=|>=|<|>|==|=)\s*([0-9]+)$")
+
+
+def normalize_cpu_threshold(value) -> Optional[str]:
+    """
+    Normalize cpu_threshold expressions from YAML.
+
+    Supported syntax examples:
+      - "<128"
+      - ">= 128"
+      - "==64"
+    """
+    if value is None:
+        return None
+
+    if not isinstance(value, str):
+        raise WorkflowError(
+            "cpu_threshold must be a string expression like '<128' or '>=128'."
+        )
+
+    expr = value.strip()
+    if not expr:
+        return None
+
+    match = CPU_THRESHOLD_RE.fullmatch(expr)
+    if not match:
+        raise WorkflowError(
+            "Invalid cpu_threshold expression "
+            f"'{value}'. Expected one of: <N, <=N, >N, >=N, ==N."
+        )
+
+    op = "==" if match.group(1) == "=" else match.group(1)
+    threshold = match.group(2)
+    return f"{op}{threshold}"
+
+
+def cpu_threshold_matches(cpu_count: float, threshold_expr: Optional[str]) -> bool:
+    """Return whether a CPU count satisfies a configured threshold expression."""
+    if threshold_expr is None:
+        return True
+
+    match = CPU_THRESHOLD_RE.fullmatch(threshold_expr.strip())
+    if not match:
+        # Should not happen when config parsing already validated syntax.
+        return False
+
+    op = "==" if match.group(1) == "=" else match.group(1)
+    threshold = float(match.group(2))
+
+    if op == "<":
+        return cpu_count < threshold
+    if op == "<=":
+        return cpu_count <= threshold
+    if op == ">":
+        return cpu_count > threshold
+    if op == ">=":
+        return cpu_count >= threshold
+    return cpu_count == threshold
+
+
 def get_default_partition(
     job: JobExecutorInterface, logger: LoggerExecutorInterface
 ) -> str:
@@ -70,6 +130,11 @@ def read_partition_file(partition_file: Path) -> List["Partition"]:
         if not partition_name or not partition_name.strip():
             raise KeyError("Partition name cannot be empty")
 
+        if not isinstance(partition_config, dict):
+            raise WorkflowError(
+                f"Partition '{partition_name}' must map to a dictionary of limits"
+            )
+
         # Extract optional cluster name from partition config
         cluster = None
         for key in ("slurm_cluster", "cluster", "clusters"):
@@ -92,6 +157,12 @@ def read_partition_file(partition_file: Path) -> List["Partition"]:
                 else:
                     is_default = bool(raw_default)
                 break
+
+        # Optional CPU threshold expression for partition eligibility.
+        if "cpu_threshold" in partition_config:
+            partition_config["cpu_threshold"] = normalize_cpu_threshold(
+                partition_config["cpu_threshold"]
+            )
 
         out.append(
             Partition(
@@ -359,6 +430,7 @@ def generate_partitions_from_slurm_query(
             for partition_name, partition_data in partitions_data.items():
                 limits = extract_partition_limits(partition_data)
                 limits["cluster"] = cluster
+                limits["cpu_threshold"] = None
                 if partition_name == default_partition:
                     limits["default"] = True
                 # Scope key by cluster so identically-named partitions across
@@ -372,6 +444,7 @@ def generate_partitions_from_slurm_query(
 
         for partition_name, partition_data in partitions_data.items():
             limits = extract_partition_limits(partition_data)
+            limits["cpu_threshold"] = None
             if partition_name == default_partition:
                 limits["default"] = True
             partitions_config[partition_name] = limits
@@ -722,6 +795,9 @@ class PartitionLimits:
     billing_weight_mem_unit: Optional[str] = None
     billing_weight_mem_gb: Optional[float] = None
 
+    # Optional eligibility threshold for CPU count, e.g. "<128" or ">=128".
+    cpu_threshold: Optional[str] = None
+
     def __post_init__(self):
         """Convert max_runtime to minutes if specified as a time string"""
         # Check if max_runtime is a string or needs conversion
@@ -730,6 +806,9 @@ class PartitionLimits:
             isinstance(self.max_runtime, (int, float)) and not isinf(self.max_runtime)
         ):
             self.max_runtime = parse_time_to_minutes(self.max_runtime)
+
+        # Validate and normalize optional cpu_threshold expression.
+        self.cpu_threshold = normalize_cpu_threshold(self.cpu_threshold)
 
 
 @dataclass
@@ -783,6 +862,10 @@ class Partition:
             if self.partition_cluster is not None:
                 return None  # Not eligible
 
+        cpu_count, cpu_type = get_job_cpu_requirement(job)
+        if not cpu_threshold_matches(float(cpu_count), self.limits.cpu_threshold):
+            return None
+
         for resource_key, limit in numerical_resources.items():
             job_requirement = job.resources.get(resource_key, 0)
             # Convert to numeric value if it's a string
@@ -813,7 +896,6 @@ class Partition:
             if not isinf(self.limits.max_threads):
                 score += effective_threads / self.limits.max_threads
 
-        cpu_count, cpu_type = get_job_cpu_requirement(job)
         if cpu_type == "task" and cpu_count > 0:
             # Check cpu_count against max_threads
             if (
