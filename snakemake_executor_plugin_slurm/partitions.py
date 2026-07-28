@@ -554,7 +554,8 @@ def estimate_partition_billing_cost(
     cost = 0.0
     if cpu_count > 0 and cpu_weight is not None:
         cost += cpu_count * cpu_weight
-    if mem_mb > 0 and mem_weight is not None and mem_weight_unit is not None:
+    if mem_mb > 0 and mem_weight is not None:
+        mem_weight_unit = (mem_weight_unit or "M").upper()
         if mem_weight_unit == "K":
             mem_units = mem_mb * 1024.0
         elif mem_weight_unit == "M":
