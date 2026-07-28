@@ -227,6 +227,7 @@ These are the available options, and the SLURM `sbatch` command line arguments t
 |                      | passed through when explicitly set) |                     |
 | `slurm_account`      | account for resource usage tracking | `--account`         |
 | `slurm_partition`    | partition/queue to submit job(s) to | `--partition`       |
+| `slurm_no_requeue`   | disable the cluster requeue default  | `--no-requeue`      |
 | `slurm_requeue`      | handle `--retries` with SLURM       | `--requeue`                    |
 |                      | functionality                       |                     |
 | `tasks`              | number of concurrent tasks / ranks  | `--ntasks`          |
@@ -322,6 +323,16 @@ snakemake --slurm-requeue ...
 ```
 
 This flag effectively does not consider failed SLURM jobs or preserves job IDs and priorities or allows job priority to be accumulated while pending.
+
+If your cluster enables requeuing by default, you can disable it for submitted jobs
+with `--slurm-no-requeue` instead. This lets Snakemake handle retries, including
+resource increases between attempts:
+
+```console
+snakemake --slurm-no-requeue ...
+```
+
+The `--slurm-requeue` and `--slurm-no-requeue` flags are mutually exclusive.
 
 ##### Node Failure Tracking
 
@@ -864,4 +875,3 @@ Cluster-specific profiles consist of two files:
 To obtain a template for a cluster-specific profile, search at the [Snakemake cluster profiles repository](https://github.com/snakemake/snakemake-cluster-profiles). This repository not only provides configuration templates, but also maintainer contacts and deployment hints.
 
 Your users will install Snakemake by Conda, add this Slurm executor plugin, and source code for their workflows. Alternatively, Snakemake is provided by [Spack](https://packages.spack.io/package.html?name=snakemake) and [Easybuild](https://docs.easybuild.io/version-specific/supported-software/s/snakemake/), which both update regularly.
-

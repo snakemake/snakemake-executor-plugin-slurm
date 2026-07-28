@@ -173,6 +173,10 @@ def validate_executor_settings(settings, logger=None):
     Validate ExecutorSettings fields for correctness
     (better user feedback in case of wrong inputs)
     """
+    if settings.requeue and settings.no_requeue:
+        raise WorkflowError(
+            "--slurm-requeue and --slurm-no-requeue are mutually exclusive."
+        )
     # status_command: only allow known values
     if settings.status_command is not None:
         if settings.status_command not in {"sacct", "squeue"}:
