@@ -250,5 +250,6 @@ def test_generate_slurm_partition_config_outputs_max_mem_mb(monkeypatch, capsys)
     # YAML should include max_mem_mb values extracted from TRES=...mem=...
     assert "max_mem_mb: 180600000" in captured.out
     assert "max_mem_mb: 10160000" in captured.out
+    assert "cpu_threshold: null" in captured.out
     assert "default: true" in captured.out
     assert "billing_weight_mem_gb: 1.0" in captured.out

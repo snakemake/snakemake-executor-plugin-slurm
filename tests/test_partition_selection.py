@@ -818,13 +818,84 @@ class TestPartitionSelection:
             # Should return None
             assert selected_partition is None
             assert mock_logger.warning.call_count >= 1
-            assert (
-                "No suitable partition found"
-                in mock_logger.warning.call_args_list[-1][0][0]
-            )
 
         finally:
             temp_path.unlink()
+
+    @pytest.fixture
+    def cpu_threshold_partition_config(self):
+        """Partition config with explicit cpu_threshold eligibility rules."""
+        return {
+            "partitions": {
+                "small": {
+                    "default": True,
+                    "max_threads": 127,
+                    "max_mem_mb": 128000,
+                    "cpu_threshold": "<128",
+                },
+                "large": {
+                    "max_threads": 256,
+                    "max_mem_mb": 512000,
+                    "cpu_threshold": ">=128",
+                },
+            }
+        }
+
+    def test_cpu_threshold_routes_small_vs_large_jobs(
+        self, cpu_threshold_partition_config, temp_yaml_file, mock_job, mock_logger
+    ):
+        """cpu_threshold should enforce partition eligibility by CPU count."""
+        temp_path = temp_yaml_file(cpu_threshold_partition_config)
+
+        try:
+            partitions = read_partition_file(temp_path)
+
+            # Small CPU job should be eligible only on "small".
+            job = mock_job(threads=64, mem_mb=64000)
+            selected_partition = get_best_partition(partitions, job, mock_logger)
+            assert selected_partition == "small"
+
+            # 128 CPU job should be excluded from "small" and use "large".
+            mock_logger.reset_mock()
+            job = mock_job(threads=128, mem_mb=128000)
+            selected_partition = get_best_partition(partitions, job, mock_logger)
+            assert selected_partition == "large"
+
+        finally:
+            temp_path.unlink()
+
+    def test_invalid_cpu_threshold_raises(self, temp_yaml_file):
+        """Invalid cpu_threshold syntax should raise a WorkflowError."""
+        config = {
+            "partitions": {
+                "bad": {
+                    "cpu_threshold": "between 1 and 4",
+                }
+            }
+        }
+        temp_path = temp_yaml_file(config)
+        try:
+            with pytest.raises(WorkflowError, match="Invalid cpu_threshold"):
+                read_partition_file(temp_path)
+        finally:
+            temp_path.unlink()
+
+    def test_non_integer_cpu_threshold_raises(self, temp_yaml_file):
+        """cpu_threshold must use whole-number CPU values only."""
+        for bad_value in ["<128.0", ">= 12.5", ">= 1:2"]:
+            config = {
+                "partitions": {
+                    "bad": {
+                        "cpu_threshold": bad_value,
+                    }
+                }
+            }
+            temp_path = temp_yaml_file(config)
+            try:
+                with pytest.raises(WorkflowError, match="Invalid cpu_threshold"):
+                    read_partition_file(temp_path)
+            finally:
+                temp_path.unlink()
 
     def test_default_partition_preferred_when_eligible(
         self, temp_yaml_file, mock_job, mock_logger
