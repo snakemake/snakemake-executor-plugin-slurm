@@ -116,7 +116,7 @@ OR for permanent use, copy the `partitions.yaml` to a location
             "file. You may need to adjust the limits based on your cluster's "
             "actual capabilities.\n"
             "- For instance, enter `supports_mpi: true` for MPI partitions.\n"
-            '- Also, enter partition limits as `cpu_threshold < <value>`. or'
+            "- Also, enter partition limits as `cpu_threshold < <value>`. or"
             '`cpu_threshold: ">= <value>`.\033[0m',
             file=sys.stderr,
         )
