@@ -345,6 +345,22 @@ When submitting array jobs, the `--slurm-array-limit` flag defines the
 maximum number of array tasks to be submitted in one job submission.
 If the number of tasks exceeds this limit, multiple array job submissions will be performed. This is useful to avoid hitting cluster limits on the maximum number of array tasks per job. Please obey your cluster limits and set this flag accordingly.
 
+##### Array memory adjustment
+
+By default, the plugin increases an explicit memory request for an array job to
+account for the encoded array-job payload. If a job has no memory constraint,
+the plugin adds a minimal `--mem` request so that this adjustment is not lost.
+
+Some clusters derive memory allocation from other requested resources and do
+not allow an explicit memory option. Disable the adjustment on such clusters:
+
+```console
+snakemake --slurm-array-memory-fudge false ...
+```
+
+The default is `true`, preserving the standard array submission behavior. In a
+Snakemake profile, use `slurm-array-memory-fudge: false` instead.
+
 
 #### MPI-specific Resources
 
@@ -864,4 +880,3 @@ Cluster-specific profiles consist of two files:
 To obtain a template for a cluster-specific profile, search at the [Snakemake cluster profiles repository](https://github.com/snakemake/snakemake-cluster-profiles). This repository not only provides configuration templates, but also maintainer contacts and deployment hints.
 
 Your users will install Snakemake by Conda, add this Slurm executor plugin, and source code for their workflows. Alternatively, Snakemake is provided by [Spack](https://packages.spack.io/package.html?name=snakemake) and [Easybuild](https://docs.easybuild.io/version-specific/supported-software/s/snakemake/), which both update regularly.
-
