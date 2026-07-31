@@ -144,6 +144,18 @@ def _get_status_command_help():
     )
 
 
+def _parse_bool(value):
+    """Parse explicit boolean values from CLI and profile configuration."""
+    if isinstance(value, bool):
+        return value
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"Expected a boolean value, got {value!r}")
+
+
 def _status_lookup_ids(external_jobid: str) -> List[str]:
     """Return candidate IDs for status lookup.
 
@@ -191,6 +203,19 @@ class ExecutorSettings(ExecutorSettingsBase):
             "Please obey your cluster limits and set this flag accordingly.",
             "env_var": False,
             "required": False,
+        },
+    )
+
+    array_memory_fudge: Optional[bool] = field(
+        default=True,
+        metadata={
+            "help": "Increase an explicit SLURM memory request for array jobs "
+            "to account for the encoded job payload. When no memory resource is "
+            "set, the executor adds a minimal --mem request. Disable this on "
+            "clusters whose memory allocation is derived from other resources.",
+            "env_var": False,
+            "required": False,
+            "type": _parse_bool,
         },
     )
 
@@ -900,7 +925,8 @@ class Executor(RemoteExecutor):
                 # add memory fudge factor to the base call,
                 # to account for the extra memory needed by the
                 # jobstep process to hold and parse the array execs payload.
-                call = apply_mem_fudge(call, array_execs_payload)
+                if self.workflow.executor_settings.array_memory_fudge:
+                    call = apply_mem_fudge(call, array_execs_payload)
 
                 use_script_submission = (
                     self.workflow.executor_settings.pass_command_as_script
