@@ -400,9 +400,7 @@ class TestRunArrayJobs:
         assert "2" in array_execs
         assert "3" in array_execs
 
-    def test_memory_fudge_can_be_disabled(
-        self, tmp_path, mock_popen_success
-    ):
+    def test_memory_fudge_can_be_disabled(self, tmp_path, mock_popen_success):
         executor = self._build_executor(tmp_path)
         executor.workflow.executor_settings.disable_memory_fudge = True
         jobs = self._make_jobs(n=2)

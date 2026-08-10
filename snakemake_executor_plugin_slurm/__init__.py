@@ -143,6 +143,7 @@ def _get_status_command_help():
         f"Set explicitly to override auto-detection."
     )
 
+
 def _status_lookup_ids(external_jobid: str) -> List[str]:
     """Return candidate IDs for status lookup.
 
