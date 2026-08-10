@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11,<4"
 license = {text = "MIT"}
 authors = [
-    {name = "Christian Meesters", email = "meesters@uni-mainz.de"},
+    {name = "Christian Meesters", email = "meesters@csc.uni-frankfurt.de"},
     {name = "David Lähnemann",   email = "david.laehnemann@dkfz-heidelberg.de"},
     {name = "Johannes Koester",  email = "johannes.koester@uni-due.de"},
 ]

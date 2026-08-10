@@ -583,6 +583,23 @@ class TestSLURMResources(TestWorkflows):
             assert "-C " not in sbatch_command
             assert "--qos " not in sbatch_command
 
+    def test_no_requeue_setting(self, mock_job):
+        """Test that no_requeue disables SLURM's cluster default."""
+        job = mock_job()
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+        }
+        settings = ExecutorSettings(no_requeue=True)
+
+        sbatch_command = get_submit_command(job, params, settings=settings)
+
+        assert " --no-requeue" in sbatch_command
+
     def test_empty_constraint(self, mock_job):
         """Test that an empty constraint is still included in the command."""
         # Create a job with an empty constraint
