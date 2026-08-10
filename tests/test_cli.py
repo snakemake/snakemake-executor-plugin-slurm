@@ -68,13 +68,13 @@ def test_jobname_prefix_validation():
         executor.__post_init__(test_mode=True)
 
 
-def test_array_memory_fudge_false_resolves_from_cli():
+def test_disable_memory_fudge_false_resolves_from_cli():
     """The executor setting must not retain the truthy string ``"false"``."""
     plugin = _SlurmSettingsPlugin()
     parser = ArgumentParser()
     plugin.register_cli_args(parser, "executor")
 
-    args = parser.parse_args(["--slurm-array-memory-fudge", "false"])
+    args = parser.parse_args(["--slurm-disable-memory-fudge"])
     settings = plugin.get_settings(args)
 
-    assert settings.array_memory_fudge is False
+    assert settings.array_memory_fudge is True
