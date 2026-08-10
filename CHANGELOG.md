@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.8.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.7.1...v2.8.0) (2026-08-10)
+
+
+### Features
+
+* add no-requeue option for [#353](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/353) ([#476](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/476)) ([7f91037](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/7f91037386a544e99dae8c49cec4e9d4a7efa702))
+* allow to disable the memory array fudge ([#482](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/482)) ([f4b52e2](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/f4b52e2d01d7fd639f720f5dc701c536176456a2))
+
+
+### Bug Fixes
+
+* emit job metadata via run_job_pre before Slurm submission ([#478](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/478)) ([fc7aa48](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/fc7aa48e8f1f73ffb3069e76820a8ecc6b805ea5))
+
 ## [2.7.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.7.0...v2.7.1) (2026-06-01)
 
 
