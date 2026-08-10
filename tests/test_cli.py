@@ -48,3 +48,8 @@ def test_jobname_prefix_validation():
 
     with pytest.raises(WorkflowError, match="jobname_prefix"):
         executor.__post_init__(test_mode=True)
+
+
+def test_requeue_options_are_mutually_exclusive():
+    with pytest.raises(WorkflowError, match="mutually exclusive"):
+        ExecutorSettings(requeue=True, no_requeue=True)

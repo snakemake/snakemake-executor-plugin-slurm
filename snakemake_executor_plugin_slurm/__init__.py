@@ -250,6 +250,17 @@ class ExecutorSettings(ExecutorSettingsBase):
         },
     )
 
+    no_requeue: bool = field(
+        default=False,
+        metadata={
+            "help": "Prevent SLURM from requeuing jobs. Results in "
+            "`sbatch ... --no-requeue ...` "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
     exclude_failed_nodes: Optional[str] = field(
         default=None,
         metadata={

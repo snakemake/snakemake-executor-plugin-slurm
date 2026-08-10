@@ -102,6 +102,7 @@ def _make_executor_stub(array_jobs=None, array_limit=100):
             init_seconds_before_status_checks=40,
             keep_successful_logs=False,
             requeue=False,
+            no_requeue=False,
             qos=None,
             reservation=None,
             pass_command_as_script=False,
