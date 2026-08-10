@@ -98,7 +98,6 @@ def _make_executor_stub(array_jobs=None, array_limit=100):
     executor.workflow = SimpleNamespace(
         executor_settings=SimpleNamespace(
             array_limit=array_limit,
-            array_memory_fudge=True,
             status_attempts=1,
             init_seconds_before_status_checks=40,
             keep_successful_logs=False,
@@ -405,7 +404,7 @@ class TestRunArrayJobs:
         self, tmp_path, mock_popen_success
     ):
         executor = self._build_executor(tmp_path)
-        executor.workflow.executor_settings.array_memory_fudge = False
+        executor.workflow.executor_settings.disable_memory_fudge = True
         jobs = self._make_jobs(n=2)
 
         executor.run_array_jobs(jobs)
@@ -414,7 +413,7 @@ class TestRunArrayJobs:
         assert "--mem " not in popen_call_str
         assert "--mem-per-cpu " not in popen_call_str
 
-    def test_array_memory_fudge_remains_enabled_by_default(
+    def test_memory_fudge_remains_enabled_by_default(
         self, tmp_path, mock_popen_success
     ):
         executor = self._build_executor(tmp_path)
