@@ -227,6 +227,7 @@ These are the available options, and the SLURM `sbatch` command line arguments t
 |                      | passed through when explicitly set) |                     |
 | `slurm_account`      | account for resource usage tracking | `--account`         |
 | `slurm_partition`    | partition/queue to submit job(s) to | `--partition`       |
+| `slurm_no_requeue`   | disable the cluster requeue default  | `--no-requeue`      |
 | `slurm_requeue`      | handle `--retries` with SLURM       | `--requeue`                    |
 |                      | functionality                       |                     |
 | `tasks`              | number of concurrent tasks / ranks  | `--ntasks`          |
@@ -323,6 +324,16 @@ snakemake --slurm-requeue ...
 
 This flag effectively does not consider failed SLURM jobs or preserves job IDs and priorities or allows job priority to be accumulated while pending.
 
+If your cluster enables requeuing by default, you can disable it for submitted jobs
+with `--slurm-no-requeue` instead. This lets Snakemake handle retries, including
+resource increases between attempts:
+
+```console
+snakemake --slurm-no-requeue ...
+```
+
+The `--slurm-requeue` and `--slurm-no-requeue` flags are mutually exclusive.
+
 ##### Node Failure Tracking
 
 When jobs fail due to SLURM's `NODE_FAIL` status (indicating a hardware or infrastructure problem with the compute node), the plugin automatically tracks which nodes have failed. These failed nodes are then excluded from all subsequent job submissions using SLURM's `--exclude` flag, preventing your jobs from being repeatedly submitted to problematic hardware.
@@ -344,6 +355,22 @@ Note: group jobs cannot be array jobs.
 When submitting array jobs, the `--slurm-array-limit` flag defines the
 maximum number of array tasks to be submitted in one job submission.
 If the number of tasks exceeds this limit, multiple array job submissions will be performed. This is useful to avoid hitting cluster limits on the maximum number of array tasks per job. Please obey your cluster limits and set this flag accordingly.
+
+##### Array memory adjustment
+
+By default, the plugin increases an explicit memory request for an array job to
+account for the encoded array-job payload. If a job has no memory constraint,
+the plugin adds a minimal `--mem` request so that this adjustment is not lost.
+
+Some clusters derive memory allocation from other requested resources and do
+not allow an explicit memory option. Disable the adjustment on such clusters:
+
+```console
+snakemake --slurm-disable-memory-fudge ...
+```
+
+The default is `false`, preserving the standard array submission behavior. In a
+Snakemake profile, use `slurm-disable-memory-fudge: true` instead.
 
 
 #### MPI-specific Resources
@@ -864,4 +891,3 @@ Cluster-specific profiles consist of two files:
 To obtain a template for a cluster-specific profile, search at the [Snakemake cluster profiles repository](https://github.com/snakemake/snakemake-cluster-profiles). This repository not only provides configuration templates, but also maintainer contacts and deployment hints.
 
 Your users will install Snakemake by Conda, add this Slurm executor plugin, and source code for their workflows. Alternatively, Snakemake is provided by [Spack](https://packages.spack.io/package.html?name=snakemake) and [Easybuild](https://docs.easybuild.io/version-specific/supported-software/s/snakemake/), which both update regularly.
-
