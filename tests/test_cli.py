@@ -78,6 +78,8 @@ def test_disable_memory_fudge_false_resolves_from_cli():
     settings = plugin.get_settings(args)
 
     assert settings.array_memory_fudge is True
+
+
 def test_requeue_options_are_mutually_exclusive():
     with pytest.raises(WorkflowError, match="mutually exclusive"):
         ExecutorSettings(requeue=True, no_requeue=True)
