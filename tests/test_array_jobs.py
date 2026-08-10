@@ -24,7 +24,6 @@ import pytest
 from snakemake_executor_plugin_slurm import (
     Executor,
     ExecutorSettings,
-    _parse_bool,
     _status_lookup_ids,
 )
 
@@ -132,18 +131,10 @@ class TestArrayJobsSettings:
         settings = ExecutorSettings()
         assert settings.array_limit == 1000
 
-    def test_array_memory_fudge_defaults_to_true(self):
+    def test_disable_memory_fudge_defaults_to_false(self):
         """Existing array memory behavior remains enabled by default."""
         settings = ExecutorSettings()
-        assert settings.array_memory_fudge is True
-
-    @pytest.mark.parametrize("value", ["false", "False", "0", "no", "off"])
-    def test_array_memory_fudge_parser_accepts_false_values(self, value):
-        assert _parse_bool(value) is False
-
-    @pytest.mark.parametrize("value", ["true", "True", "1", "yes", "on"])
-    def test_array_memory_fudge_parser_accepts_true_values(self, value):
-        assert _parse_bool(value) is True
+        assert settings.disable_memory_fudge is False
 
     def test_array_jobs_none_yields_empty_set_on_executor(self):
         """Executor with array_jobs=None initialises self.array_jobs as empty set."""

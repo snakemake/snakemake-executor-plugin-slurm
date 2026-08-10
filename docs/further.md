@@ -355,11 +355,11 @@ Some clusters derive memory allocation from other requested resources and do
 not allow an explicit memory option. Disable the adjustment on such clusters:
 
 ```console
-snakemake --slurm-array-memory-fudge false ...
+snakemake --slurm-disable-memory-fudge false ...
 ```
 
 The default is `true`, preserving the standard array submission behavior. In a
-Snakemake profile, use `slurm-array-memory-fudge: false` instead.
+Snakemake profile, use `slurm-disable-memory-fudge: false` instead.
 
 
 #### MPI-specific Resources
