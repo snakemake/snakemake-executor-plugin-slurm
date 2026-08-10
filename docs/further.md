@@ -356,6 +356,22 @@ When submitting array jobs, the `--slurm-array-limit` flag defines the
 maximum number of array tasks to be submitted in one job submission.
 If the number of tasks exceeds this limit, multiple array job submissions will be performed. This is useful to avoid hitting cluster limits on the maximum number of array tasks per job. Please obey your cluster limits and set this flag accordingly.
 
+##### Array memory adjustment
+
+By default, the plugin increases an explicit memory request for an array job to
+account for the encoded array-job payload. If a job has no memory constraint,
+the plugin adds a minimal `--mem` request so that this adjustment is not lost.
+
+Some clusters derive memory allocation from other requested resources and do
+not allow an explicit memory option. Disable the adjustment on such clusters:
+
+```console
+snakemake --slurm-disable-memory-fudge ...
+```
+
+The default is `false`, preserving the standard array submission behavior. In a
+Snakemake profile, use `slurm-disable-memory-fudge: true` instead.
+
 
 #### MPI-specific Resources
 

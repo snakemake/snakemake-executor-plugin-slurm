@@ -100,6 +100,7 @@ def _make_executor_stub(array_jobs=None, array_limit=100):
             array_limit=array_limit,
             status_attempts=1,
             init_seconds_before_status_checks=40,
+            disable_memory_fudge=False,
             keep_successful_logs=False,
             requeue=False,
             no_requeue=False,
@@ -130,6 +131,11 @@ class TestArrayJobsSettings:
         """array_limit field defaults to 1000."""
         settings = ExecutorSettings()
         assert settings.array_limit == 1000
+
+    def test_disable_memory_fudge_defaults_to_false(self):
+        """Existing array memory behavior remains enabled by default."""
+        settings = ExecutorSettings()
+        assert settings.disable_memory_fudge is False
 
     def test_array_jobs_none_yields_empty_set_on_executor(self):
         """Executor with array_jobs=None initialises self.array_jobs as empty set."""
@@ -395,6 +401,28 @@ class TestRunArrayJobs:
         assert "1" not in array_execs
         assert "2" in array_execs
         assert "3" in array_execs
+
+    def test_memory_fudge_can_be_disabled(self, tmp_path, mock_popen_success):
+        executor = self._build_executor(tmp_path)
+        executor.workflow.executor_settings.disable_memory_fudge = True
+        jobs = self._make_jobs(n=2)
+
+        executor.run_array_jobs(jobs)
+
+        popen_call_str = mock_popen_success.call_args_list[0][0][0]
+        assert "--mem " not in popen_call_str
+        assert "--mem-per-cpu " not in popen_call_str
+
+    def test_memory_fudge_remains_enabled_by_default(
+        self, tmp_path, mock_popen_success
+    ):
+        executor = self._build_executor(tmp_path)
+        jobs = self._make_jobs(n=2)
+
+        executor.run_array_jobs(jobs)
+
+        popen_call_str = mock_popen_success.call_args_list[0][0][0]
+        assert "--mem 1" in popen_call_str
 
     def test_array_execs_omits_first_task_of_each_chunk(self, tmp_path):
         """For each chunk, first task uses base exec command and is absent from map."""

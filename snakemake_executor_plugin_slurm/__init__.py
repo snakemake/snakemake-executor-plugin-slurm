@@ -194,6 +194,18 @@ class ExecutorSettings(ExecutorSettingsBase):
         },
     )
 
+    disable_memory_fudge: bool = field(
+        default=False,
+        metadata={
+            "help": "Increase an explicit SLURM memory request for array jobs "
+            "to account for the encoded job payload. When no memory resource is "
+            "set, the executor adds a minimal --mem request. Disable this on "
+            "clusters whose memory allocation is derived from other resources.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
     logdir: Optional[Path] = field(
         default=None,
         metadata={
@@ -911,7 +923,8 @@ class Executor(RemoteExecutor):
                 # add memory fudge factor to the base call,
                 # to account for the extra memory needed by the
                 # jobstep process to hold and parse the array execs payload.
-                call = apply_mem_fudge(call, array_execs_payload)
+                if not self.workflow.executor_settings.disable_memory_fudge:
+                    call = apply_mem_fudge(call, array_execs_payload)
 
                 use_script_submission = (
                     self.workflow.executor_settings.pass_command_as_script
