@@ -194,7 +194,7 @@ class ExecutorSettings(ExecutorSettingsBase):
         },
     )
 
-    disable_memory_fudge: Optional[bool] = field(
+    disable_memory_fudge: bool = field(
         default=False,
         metadata={
             "help": "Increase an explicit SLURM memory request for array jobs "
