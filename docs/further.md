@@ -227,6 +227,7 @@ These are the available options, and the SLURM `sbatch` command line arguments t
 |                      | passed through when explicitly set) |                     |
 | `slurm_account`      | account for resource usage tracking | `--account`         |
 | `slurm_partition`    | partition/queue to submit job(s) to | `--partition`       |
+| `slurm_no_requeue`   | disable the cluster requeue default  | `--no-requeue`      |
 | `slurm_requeue`      | handle `--retries` with SLURM       | `--requeue`                    |
 |                      | functionality                       |                     |
 | `tasks`              | number of concurrent tasks / ranks  | `--ntasks`          |
@@ -322,6 +323,16 @@ snakemake --slurm-requeue ...
 ```
 
 This flag effectively does not consider failed SLURM jobs or preserves job IDs and priorities or allows job priority to be accumulated while pending.
+
+If your cluster enables requeuing by default, you can disable it for submitted jobs
+with `--slurm-no-requeue` instead. This lets Snakemake handle retries, including
+resource increases between attempts:
+
+```console
+snakemake --slurm-no-requeue ...
+```
+
+The `--slurm-requeue` and `--slurm-no-requeue` flags are mutually exclusive.
 
 ##### Node Failure Tracking
 
