@@ -109,6 +109,7 @@ The following limits can be defined for each partition:
 | `max_gpu`               | int       | Maximum number of GPUs             | 0         |
 | `available_gpu_models`  | list[str] | List of available GPU models       | none      |
 | `max_cpus_per_gpu`      | int       | Maximum CPUs per GPU               | unlimited |
+| `cpu_threshold`         | str       | CPU-count eligibility rule (`<128`, `>=128`, `==64`) | none |
 | `supports_mpi`          | bool      | Whether MPI jobs are supported     | true      |
 | `max_mpi_tasks`         | int       | Maximum MPI tasks                  | unlimited |
 | `available_constraints` | list[str] | List of available node constraints | none      |
@@ -127,6 +128,11 @@ Note: the `max_runtime` definition may contain
 
 They are all auto-converted to minutes. Seconds are rounded to the nearest value in minutes.
 
+Note: `cpu_threshold` is an optional filter expression for CPU count and supports
+`<`, `<=`, `>`, `>=`, and `==` (or `=`), for example `"<128"` or `">=128"`.
+If configured, partitions are only considered when a job's effective CPU request
+matches the expression.
+
 ##### Example Partition Configuration
 
 ```yaml
@@ -135,14 +141,22 @@ partitions:
     max_runtime: 720  # 12 hours
     max_mem_mb: 64000  # 64 GB
     max_cpus_per_task: 24
-    max_nodes: 1
+    cpu_threshold: "<128"
+    max_nodes: 100
+
+  parallel:
+    max_runtime: 720  # 12 hours
+    max_mem_mb: 64000  # 64 GB
+    max_cpus_per_task: 24
+    cpu_threshold: ">=128"
+    max_nodes: 100
     
   highmem:
     max_runtime: 1440  # 24 hours
     max_mem_mb: 512000  # 512 GB
     max_mem_mb_per_cpu: 16000
     max_cpus_per_task: 48
-    max_nodes: 1
+    max_nodes: 2
     
   gpu:
     max_runtime: 2880  # 48 hours
