@@ -254,8 +254,8 @@ class ExecutorSettings(ExecutorSettingsBase):
         default=None,
         metadata={
             "help": "A cluster specific node local local global directory. "
-            "Similar to '.remote_job_local_storage_prefix' of the fs-storage "
-            "plugin. Used to ensure stage-in when input is flagged for random "
+            "Similar to '.remote_job_local_storage_prefix' of Snakemake. "
+            "Used to ensure stage-in when input is flagged for random "
             "or mixed access patterns - see https://jgu.to/kwenq ."
             "Other than the fs-storage plugin, this function only works to "
             "stage-in input files (no stage-out) but supports transferring "
