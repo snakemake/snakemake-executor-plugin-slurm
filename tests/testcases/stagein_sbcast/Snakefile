@@ -1,0 +1,25 @@
+inputflags:
+    access.sequential
+
+
+rule all:
+    input:
+        "counted/count.txt"
+
+
+rule make_words:
+    output:
+        "data/words"
+    shell:
+        "printf 'alpha\nbeta\ngamma\n' > {output}"
+
+
+rule use_sbcast:
+    input:
+        access.random("data/words")
+    output:
+        "counted/count.txt"
+    log:
+        "log/sbcast.log"
+    shell:
+        "wc -l {input} > {output}"
