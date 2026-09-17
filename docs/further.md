@@ -42,6 +42,20 @@ $ snakemake --executor slurm \
 This example assumes no limit for submitted jobs (`-j unlimited`). Any number, e.g. `-j 150`, will throttle a workflow to this number of concurrent jobs.
 Furthermore, on many clusters we must assume separation of workflows and data. Use the `--directory <path>` flag to point to a file system that contains your data.
 
+### Shell environment
+
+The plugin invokes the remote jobs within a non-interactive sh shell. This means that neither `.bashrc` nor sh's `$ENV` variable will be considered.
+However, environment variables will be passed from the shell from which you invoke Snakemake.
+In order to ensure further definitions, e.g. from the file pointed to by `$ENV` are sourced, you can use Snakemake's precommand flag, e.g.
+
+```console
+--precommand '. $ENV'
+```
+or within a [profile](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles) as
+
+```yaml
+precommand: ". $ENV"
+```
 
 ### Configuration
 
