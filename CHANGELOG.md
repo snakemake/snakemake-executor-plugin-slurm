@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.8.0...v2.8.1) (2026-09-17)
+
+
+### Documentation
+
+* document shell environment and precommand ([#483](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/483)) ([e9dc903](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/e9dc9034867df6679c2157c18b3d362ef80530da))
+
 ## [2.8.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.7.1...v2.8.0) (2026-08-10)
 
 
