@@ -256,7 +256,7 @@ class ExecutorSettings(ExecutorSettingsBase):
             "help": "A cluster specific node local local global directory. "
             "Similar to '.remote_job_local_storage_prefix' of Snakemake. "
             "Used to ensure stage-in when input is flagged for random "
-            "or mixed access patterns - see https://jgu.to/kwenq ."
+            "or multi access patterns - see https://jgu.to/kwenq ."
             "Other than the fs-storage plugin, this function only works to "
             "stage-in input files (no stage-out) but supports transferring "
             "onto all nodes of the SLURM job. For big files (> 2GB)'ssh' from "
@@ -267,7 +267,7 @@ class ExecutorSettings(ExecutorSettingsBase):
         default=False,
         metadata={
             "help": "By default, when node_local_prefix is set, Snakemake will "
-            "automatically stage in input files with random or mixed access "
+            "automatically stage in input files with random or multi access "
             "patterns to the node local directory. Setting this flag will "
             "suppress this behavior, so that no automatic staging will be "
             "performed.",
@@ -704,9 +704,10 @@ class Executor(RemoteExecutor):
             general_args += " --slurm-jobstep-pass-command-as-script"
         # attempt auto stage-in if not suppressed and node_local_prefix is set
         if node_local_prefix and not suppress_auto_stagein:
-            ld = node_local_prefix
-            ld = encode_deferred_envvars(ld)
-            general_args += f" --slurm-jobstep-node-local-prefix={shlex.quote(ld)}"
+            encoded_prefix = base64.urlsafe_b64encode(
+                node_local_prefix.encode()
+            ).decode("ascii")
+            general_args += f" --slurm-jobstep-node-local-prefix={encoded_prefix}"
         return general_args
 
     def run_jobs(self, jobs: List[JobExecutorInterface]):
@@ -726,19 +727,19 @@ class Executor(RemoteExecutor):
         )
         if not suppress_auto_stagein and node_local_prefix:
             for job in jobs:
+                size = get_file_size(job)
                 for inp in job.input:
                     has_random_or_mixed = isinstance(
                         inp.flags.get(STORE_KEY), AccessPattern
                     ) and inp.flags[STORE_KEY] in {
                         AccessPattern.RANDOM,
-                        AccessPattern.MIXED,
+                        AccessPattern.MULTI,
                     }
                     if has_random_or_mixed:
-                        size = get_file_size(inp.path)
                         if size is not None and size > 100:
                             self.logger.warning(
-                                f"Job '{job.name}' has input file '{inp.path}' with "
-                                f"random or mixed access pattern and size {size} "
+                                f"Job '{job.name}' has input file '{inp.file}' with "
+                                f"random or multi access pattern and size {size} "
                                 "bytes. Snakemake will attempt to stage in this file "
                                 "to the node local directory specified by "
                                 f"{node_local_prefix}. "
