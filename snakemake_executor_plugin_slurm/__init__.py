@@ -247,7 +247,7 @@ class ExecutorSettings(ExecutorSettingsBase):
         },
     )
 
-    # The link below is the URL shortener of the RMU universities (Mainz, 
+    # The link below is the URL shortener of the RMU universities (Mainz,
     # Frankfurt, Darmstadt) in Germany. It points to Snakemake's
     # access pattern documentation.
     node_local_prefix: Optional[str] = field(

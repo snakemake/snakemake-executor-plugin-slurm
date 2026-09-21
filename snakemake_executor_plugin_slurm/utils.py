@@ -80,7 +80,7 @@ def encode_deferred_envvars(value: str) -> str:
     environment variables (e.g. via ``os.path.expandvars``) against its own
     ``os.environ`` once the job is running in its real job context.
     """
-    return 
+    return
 
 
 def pending_jobs_for_rule(dag: DAGExecutorInterface, rule_name: str) -> int:
