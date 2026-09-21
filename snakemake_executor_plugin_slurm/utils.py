@@ -1,5 +1,6 @@
 # utility functions for the SLURM executor plugin
 
+import base64
 from collections import Counter
 import math
 import os
@@ -69,6 +70,17 @@ def get_job_wildcards(job: JobExecutorInterface) -> str:
         wildcard_str = ""
 
     return wildcard_str
+
+
+def encode_deferred_envvars(value: str) -> str:
+    """Base64-encode a value so embedded ``$VAR``/``${VAR}`` references are
+    never seen (and thus never expanded) by the submit-time shell.
+
+    The jobstep-side code must base64-decode this value and then expand any
+    environment variables (e.g. via ``os.path.expandvars``) against its own
+    ``os.environ`` once the job is running in its real job context.
+    """
+    return
 
 
 def pending_jobs_for_rule(dag: DAGExecutorInterface, rule_name: str) -> int:
@@ -406,3 +418,29 @@ def set_gres_string(job: JobExecutorInterface) -> str:
         gres += f" --gpus={gpu_string}"
 
     return gres
+
+
+def get_file_size(job: JobExecutorInterface) -> int:
+    """
+    Function to get the file size of the input files for a job. This is used
+    to determine the resources needed for the job.
+
+    Args:
+        job: The JobExecutorInterface instance representing the job
+    Returns:
+        The total file size of the input files for the job, in GB.
+    """
+    total_size_bytes = 0
+    for input_file in job.input:
+        if os.path.isfile(input_file):
+            total_size_bytes += os.path.getsize(input_file)
+        elif os.path.isdir(input_file):
+            for dirpath, _, filenames in os.walk(input_file):
+                for filename in filenames:
+                    file_path = os.path.join(dirpath, filename)
+                    if os.path.isfile(file_path):
+                        total_size_bytes += os.path.getsize(file_path)
+
+    # Convert bytes to GB
+    total_size_gb = int(total_size_bytes / (1024**3))
+    return round_half_up(total_size_gb)  # implicit conversion to int

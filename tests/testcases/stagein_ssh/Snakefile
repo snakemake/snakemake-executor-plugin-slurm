@@ -1,0 +1,33 @@
+import os
+
+
+inputflags:
+    access.sequential
+
+
+rule all:
+    input:
+        "measured/size.txt"
+
+
+rule make_big_sparse:
+    output:
+        "data/big"
+    run:
+        size_bytes = int(
+            os.environ.get("STAGEIN_TEST_BIG_BYTES", str(4 * 1024 * 1024 * 1024 + 1))
+        )
+        with open(output[0], "wb") as f:
+            f.seek(size_bytes - 1)
+            f.write(b"\0")
+
+
+rule use_ssh:
+    input:
+        access.multi("data/big")
+    output:
+        "measured/size.txt"
+    log:
+        "log/ssh.log"
+    shell:
+        "ls -lh {input} > {output}"
