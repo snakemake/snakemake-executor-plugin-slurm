@@ -1,5 +1,6 @@
 # utility functions for the SLURM executor plugin
 
+import base64
 from collections import Counter
 import math
 import os
@@ -71,31 +72,15 @@ def get_job_wildcards(job: JobExecutorInterface) -> str:
     return wildcard_str
 
 
-_DEFERRED_ENVVAR_PATTERN = re.compile(
-    r"""
-    (?<!\\)\$
-    (?:
-        \{(?P<braced>[A-Za-z_][A-Za-z0-9_]*)\}
-        |(?P<bare>[A-Za-z_][A-Za-z0-9_]*)
-    )
-    """,
-    re.VERBOSE,
-)
-
-
 def encode_deferred_envvars(value: str) -> str:
-    """Replace shell-style env variables with neutral markers.
+    """Base64-encode a value so embedded ``$VAR``/``${VAR}`` references are
+    never seen (and thus never expanded) by the submit-time shell.
 
-    The marker keeps submit-time shell quoting safe. The matching jobstep-side
-    code can expand ``__ENV_NAME__`` back from ``os.environ`` once the job is
-    running in its real job context.
+    The jobstep-side code must base64-decode this value and then expand any
+    environment variables (e.g. via ``os.path.expandvars``) against its own
+    ``os.environ`` once the job is running in its real job context.
     """
-
-    def replace(match: re.Match[str]) -> str:
-        name = match.group("braced") or match.group("bare")
-        return f"__ENV_{name}__"
-
-    return _DEFERRED_ENVVAR_PATTERN.sub(replace, value)
+    return 
 
 
 def pending_jobs_for_rule(dag: DAGExecutorInterface, rule_name: str) -> int:
@@ -446,7 +431,7 @@ def get_file_size(job: JobExecutorInterface) -> int:
         The total file size of the input files for the job, in GB.
     """
     total_size_bytes = 0
-    for input_file in job.input_files:
+    for input_file in job.input:
         if os.path.isfile(input_file):
             total_size_bytes += os.path.getsize(input_file)
         elif os.path.isdir(input_file):
@@ -457,5 +442,5 @@ def get_file_size(job: JobExecutorInterface) -> int:
                         total_size_bytes += os.path.getsize(file_path)
 
     # Convert bytes to GB
-    total_size_gb = total_size_bytes / (1024**3)
+    total_size_gb = int(total_size_bytes / (1024**3))
     return round_half_up(total_size_gb)  # implicit conversion to int
