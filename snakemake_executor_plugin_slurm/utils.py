@@ -406,3 +406,28 @@ def set_gres_string(job: JobExecutorInterface) -> str:
         gres += f" --gpus={gpu_string}"
 
     return gres
+
+
+def add_failing_nodes(jobid):
+    """
+    Function to retrieve failing nodes to be added to the list of failed nodes.
+    This is needed to avoid submitting jobs to nodes that are
+    known to be failing. The list of failed nodes is passed
+    as a parameter to the SLURM executor plugin.
+    """
+    try:
+        sacct_output = subprocess.check_output(
+            f"sacct -j {jobid} -n -X -o nodelist%-256",
+            shell=True,
+            text=True,
+            stderr=subprocess.PIPE,
+        )
+        nodes = {
+            node.strip()
+            for node in sacct_output.splitlines()
+            if node.strip() and node.strip() != "None assigned"
+        }
+        return nodes
+    except subprocess.CalledProcessError as e:
+        print(f"Could not retrieve node information for job {jobid}: {e.stderr}")
+    return set()
