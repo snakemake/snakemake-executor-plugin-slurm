@@ -422,11 +422,12 @@ def add_failing_nodes(jobid):
             text=True,
             stderr=subprocess.PIPE,
         )
-        nodes = sacct_output.strip()
-        # this list may contain `None assigned - we must
-        # filter out this invalid entry
-        if nodes and nodes != "None assigned":
-            return {nodes}
+        nodes = {
+            node.strip()
+            for node in sacct_output.splitlines()
+            if node.strip() and node.strip() != "None assigned"
+        }
+        return nodes
     except subprocess.CalledProcessError as e:
         print(f"Could not retrieve node information for job {jobid}: {e.stderr}")
     return set()
