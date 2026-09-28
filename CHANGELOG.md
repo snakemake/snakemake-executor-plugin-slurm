@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.8.1](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.8.0...v2.8.1) (2026-09-28)
+
+
+### Bug Fixes
+
+* empty feedback upon node failure ([#486](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/486)) ([8c2af56](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/8c2af56eb7dd1e0b78866691d6981f1d8327e0db))
+
+
+### Documentation
+
+* document shell environment and precommand ([#483](https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/483)) ([e9dc903](https://github.com/snakemake/snakemake-executor-plugin-slurm/commit/e9dc9034867df6679c2157c18b3d362ef80530da))
+
 ## [2.8.0](https://github.com/snakemake/snakemake-executor-plugin-slurm/compare/v2.7.1...v2.8.0) (2026-08-10)
 
 
