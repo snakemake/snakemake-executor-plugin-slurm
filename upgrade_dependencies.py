@@ -58,7 +58,7 @@ def main():
         if not m:
             return None
         major, minor, patch = map(int, m.groups())
-        return f">={major}.{minor}.{patch},<{major+1}"
+        return f">={major}.{minor}.{patch},<{major + 1}"
 
     print("Upgrading pyproject.toml dependencies to sensible ranges...")
     print(f"(dry-run mode: {dry_run})\n")

@@ -184,9 +184,9 @@ class TestEfficiencyReport(snakemake.common.tests.TestWorkflowsLocalStorageBase)
                 report_found = True
                 report_path = os.path.join(expected_path, fname)
                 # Verify it's not empty
-                assert (
-                    os.stat(report_path).st_size > 0
-                ), f"Efficiency report {report_path} is empty"
+                assert os.stat(report_path).st_size > 0, (
+                    f"Efficiency report {report_path} is empty"
+                )
                 break
         assert report_found, "Efficiency report file not found"
 
@@ -582,6 +582,23 @@ class TestSLURMResources(TestWorkflows):
             sbatch_command = get_submit_command(job, params)
             assert "-C " not in sbatch_command
             assert "--qos " not in sbatch_command
+
+    def test_no_requeue_setting(self, mock_job):
+        """Test that no_requeue disables SLURM's cluster default."""
+        job = mock_job()
+        params = {
+            "run_uuid": "test_run",
+            "slurm_logfile": "test_logfile",
+            "comment_str": "test_comment",
+            "account": None,
+            "partition": None,
+            "workdir": ".",
+        }
+        settings = ExecutorSettings(no_requeue=True)
+
+        sbatch_command = get_submit_command(job, params, settings=settings)
+
+        assert " --no-requeue" in sbatch_command
 
     def test_empty_constraint(self, mock_job):
         """Test that an empty constraint is still included in the command."""

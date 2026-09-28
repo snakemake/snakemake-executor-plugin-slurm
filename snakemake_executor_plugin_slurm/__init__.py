@@ -48,6 +48,7 @@ from .utils import (
     delete_slurm_environment,
     delete_empty_dirs,
     set_gres_string,
+    add_failing_nodes,
 )
 from .job_status_query import (
     get_min_job_age,
@@ -205,6 +206,18 @@ class ExecutorSettings(ExecutorSettingsBase):
         },
     )
 
+    disable_memory_fudge: bool = field(
+        default=False,
+        metadata={
+            "help": "Increase an explicit SLURM memory request for array jobs "
+            "to account for the encoded job payload. When no memory resource is "
+            "set, the executor adds a minimal --mem request. Disable this on "
+            "clusters whose memory allocation is derived from other resources.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
     logdir: Optional[Path] = field(
         default=None,
         metadata={
@@ -255,6 +268,17 @@ class ExecutorSettings(ExecutorSettingsBase):
             "help": "Requeue jobs if they fail with exit code != 0, "
             "if no cluster default. Results in "
             "`sbatch ... --requeue ...` "
+            "This flag has no effect, if not set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
+    no_requeue: bool = field(
+        default=False,
+        metadata={
+            "help": "Prevent SLURM from requeuing jobs. Results in "
+            "`sbatch ... --no-requeue ...` "
             "This flag has no effect, if not set.",
             "env_var": False,
             "required": False,
@@ -521,8 +545,7 @@ class Executor(RemoteExecutor):
                 "the array_limit setting to enable array job submission."
             )
             raise WorkflowError(
-                "Array job submission is effectively disabled due to "
-                "low array_limit."
+                "Array job submission is effectively disabled due to low array_limit."
             )
         self.slurm_logdir = _select_logdir(self.workflow)
         # Check the environment variable "SNAKEMAKE_SLURM_PARTITIONS",
@@ -676,7 +699,7 @@ class Executor(RemoteExecutor):
                         "submitted as an array job. "
                         "Submitting it as a regular job instead."
                     )
-                self._job_submission_executor.submit(self.run_job, job)
+                self._submit_job(job)
             else:
                 ready_jobs_by_rule.setdefault(job.rule.name, []).append(job)
 
@@ -685,10 +708,8 @@ class Executor(RemoteExecutor):
                 "all" in self.array_jobs or rule_name in self.array_jobs
             )
             # TODO: use more sensible logging information, once finished
-            self.logger.debug(
-                f"Running jobs for rule: {rule_name}, " f"{same_rule_jobs}"
-            )
-            self.logger.debug("Current array job settings: " f"{self.array_jobs}")
+            self.logger.debug(f"Running jobs for rule: {rule_name}, {same_rule_jobs}")
+            self.logger.debug(f"Current array job settings: {self.array_jobs}")
 
             if array_selected_for_rule:
                 dag = getattr(self.workflow, "dag", None)
@@ -713,9 +734,7 @@ class Executor(RemoteExecutor):
                             "but only one pending job is available; submitting "
                             "as a regular job."
                         )
-                        self._job_submission_executor.submit(
-                            self.run_job, same_rule_jobs[0]
-                        )
+                        self._submit_job(same_rule_jobs[0])
                     else:
                         self.logger.debug(
                             "Array job collection incomplete for rule "
@@ -739,9 +758,7 @@ class Executor(RemoteExecutor):
                         f"{rule_name}: {len(same_rule_jobs)} ready, "
                         f"{eligible_jobs} eligible, chunk_size={chunk_size}."
                     )
-                    self._job_submission_executor.submit(
-                        self.run_array_jobs, same_rule_jobs
-                    )
+                    self._submit_array_jobs(same_rule_jobs)
                 continue
             # Non-array mode: submit all ready jobs individually.
             elif len(same_rule_jobs) == 1:
@@ -749,7 +766,7 @@ class Executor(RemoteExecutor):
                     f"Submitting single job for rule {rule_name} as "
                     "array mode is disabled."
                 )
-                self._job_submission_executor.submit(self.run_job, same_rule_jobs[0])
+                self._submit_job(same_rule_jobs[0])
                 continue
             else:
                 self.logger.debug(
@@ -757,7 +774,18 @@ class Executor(RemoteExecutor):
                     f"{rule_name} individually (array mode disabled)."
                 )
                 for job in same_rule_jobs:
-                    self._job_submission_executor.submit(self.run_job, job)
+                    self._submit_job(job)
+
+    def _submit_job(self, job: JobExecutorInterface):
+        """Emit standard job metadata before submitting one Slurm job."""
+        self.run_job_pre(job)
+        self._job_submission_executor.submit(self.run_job, job)
+
+    def _submit_array_jobs(self, jobs: List[JobExecutorInterface]):
+        """Emit metadata for every array member before one array submission."""
+        for job in jobs:
+            self.run_job_pre(job)
+        self._job_submission_executor.submit(self.run_array_jobs, jobs)
 
     def _report_job_submission_threadsafe(self, job_info: SubmittedJobInfo):
         if self._main_event_loop is not None:
@@ -910,7 +938,8 @@ class Executor(RemoteExecutor):
                 # add memory fudge factor to the base call,
                 # to account for the extra memory needed by the
                 # jobstep process to hold and parse the array execs payload.
-                call = apply_mem_fudge(call, array_execs_payload)
+                if not self.workflow.executor_settings.disable_memory_fudge:
+                    call = apply_mem_fudge(call, array_execs_payload)
 
                 use_script_submission = (
                     self.workflow.executor_settings.pass_command_as_script
@@ -1509,21 +1538,11 @@ We leave it to SLURM to resume your job(s)""")
                     # Always track the failed node so future submissions exclude it,
                     # regardless of whether requeue is enabled.
                     if is_query_tool_available("sacct"):
-                        try:
-                            sacct_output = subprocess.check_output(
-                                f"sacct -j {j.external_jobid} -n -X -o nodelist%-256",
-                                shell=True,
-                                text=True,
-                                stderr=subprocess.PIPE,
-                            )
-                            node = sacct_output.strip()
-                            if node:
-                                self._failed_nodes.add(node)
-                        except subprocess.CalledProcessError as e:
-                            self.logger.warning(
-                                f"Could not retrieve node information for job "
-                                f"{j.external_jobid}: {e.stderr}"
-                            )
+                        newly_failed = self._failed_nodes.update(
+                            add_failing_nodes(j.external_jobid)
+                        )
+                        if newly_failed:
+                            self._failed_nodes.update(newly_failed)
                     else:
                         self.logger.debug(
                             "sacct not available; cannot track failed node"

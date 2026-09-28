@@ -100,8 +100,10 @@ def _make_executor_stub(array_jobs=None, array_limit=100):
             array_limit=array_limit,
             status_attempts=1,
             init_seconds_before_status_checks=40,
+            disable_memory_fudge=False,
             keep_successful_logs=False,
             requeue=False,
+            no_requeue=False,
             qos=None,
             reservation=None,
             pass_command_as_script=False,
@@ -129,6 +131,11 @@ class TestArrayJobsSettings:
         """array_limit field defaults to 1000."""
         settings = ExecutorSettings()
         assert settings.array_limit == 1000
+
+    def test_disable_memory_fudge_defaults_to_false(self):
+        """Existing array memory behavior remains enabled by default."""
+        settings = ExecutorSettings()
+        assert settings.disable_memory_fudge is False
 
     def test_array_jobs_none_yields_empty_set_on_executor(self):
         """Executor with array_jobs=None initialises self.array_jobs as empty set."""
@@ -158,6 +165,16 @@ class TestArrayJobsSettings:
 
 class TestRunJobsRouting:
     """Tests that run_jobs dispatches to run_job or run_array_jobs correctly."""
+
+    def test_emits_job_info_once_for_each_submitted_job(self):
+        """Every submitted job logs its standard JOB_INFO metadata first."""
+        executor = _make_executor_stub(array_jobs="myrule")
+        jobs = [_make_mock_job(rule_name="myrule", jobid=i) for i in range(3)]
+
+        executor.run_jobs(jobs)
+
+        for job in jobs:
+            job.log_info.assert_called_once()
 
     def test_single_non_array_job_uses_run_job(self):
         """One job with no array setting → run_job is enqueued."""
@@ -255,6 +272,8 @@ class TestRunJobsRouting:
         executor.run_jobs(ready_jobs)
 
         assert executor._job_submission_executor.submit.call_count == 0
+        for job in ready_jobs:
+            job.log_info.assert_not_called()
 
     def test_array_rule_submits_at_chunk_size_even_if_more_eligible_in_dag(self):
         """
@@ -382,6 +401,28 @@ class TestRunArrayJobs:
         assert "1" not in array_execs
         assert "2" in array_execs
         assert "3" in array_execs
+
+    def test_memory_fudge_can_be_disabled(self, tmp_path, mock_popen_success):
+        executor = self._build_executor(tmp_path)
+        executor.workflow.executor_settings.disable_memory_fudge = True
+        jobs = self._make_jobs(n=2)
+
+        executor.run_array_jobs(jobs)
+
+        popen_call_str = mock_popen_success.call_args_list[0][0][0]
+        assert "--mem " not in popen_call_str
+        assert "--mem-per-cpu " not in popen_call_str
+
+    def test_memory_fudge_remains_enabled_by_default(
+        self, tmp_path, mock_popen_success
+    ):
+        executor = self._build_executor(tmp_path)
+        jobs = self._make_jobs(n=2)
+
+        executor.run_array_jobs(jobs)
+
+        popen_call_str = mock_popen_success.call_args_list[0][0][0]
+        assert "--mem 1" in popen_call_str
 
     def test_array_execs_omits_first_task_of_each_chunk(self, tmp_path):
         """For each chunk, first task uses base exec command and is absent from map."""
@@ -662,4 +703,25 @@ class TestCheckActiveArrayJobs:
 
         assert remaining == [active_job]
         executor.report_job_success.assert_not_called()
+        executor.report_job_error.assert_not_called()
+
+    def test_node_fail_tracks_failing_node(self, monkeypatch, tmp_path):
+        """A NODE_FAIL job adds the node returned by SLURM to the exclusion set."""
+        executor = _make_check_executor()
+        executor.workflow.executor_settings.requeue = True
+        self._patch_all(monkeypatch, {"123_1": "NODE_FAIL"})
+        monkeypatch.setattr(
+            "snakemake_executor_plugin_slurm.add_failing_nodes",
+            lambda jobid: {"bad_node01"},
+        )
+
+        active_job = SimpleNamespace(
+            external_jobid="123_1",
+            aux={"slurm_logfile": tmp_path / "123_1.log"},
+        )
+
+        remaining = _run_check(executor, [active_job])
+
+        assert remaining == [active_job]
+        assert executor._failed_nodes == {"bad_node01"}
         executor.report_job_error.assert_not_called()
