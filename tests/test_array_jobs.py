@@ -704,3 +704,24 @@ class TestCheckActiveArrayJobs:
         assert remaining == [active_job]
         executor.report_job_success.assert_not_called()
         executor.report_job_error.assert_not_called()
+
+    def test_node_fail_tracks_failing_node(self, monkeypatch, tmp_path):
+        """A NODE_FAIL job adds the node returned by SLURM to the exclusion set."""
+        executor = _make_check_executor()
+        executor.workflow.executor_settings.requeue = True
+        self._patch_all(monkeypatch, {"123_1": "NODE_FAIL"})
+        monkeypatch.setattr(
+            "snakemake_executor_plugin_slurm.add_failing_nodes",
+            lambda jobid: {"bad_node01"},
+        )
+
+        active_job = SimpleNamespace(
+            external_jobid="123_1",
+            aux={"slurm_logfile": tmp_path / "123_1.log"},
+        )
+
+        remaining = _run_check(executor, [active_job])
+
+        assert remaining == [active_job]
+        assert executor._failed_nodes == {"bad_node01"}
+        executor.report_job_error.assert_not_called()

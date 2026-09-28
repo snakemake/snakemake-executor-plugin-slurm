@@ -48,6 +48,7 @@ from .utils import (
     delete_slurm_environment,
     delete_empty_dirs,
     set_gres_string,
+    add_failing_nodes,
 )
 from .job_status_query import (
     get_min_job_age,
@@ -1514,21 +1515,11 @@ We leave it to SLURM to resume your job(s)""")
                     # Always track the failed node so future submissions exclude it,
                     # regardless of whether requeue is enabled.
                     if is_query_tool_available("sacct"):
-                        try:
-                            sacct_output = subprocess.check_output(
-                                f"sacct -j {j.external_jobid} -n -X -o nodelist%-256",
-                                shell=True,
-                                text=True,
-                                stderr=subprocess.PIPE,
-                            )
-                            node = sacct_output.strip()
-                            if node:
-                                self._failed_nodes.add(node)
-                        except subprocess.CalledProcessError as e:
-                            self.logger.warning(
-                                f"Could not retrieve node information for job "
-                                f"{j.external_jobid}: {e.stderr}"
-                            )
+                        newly_failed = self._failed_nodes.update(
+                            add_failing_nodes(j.external_jobid)
+                        )
+                        if newly_failed:
+                            self._failed_nodes.update(newly_failed)
                     else:
                         self.logger.debug(
                             "sacct not available; cannot track failed node"
