@@ -162,6 +162,42 @@ def _status_lookup_ids(external_jobid: str) -> List[str]:
     return candidates
 
 
+_ARRAY_DISPATCHER = (
+    "import base64,json,os,sys,zlib;"
+    "k=os.environ.get('SLURM_ARRAY_TASK_ID');"
+    "m=json.loads(base64.b64decode(sys.argv[1]));"
+    "c=m.get(k);"
+    "sys.exit('array dispatch: no command for array task '+repr(k)) "
+    "if c is None else None;"
+    "os.execv('/bin/sh',['/bin/sh','-c',"
+    "zlib.decompress(bytes.fromhex(c)).decode()])"
+)
+
+
+def get_array_dispatch_command(array_execs_payload: str, python_executable: str) -> str:
+    """Return the shell command that dispatches one array task.
+
+    The returned command is what the submitted SLURM job runs for *every*
+    array task: it looks up the task's own execution command in the payload
+    (keyed by ``SLURM_ARRAY_TASK_ID``) and replaces itself with it. Hence each
+    array task executes exactly the job it was created for, and no task
+    inherits another (e.g. the chunk's first) job as its DAG target.
+
+    ``python_executable`` is the interpreter selected by the executor
+    (``get_python_executable()``), i.e. the same one the spawned job commands
+    start with; it is shell-quoted because it may contain whitespace.
+
+    The payload is only base64, so quoting it with ``shlex.quote`` alongside
+    the dispatcher source (which contains no double quotes, dollar signs,
+    backticks or backslashes) keeps the command safe both inside
+    ``sbatch --wrap='...'`` and as a line of an sbatch script.
+    """
+    return (
+        f'{shlex.quote(python_executable)} -c "{_ARRAY_DISPATCHER}" '
+        f"{shlex.quote(array_execs_payload)}"
+    )
+
+
 @dataclass
 class ExecutorSettings(ExecutorSettingsBase):
     """Settings for the SLURM executor plugin."""
@@ -910,12 +946,15 @@ class Executor(RemoteExecutor):
             array_limit = min(self.max_array_size, len(jobs))
             for start_index in range(1, len(jobs) + 1, array_limit):
                 end_index = min(start_index + array_limit - 1, len(jobs))
-                # The first task of each chunk runs via the plain base command.
-                # Remaining tasks are dispatched from --slurm-jobstep-array-execs.
-                exec_job = self.format_job_exec(jobs[start_index - 1])
+                # Every array task must execute exactly the job it was created
+                # for. The payload therefore covers the whole chunk and the
+                # submission command only dispatches on SLURM_ARRAY_TASK_ID.
+                # Embedding a concrete job in the submission command (as done
+                # before) makes *all* tasks inherit it as their DAG target, so
+                # all tasks but the first would post-process - and wait for the
+                # outputs of - a job they never ran.
                 sub_array_execs = {
-                    str(i): array_execs[i]
-                    for i in range(start_index + 1, end_index + 1)
+                    str(i): array_execs[i] for i in range(start_index, end_index + 1)
                 }
                 array_execs_payload = base64.b64encode(
                     json.dumps(sub_array_execs).encode("utf-8")
@@ -927,6 +966,10 @@ class Executor(RemoteExecutor):
                 if not self.workflow.executor_settings.disable_memory_fudge:
                     call = apply_mem_fudge(call, array_execs_payload)
 
+                dispatch_command = get_array_dispatch_command(
+                    array_execs_payload, self.get_python_executable()
+                )
+
                 use_script_submission = (
                     self.workflow.executor_settings.pass_command_as_script
                 )
@@ -935,23 +978,16 @@ class Executor(RemoteExecutor):
                     call_with_array = call + f" --array={start_index}-{end_index}"
 
                     if not use_script_submission:
-                        # Use --wrap for the base execution command.
-                        call_with_array += (
-                            f' --wrap="{exec_job}'
-                            f" --slurm-jobstep-array-execs="
-                            f"{shlex.quote(array_execs_payload)}"
-                            '"'
-                        )
+                        # Use --wrap for the dispatching command.
+                        call_with_array += f" --wrap={shlex.quote(dispatch_command)}"
                         subprocess_stdin = None
                         self.logger.debug(f"call with array: {call_with_array}")
                     else:
-                        # Use /dev/stdin to pass the base execution command as a script.
+                        # Use /dev/stdin to pass the dispatching command as a script.
                         sbatch_script = "\n".join(
                             [
                                 "#!/bin/sh",
-                                f"{exec_job}",
-                                "--slurm-jobstep-array-execs",
-                                shlex.quote(array_execs_payload),
+                                dispatch_command,
                             ]
                         )
                         call_with_array += " /dev/stdin"

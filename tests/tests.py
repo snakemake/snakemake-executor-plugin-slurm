@@ -1276,3 +1276,84 @@ class TestArrayJobsAllWithLimit(_LocalTestcasesBase):
 
     def test_array_jobs_all_with_limit(self, tmp_path):
         self.run_workflow("array_jobs", tmp_path)
+
+
+class _ArrayJobsSlowFirstBase(_LocalTestcasesBase):
+    """Base for regression tests where the first task of an array chunk is slow.
+
+    The testcase makes the first task of every array chunk sleep longer than
+    the workflow's ``latency_wait``. Before the fix, all other tasks of that
+    chunk inherited the first task as their DAG target, finished their *own*
+    job first and then failed with a MissingOutputException for the still
+    running first task - and their successfully produced outputs were removed
+    as "corrupted".
+    """
+
+    TESTCASE = "array_jobs_slow_first"
+
+    # Generic workflows inherited from Snakemake's test base class are not part
+    # of this regression (and running them in array mode would test something
+    # else entirely); they are covered by TestWorkflows.
+    test_simple_workflow = None
+    test_group_workflow = None
+
+    def get_executor(self) -> str:
+        return "slurm"
+
+    def assert_one_job_per_array_task(self, tmp_path):
+        """每个数组任务只允许执行（并据此做 postprocess）一个作业。"""
+        workdir = Path(tmp_path) / self.TESTCASE
+        element_logs = sorted(
+            (workdir / ".snakemake" / "slurm_logs").glob("rule_*/**/*.log")
+        )
+        assert element_logs, f"no SLURM array task logs found under {workdir}"
+
+        for element_log in element_logs:
+            text = element_log.read_text(errors="ignore")
+            assert "MissingOutputException" not in text, element_log
+            outputs = set(re.findall(r"^\s*output: (\S+)", text, flags=re.M))
+            assert len(outputs) == 1, (element_log, outputs)
+
+
+class TestArrayJobsSlowFirstTask(_ArrayJobsSlowFirstBase):
+    """Regression test: one array per rule, its first task is the slow one.
+
+    The default array limit (1000) is larger than the number of ready jobs,
+    so both rules are submitted as a single array each.
+    """
+
+    __test__ = True
+
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        return ExecutorSettings(
+            array_jobs="all",
+            init_seconds_before_status_checks=2,
+            # no Slurm accounting database required, works on plain clusters
+            status_command="squeue",
+        )
+
+    def test_array_jobs_slow_first_task(self, tmp_path):
+        self.run_workflow(self.TESTCASE, tmp_path)
+        self.assert_one_job_per_array_task(tmp_path)
+
+
+class TestArrayJobsSlowFirstTaskChunked(_ArrayJobsSlowFirstBase):
+    """Same as above, but chunked into arrays of 2 tasks.
+
+    This is the production pattern: every array chunk has its own slow first
+    task which the remaining tasks of that chunk must not post-process.
+    """
+
+    __test__ = True
+
+    def get_executor_settings(self) -> Optional[ExecutorSettingsBase]:
+        return ExecutorSettings(
+            array_jobs="all",
+            array_limit=2,
+            init_seconds_before_status_checks=2,
+            status_command="squeue",
+        )
+
+    def test_array_jobs_slow_first_task_chunked(self, tmp_path):
+        self.run_workflow(self.TESTCASE, tmp_path)
+        self.assert_one_job_per_array_task(tmp_path)

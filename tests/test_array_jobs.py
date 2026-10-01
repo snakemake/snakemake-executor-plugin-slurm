@@ -6,6 +6,8 @@ TestWorkflows. They cover:
   - ExecutorSettings array-job field defaults and parsing  (TestArrayJobsSettings)
   - run_jobs() dispatch routing                            (TestRunJobsRouting)
   - run_array_jobs() sbatch construction and chunking      (TestRunArrayJobs)
+    incl. the per-task dispatch command contract: each array task executes
+    exactly the job it was created for
   - _status_lookup_ids() helper edge cases                 (TestStatusLookupIds)
   - check_active_jobs() status resolution for array tasks  (TestCheckActiveArrayJobs)
 """
@@ -14,7 +16,9 @@ import asyncio
 import base64
 import errno
 import json
-import re
+import os
+import shlex
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -339,6 +343,7 @@ class TestRunArrayJobs:
             side_effect=lambda job: iter(["-A testaccount"])
         )
         executor.get_partition_arg = MagicMock(return_value="-p main")
+        executor.get_python_executable = MagicMock(return_value="/usr/bin/python3")
         executor.format_job_exec = MagicMock(
             side_effect=lambda job: f"snakemake_exec_{job.jobid}"
         )
@@ -376,31 +381,132 @@ class TestRunArrayJobs:
         external_ids = [c[0][0].external_jobid for c in calls]
         assert external_ids == ["987654_1", "987654_2", "987654_3"]
 
-    def test_array_execs_task_1_absent_tasks_2_plus_present(
-        self, tmp_path, mock_popen_success
-    ):
-        """The --slurm-jobstep-array-execs map has keys 2,3,… but never 1.
+    @staticmethod
+    def _extract_wrap_command(sbatch_call: str) -> str:
+        """Return the command SLURM runs for each task of the array job."""
+        tokens = shlex.split(sbatch_call)
+        wrap = next(t for t in tokens if t.startswith("--wrap="))
+        return wrap[len("--wrap=") :]
 
-        Task 1 executes via the plain base exec_job; tasks 2+ are encoded
-        in the compressed map so the job-step can dispatch them.
+    @staticmethod
+    def _extract_payload(sbatch_call: str) -> dict:
+        """Decode the per-task payload embedded in the dispatch command."""
+        wrap_command = TestRunArrayJobs._extract_wrap_command(sbatch_call)
+        encoded_payload = shlex.split(wrap_command)[-1]
+        return json.loads(base64.b64decode(encoded_payload).decode("utf-8"))
+
+    def test_payload_covers_whole_chunk(self, tmp_path, mock_popen_success):
+        """Every task of the chunk is in the payload, including the first one.
+
+        The dispatch command must be able to serve all tasks of the chunk:
+        there is no task that executes via a plain base command any more.
         """
         executor = self._build_executor(tmp_path)
         jobs = self._make_jobs(n=3)
         executor.run_array_jobs(jobs)
         popen_call_str = mock_popen_success.call_args_list[0][0][0]
-        match = re.search(
-            r"--slurm-jobstep-array-execs=(?:'([A-Za-z0-9+/=]+)'|([A-Za-z0-9+/=]+))",
-            popen_call_str,
+        array_execs = self._extract_payload(popen_call_str)
+        assert set(array_execs) == {"1", "2", "3"}
+
+    def test_wrap_has_no_job_target_and_no_legacy_flag(
+        self, tmp_path, mock_popen_success
+    ):
+        """The wrap must not embed a job, nor use the legacy jobstep protocol.
+
+        Embedding a concrete job makes *all* array tasks inherit it as their
+        DAG target and post-process it, even though only one of them runs it.
+        """
+        executor = self._build_executor(tmp_path)
+        jobs = self._make_jobs(n=3)
+        executor.run_array_jobs(jobs)
+        popen_call_str = mock_popen_success.call_args_list[0][0][0]
+        assert "--slurm-jobstep-array-execs" not in popen_call_str
+        for job in jobs:
+            assert f"snakemake_exec_{job.jobid}" not in popen_call_str
+        assert "SLURM_ARRAY_TASK_ID" in self._extract_wrap_command(popen_call_str)
+
+    def test_dispatch_command_runs_the_command_of_its_own_task(self, tmp_path):
+        """Running the dispatch command with a task ID runs only that task."""
+        executor = self._build_executor(tmp_path)
+        executor.format_job_exec = MagicMock(
+            side_effect=lambda job: f"echo JOB_{job.jobid}"
         )
-        assert match, (
-            "Could not find --slurm-jobstep-array-execs in sbatch call.\n"
-            f"Call was: {popen_call_str!r}"
+        jobs = self._make_jobs(n=3)
+        with patch("snakemake_executor_plugin_slurm.subprocess.Popen") as mock_popen:
+            proc = MagicMock()
+            proc.communicate.return_value = ("987654", "")
+            proc.returncode = 0
+            mock_popen.return_value = proc
+            executor.run_array_jobs(jobs)
+
+        sbatch_call = mock_popen.call_args_list[0][0][0]
+        dispatch_command = self._extract_wrap_command(sbatch_call)
+
+        for task_id, jobid in (("1", 1), ("2", 2), ("3", 3)):
+            result = subprocess.run(
+                ["sh", "-c", dispatch_command],
+                capture_output=True,
+                text=True,
+                env={**os.environ, "SLURM_ARRAY_TASK_ID": task_id},
+            )
+            assert result.returncode == 0, result.stderr
+            assert result.stdout.strip() == f"JOB_{jobid}"
+
+    def test_dispatch_command_fails_for_unknown_task(self, tmp_path):
+        """An unknown/absent array task ID must fail loudly instead of idling."""
+        executor = self._build_executor(tmp_path)
+        executor.format_job_exec = MagicMock(side_effect=lambda job: "true")
+        jobs = self._make_jobs(n=2)
+        with patch("snakemake_executor_plugin_slurm.subprocess.Popen") as mock_popen:
+            proc = MagicMock()
+            proc.communicate.return_value = ("987654", "")
+            proc.returncode = 0
+            mock_popen.return_value = proc
+            executor.run_array_jobs(jobs)
+
+        dispatch_command = self._extract_wrap_command(
+            mock_popen.call_args_list[0][0][0]
         )
-        encoded_payload = match.group(1) or match.group(2)
-        array_execs = json.loads(base64.b64decode(encoded_payload).decode("utf-8"))
-        assert "1" not in array_execs
-        assert "2" in array_execs
-        assert "3" in array_execs
+        result = subprocess.run(
+            ["sh", "-c", dispatch_command],
+            capture_output=True,
+            text=True,
+            env={**os.environ, "SLURM_ARRAY_TASK_ID": "7"},
+        )
+        assert result.returncode != 0
+        assert "array task" in result.stderr
+
+    def test_dispatcher_source_is_shell_safe(self):
+        """The dispatcher survives both shell layers (call string and script)."""
+        from snakemake_executor_plugin_slurm import _ARRAY_DISPATCHER
+
+        for char in ('"', "$", "`", "\\"):
+            assert char not in _ARRAY_DISPATCHER
+
+    def test_dispatch_command_quotes_given_interpreter(self):
+        """The interpreter is shell-quoted, it may contain whitespace."""
+        from snakemake_executor_plugin_slurm import get_array_dispatch_command
+
+        command = get_array_dispatch_command("QUJD", "/opt/my python/bin/python3")
+        assert command.startswith("'/opt/my python/bin/python3' -c ")
+        assert shlex.split(command)[0] == "/opt/my python/bin/python3"
+
+    def test_dispatch_uses_executor_selected_interpreter(
+        self, tmp_path, mock_popen_success
+    ):
+        """The dispatcher runs with the interpreter the executor spawns jobs with."""
+        executor = self._build_executor(tmp_path)
+        executor.get_python_executable = MagicMock(
+            return_value="/opt/snakemake env/bin/python3"
+        )
+        jobs = self._make_jobs(n=2)
+        executor.run_array_jobs(jobs)
+
+        sbatch_call = mock_popen_success.call_args_list[0][0][0]
+        assert "'/opt/snakemake env/bin/python3'" in sbatch_call
+        dispatch_command = self._extract_wrap_command(sbatch_call)
+        assert shlex.split(dispatch_command)[0] == "/opt/snakemake env/bin/python3"
+        executor.get_python_executable.assert_called()
 
     def test_memory_fudge_can_be_disabled(self, tmp_path, mock_popen_success):
         executor = self._build_executor(tmp_path)
@@ -424,8 +530,8 @@ class TestRunArrayJobs:
         popen_call_str = mock_popen_success.call_args_list[0][0][0]
         assert "--mem 1" in popen_call_str
 
-    def test_array_execs_omits_first_task_of_each_chunk(self, tmp_path):
-        """For each chunk, first task uses base exec command and is absent from map."""
+    def test_payload_covers_each_chunk_separately(self, tmp_path):
+        """5 jobs with array_limit=3 → chunks {1,2,3} and {4,5}."""
         executor = self._build_executor(tmp_path, array_limit=3)
         jobs = self._make_jobs(n=5)
 
@@ -439,29 +545,40 @@ class TestRunArrayJobs:
         first_call_str = mock_popen.call_args_list[0][0][0]
         second_call_str = mock_popen.call_args_list[1][0][0]
 
-        assert '--wrap="snakemake_exec_1 ' in first_call_str
-        assert '--wrap="snakemake_exec_4 ' in second_call_str
+        assert "--array=1-3" in first_call_str
+        assert "--array=4-5" in second_call_str
 
-        first_match = re.search(
-            r"--slurm-jobstep-array-execs=(?:'([A-Za-z0-9+/=]+)'|([A-Za-z0-9+/=]+))",
-            first_call_str,
+        assert set(self._extract_payload(first_call_str)) == {"1", "2", "3"}
+        assert set(self._extract_payload(second_call_str)) == {"4", "5"}
+
+        # no chunk embeds a plain (non-dispatching) job command any more
+        for call_str, jobids in (
+            (first_call_str, (1, 2, 3)),
+            (second_call_str, (4, 5)),
+        ):
+            for jobid in jobids:
+                assert f"snakemake_exec_{jobid}" not in call_str
+
+    def test_single_task_chunks_still_dispatch_themselves(self, tmp_path):
+        """array_limit=1 must work, too: each array has exactly one task."""
+        executor = self._build_executor(tmp_path, array_limit=1)
+        executor.format_job_exec = MagicMock(
+            side_effect=lambda job: f"echo JOB_{job.jobid}"
         )
-        second_match = re.search(
-            r"--slurm-jobstep-array-execs=(?:'([A-Za-z0-9+/=]+)'|([A-Za-z0-9+/=]+))",
-            second_call_str,
-        )
-        assert first_match and second_match
+        jobs = self._make_jobs(n=2)
 
-        first_payload = first_match.group(1) or first_match.group(2)
-        second_payload = second_match.group(1) or second_match.group(2)
-        first_map = json.loads(base64.b64decode(first_payload).decode("utf-8"))
-        second_map = json.loads(base64.b64decode(second_payload).decode("utf-8"))
+        with patch("snakemake_executor_plugin_slurm.subprocess.Popen") as mock_popen:
+            proc = MagicMock()
+            proc.communicate.return_value = ("333333", "")
+            proc.returncode = 0
+            mock_popen.return_value = proc
+            executor.run_array_jobs(jobs)
 
-        assert "1" not in first_map
-        assert "2" in first_map
-        assert "3" in first_map
-        assert "4" not in second_map
-        assert "5" in second_map
+        submitted = [call[0][0] for call in mock_popen.call_args_list]
+        assert len(submitted) == 2
+        for index, call_str in enumerate(submitted, start=1):
+            assert f"--array={index}-{index}" in call_str
+            assert set(self._extract_payload(call_str)) == {str(index)}
 
     def test_array_limit_produces_chunked_sbatch_calls(self, tmp_path):
         """5 jobs with array_limit=3 → 2 Popen calls: --array=1-3 and --array=4-5."""

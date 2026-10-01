@@ -1,0 +1,80 @@
+"""
+Testcase workflow for SLURM array-job regression tests.
+
+It reproduces the production failure in which every array task inherits the
+first task of its array chunk as its DAG target: only the chunk's first task
+really executes that job, but *all* tasks post-process it, so the faster tasks
+fail with a MissingOutputException while the first task is still running (and
+their own, successfully produced, outputs are then removed as "corrupted").
+
+To make that window deterministic, the first task of every array chunk
+(``SLURM_ARRAY_TASK_ID == SLURM_ARRAY_TASK_MIN``) sleeps much longer than the
+``latency_wait`` of the workflow under test; all other tasks finish at once.
+Outside of array mode the sleep is skipped entirely.
+
+The output of ``bin_call`` is produced by a compound shell command ending in
+``gzip -f``, i.e. the shape of rules that write an intermediate file, consume
+it and declare only the compressed result - the case in which the failing
+output check also removes an already produced, valid output.
+
+``generate_numbers`` and ``collect`` are localrules, so the workflow submits
+exactly one array of 4 cluster jobs (rule ``bin_call``).
+"""
+
+N = 4
+
+localrules:
+    generate_numbers,
+    collect,
+
+
+rule all:
+    input:
+        "results/collected.txt",
+
+
+rule generate_numbers:
+    output:
+        expand("numbers/{i}.txt", i=range(1, N + 1)),
+    shell:
+        r"""
+        mkdir -p numbers
+        for i in $(seq 1 4); do
+            printf "%s\n" "$i" > "numbers/$i.txt"
+        done
+        """
+
+
+rule bin_call:
+    input:
+        "numbers/{i}.txt",
+    output:
+        "calls/{i}.txt.gz",
+    log:
+        "logs/bin_call_{i}.log",
+    params:
+        plain="calls/{i}.txt",
+    resources:
+        runtime=5,
+    shell:
+        r"""
+        mkdir -p calls logs
+        # {{ }} are Snakemake escapes for literal braces
+        if [ -n "${{SLURM_ARRAY_TASK_ID:-}}" ] && \
+           [ "${{SLURM_ARRAY_TASK_ID:-}}" = "${{SLURM_ARRAY_TASK_MIN:-}}" ]; then
+            sleep 15
+        fi
+        cp {input} {params.plain} > {log} 2>&1 && gzip -f {params.plain}
+        """
+
+
+rule collect:
+    input:
+        expand("calls/{i}.txt.gz", i=range(1, N + 1)),
+    output:
+        "results/collected.txt",
+    shell:
+        r"""
+        mkdir -p results
+        cat {input} > {output}
+        """
