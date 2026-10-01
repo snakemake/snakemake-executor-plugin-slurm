@@ -370,6 +370,14 @@ When submitting array jobs, the `--slurm-array-limit` flag defines the
 maximum number of array tasks to be submitted in one job submission.
 If the number of tasks exceeds this limit, multiple array job submissions will be performed. This is useful to avoid hitting cluster limits on the maximum number of array tasks per job. Please obey your cluster limits and set this flag accordingly.
 
+Each array task executes exactly the job it was created for: the submitted
+command only dispatches, per task, the execution string of that task's own job
+(selected by `SLURM_ARRAY_TASK_ID`). In particular, no array task
+post-processes or waits for the outputs of another task of its array. If the
+number of tasks exceeds `--slurm-array-limit`, several array job submissions
+are performed as described above, each dispatching its own tasks in the same
+way.
+
 ##### Array memory adjustment
 
 By default, the plugin increases an explicit memory request for an array job to
