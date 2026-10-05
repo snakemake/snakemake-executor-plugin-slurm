@@ -523,6 +523,23 @@ rule gpu_task:
 Here, `gres="gpu:a100:2"` requests two GPUs of the a100 model.
 This approach offers flexibility, especially on clusters where specific GPU models are available.
 
+Like SLURM's `--gres` flag, the `gres` resource also accepts a comma-separated list of several entries (without blanks), so that you can request further generic resources next to the GPUs:
+
+```Python
+rule gpu_task_with_scratch:
+    input:
+        "input_file"
+    output:
+        "output_file"
+    resources:
+        gres="gpu:a100:2,tmpspace:10G"
+    shell:
+        "your_gpu_application --input {input} --output {output}"
+```
+
+Each entry is of the form `<name>`, `<name>:<number>` or `<name>:<type>:<number>`, where the number may carry a size postfix such as `G` (e.g. `tmpspace:10G`).
+Which generic resources are available (`tmpspace` in the example above is cluster specific) is up to your cluster administrators; `sbatch --gres=help` lists them.
+
 ##### Additional Considerations: CPU Allocation per GPU
 
 When configuring GPU jobs, it's crucial to allocate CPU resources appropriately to ensure that GPU tasks are not bottlenecked by insufficient CPU availability.

@@ -377,6 +377,68 @@ class TestGresString:
 
         assert set_gres_string(job) == " --gres=tmpspace:10G"
 
+    @pytest.mark.parametrize(
+        "gres",
+        [
+            # GPU model plus a size-valued resource, see issue #466
+            "gpu:a100:2,tmpspace:10G",
+            "gpu:a40:1,localtmp:2G",
+            # the order of the entries does not matter
+            "tmpspace:10G,gpu:a100:2",
+            # entries without a count or a type are valid, too
+            "gpu,tmpspace:10G",
+            "gpu:2,mps:100",
+            # more than two entries
+            "gpu:a100:2,tmpspace:10G,license_x:1",
+        ],
+    )
+    def test_valid_gres_list(self, mock_job, gres):
+        """Test with a comma-separated list of GRES entries."""
+        job = mock_job(gres=gres)
+
+        assert set_gres_string(job) == f" --gres={gres}"
+
+    @pytest.mark.parametrize(
+        "gres",
+        [
+            "gpu:a100:2,",  # trailing comma, i.e. an empty entry
+            ",gpu:a100:2",
+            "gpu:a100:2,,tmpspace:10G",
+            # a blank would split the (unquoted) sbatch argument in the shell
+            "gpu:a100:2, tmpspace:10G",
+            # sbatch separates name and count with a colon, not with '='
+            "gpu:a100:2,tmpspace=10G",
+            # a single bad entry invalidates the whole list
+            "gpu:a100:2,tmpspace:10G;id",
+            "gpu:a100:2,$(id)",
+        ],
+    )
+    def test_invalid_gres_list(self, mock_job, gres):
+        """Test that every entry of a GRES list is validated."""
+        job = mock_job(gres=gres)
+
+        with pytest.raises(WorkflowError, match="Invalid GRES format"):
+            set_gres_string(job)
+
+    @pytest.mark.parametrize(
+        "gres",
+        [
+            "gpu:a100:2\n,tmpspace:10G",
+            "gpu:a100:2,tmpspace:10G\n",
+        ],
+    )
+    def test_gres_list_with_newline_is_rejected(self, mock_job, gres):
+        """Test that a newline cannot slip past the per-entry validation.
+
+        The value is appended unquoted to the sbatch command line, where a
+        newline ends the command. Only the rejection matters here: the error
+        message for values containing a newline is chosen by a separate check.
+        """
+        job = mock_job(gres=gres)
+
+        with pytest.raises(WorkflowError):
+            set_gres_string(job)
+
     def test_both_gres_and_gpu_set(self, mock_job):
         """Test error case when both GRES and GPU are specified."""
         job = mock_job(gres="gpu:1", gpu="2")
@@ -408,6 +470,16 @@ class TestGresString:
                 match="GRES format should not be a nested string",
             ):
                 set_gres_string(job)
+
+    def test_nested_string_gres_list_raise(self, mock_job):
+        """Test error case when a GRES list is a nested string."""
+        job = mock_job(gres="'gpu:1,tmpspace:10G'")
+
+        with pytest.raises(
+            WorkflowError,
+            match="GRES format should not be a nested string",
+        ):
+            set_gres_string(job)
 
     def test_gpu_model_nested_string_raise(self, mock_job):
         """Test error case when gpu_model is a nested string."""

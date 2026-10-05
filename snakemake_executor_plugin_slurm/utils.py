@@ -341,9 +341,10 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     Function to set the gres string for the SLURM job
     based on the resources requested in the job.
     """
-    # generic resources (GRES) arguments can be of type "string",
+    # `sbatch --gres` takes a comma-delimited list of generic resources (GRES),
+    # e.g. "gpu:a100:2,tmpspace:10G". Each entry can be of type "string",
     # "string:int" or "string:string:int" with optional postfix 'T' or 'G' or 'M'
-    gres_re = re.compile(r"^[a-zA-Z0-9_]+(:[a-zA-Z0-9_\.]+)?(:\d+[TGM]?)?$")
+    gres_entry_re = re.compile(r"^[a-zA-Z0-9_]+(:[a-zA-Z0-9_\.]+)?(:\d+[TGM]?)?$")
 
     # gpu model arguments can be of type "string"
     # The model string may contain a dot for variants, see
@@ -360,8 +361,11 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     # GRES
     gres = ""
     if job.resources.get("gres"):
-        # Validate GRES format (e.g., "gpu:1", "gpu:tesla:2")
-        if not gres_re.match(job.resources.gres):
+        # Validate GRES format (e.g., "gpu:1", "gpu:tesla:2" or "gpu:1,tmpspace:10G").
+        # The value is passed unquoted to the shell, so every entry has to match.
+        if not all(
+            gres_entry_re.fullmatch(entry) for entry in job.resources.gres.split(",")
+        ):
             if not string_check.match(job.resources.gres):
                 raise WorkflowError(
                     "GRES format should not be a nested string (start "
@@ -376,7 +380,9 @@ def set_gres_string(job: JobExecutorInterface) -> str:
                     f"Invalid GRES format: {job.resources.gres}. Expected format: "
                     "'<name>', '<name>:<number>' or '<name>:<type>:<number>' "
                     "with an optional 'T' 'M' or 'G' postfix "
-                    "(e.g., 'gpu', 'gpu:1' or 'gpu:tesla:2') "
+                    "(e.g., 'gpu', 'gpu:1' or 'gpu:tesla:2'). "
+                    "Several entries can be given as a comma-separated list "
+                    "without spaces (e.g., 'gpu:tesla:2,tmpspace:10G')."
                 )
         gres += f" --gres={job.resources.gres}"
 
