@@ -5,7 +5,11 @@ SLURM parameter validation functions for the Snakemake executor plugin.
 import re
 from pathlib import Path
 from snakemake_interface_common.exceptions import WorkflowError
-from .job_status_query import get_min_job_age, is_query_tool_available
+from .job_status_query import (
+    get_min_job_age,
+    get_status_check_intervals,
+    is_query_tool_available,
+)
 
 
 def validate_or_get_slurm_job_id(job_id, output):
@@ -144,13 +148,9 @@ def validate_status_command_settings(settings, logger):
         return
     min_job_age = get_min_job_age()
     sacct_available = is_query_tool_available("sacct")
-    initial_interval = getattr(
-        settings,
-        "init_seconds_before_status_checks",
-        40,
-    )
+    initial_interval, _ = get_status_check_intervals(settings, status_command)
     dynamic_check_threshold = 3 * initial_interval
-    if not sacct_available and status_command == "sacct":
+    if not sacct_available and status_command in ("sacct", "squeue+sacct"):
         logger.warning(
             "The 'sacct' command is not available. Falling back to 'squeue'."
         )
@@ -179,9 +179,10 @@ def validate_executor_settings(settings, logger=None):
         )
     # status_command: only allow known values
     if settings.status_command is not None:
-        if settings.status_command not in {"sacct", "squeue"}:
+        if settings.status_command not in {"sacct", "squeue", "squeue+sacct"}:
             raise WorkflowError(
-                "Invalid status command. Allowed values are 'sacct' or 'squeue'."
+                "Invalid status command. Allowed values are 'sacct', 'squeue' "
+                "or 'squeue+sacct'."
             )
     # status_attempts
     if settings.status_attempts is not None:
@@ -198,6 +199,24 @@ def validate_executor_settings(settings, logger=None):
         ):
             raise WorkflowError(
                 "init-seconds-before-status-checks must be a positive integer."
+            )
+    # max_seconds_between_status_checks
+    if settings.max_seconds_between_status_checks is not None:
+        if (
+            not isinstance(settings.max_seconds_between_status_checks, int)
+            or settings.max_seconds_between_status_checks < 1
+        ):
+            raise WorkflowError(
+                "max-seconds-between-status-checks must be a positive integer."
+            )
+        if (
+            settings.init_seconds_before_status_checks is not None
+            and settings.max_seconds_between_status_checks
+            < settings.init_seconds_before_status_checks
+        ):
+            raise WorkflowError(
+                "max-seconds-between-status-checks must not be smaller than "
+                "init-seconds-before-status-checks."
             )
     # efficiency_threshold
     if settings.efficiency_threshold is not None:

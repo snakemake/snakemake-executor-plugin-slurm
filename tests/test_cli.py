@@ -83,3 +83,32 @@ def test_disable_memory_fudge_flag_resolves_from_cli():
 def test_requeue_options_are_mutually_exclusive():
     with pytest.raises(WorkflowError, match="mutually exclusive"):
         ExecutorSettings(requeue=True, no_requeue=True)
+
+
+def test_max_seconds_between_status_checks_below_init_raises():
+    with pytest.raises(WorkflowError, match="must not be smaller than"):
+        ExecutorSettings(
+            init_seconds_before_status_checks=40,
+            max_seconds_between_status_checks=30,
+        )
+
+
+def test_max_seconds_between_status_checks_equal_to_init_is_valid():
+    settings = ExecutorSettings(
+        init_seconds_before_status_checks=30,
+        max_seconds_between_status_checks=30,
+    )
+
+    assert settings.max_seconds_between_status_checks == 30
+
+
+def test_init_seconds_above_default_max_is_valid():
+    settings = ExecutorSettings(init_seconds_before_status_checks=300)
+
+    assert settings.max_seconds_between_status_checks is None
+
+
+def test_squeue_sacct_status_command_is_valid():
+    settings = ExecutorSettings(status_command="squeue+sacct")
+
+    assert settings.status_command == "squeue+sacct"

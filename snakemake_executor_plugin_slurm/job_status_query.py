@@ -1,4 +1,5 @@
 import asyncio
+import os
 import shlex
 import subprocess
 import re
@@ -105,12 +106,43 @@ def should_recommend_squeue_status_command(min_threshold_seconds=120):
     return False
 
 
-def query_job_status_sacct(runid) -> list:
+def get_status_check_intervals(settings, status_command):
+    """
+    Return the initial and the maximum time in seconds between status checks.
+
+    A default initial time never exceeds a set maximum, and a default maximum
+    is never smaller than the initial time.
+    """
+    if status_command == "squeue+sacct":
+        # Each round runs one squeue query, and sacct only for the jobs that
+        # squeue does not report. So a fixed interval of 20 seconds puts
+        # little load on slurmdbd.
+        default_initial, default_maximum = 20, 20
+    else:
+        # If `AccountingStorageType`` for `sacct` is set to
+        # `accounting_storage/none`, `sacct` will query `slurmctld` (instead
+        # of `slurmdbd`) and this in turn can rely on default config,
+        # see: https://stackoverflow.com/a/46667605
+        # This config defaults to `MinJobAge=300`, which implies that jobs will
+        # be removed from `slurmctld` within 6 minutes of finishing. So the
+        # default maximum is conservative, with half that time.
+        default_initial, default_maximum = 40, 180
+    initial = getattr(settings, "init_seconds_before_status_checks", None)
+    maximum = getattr(settings, "max_seconds_between_status_checks", None)
+    if initial is None:
+        initial = default_initial if maximum is None else min(default_initial, maximum)
+    if maximum is None:
+        maximum = max(default_maximum, initial)
+    return initial, maximum
+
+
+def query_job_status_sacct(runid, job_ids=None) -> list:
     """
     Query job status using sacct command
 
     Args:
         runid: workflow run ID
+        job_ids: optional list of job IDs to restrict the query to
 
     Returns:
         Dictionary mapping job ID to JobStatus object
@@ -129,6 +161,8 @@ def query_job_status_sacct(runid) -> list:
                         --noheader --format=JobIdRaw,State \
                         --starttime {sacct_starttime} \
                         --endtime now --name {runid}"""
+    if job_ids:
+        query_command = f"{query_command} --jobs {','.join(job_ids)}"
 
     # for better redability in verbose output
     query_command = shlex.join(shlex.split(query_command))
@@ -150,10 +184,15 @@ def query_job_status_squeue(runid) -> list:
     # Note: The format string contains a pipe '|' which must be quoted to
     # prevent shell interpretation when passing to subprocess with shell=True
     format_arg = shlex.quote("%i|%T")
+    # --array: report each pending array task on its own line
+    # --user: slurmctld then sends only the jobs of this user, instead of all
+    # jobs of the cluster for the client to filter by --name
     query_command = f"""squeue
                        --format={format_arg}
                        --states=all
+                       --array
                        --noheader
+                       --user {os.getuid()}
                        --name {runid}"""
     # for better redability in verbose output
     query_command = shlex.join(shlex.split(query_command))

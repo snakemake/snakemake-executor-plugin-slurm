@@ -300,16 +300,44 @@ Or if you are a system administrator, you can adjust the respective defaults in 
 Some of these are [central snakemake command-line arguments determining its behavior](https://snakemake.readthedocs.io/en/stable/executing/cli.html#snakemake.cli-get_argument_parser-behavior):
 
 * With `--seconds-between-status-checks`, you set the wait time between rounds of status checks of all submitted jobs.
-  In the SLURM plugin, this is currently fixed to a minimum of 40 seconds.
-  To reduce the burden of regular status checks,  this time automatically increases in 10 second steps with every status check whenever no finished jobs are found.
-  But this will never go beyond a wait time of 180 seconds (3 minutes), to avoid long wait times once jobs do finish.
+  In the SLURM plugin, this wait time depends on the status command (see below).
+  With the default status command `squeue+sacct`, the plugin checks the job status every 20 seconds.
+  With `sacct` or `squeue`, the wait time starts at 40 seconds.
+  To reduce the burden of regular status checks, it then increases in 10 second steps with every status check whenever no finished jobs are found.
+  But this will never go beyond a wait time of 180 seconds (3 minutes) by default, to avoid long wait times once jobs do finish.
   Also, as soon as finished jobs are found, this gets reset to 40 seconds.
+  You can change both values (see below).
 * With `--max-status-checks-per-second`, you can limit the frequency of individual attempts of querying the job status database within a round of status checks.
   Within a round, repeated attempts will happen whenever the `sacct` command used for the status query comes back with an error.
 
 Or you might sometimes want to decrease certain wait times for small workflow runs during development.
-For example, the plugin waits 40 seconds before performing the first job status check.
-You can reduce this value with the `--slurm-init-seconds-before-status-checks=<time in seconds>` option, to minimize turn-around times for test runs.
+For example, the plugin waits 20 seconds (`squeue+sacct`) or 40 seconds (`sacct`, `squeue`) before performing the first job status check.
+You can change this value with the `--slurm-init-seconds-before-status-checks=<time in seconds>` option, to minimize turn-around times for test runs.
+
+Likewise, the plugin waits at most 20 seconds (`squeue+sacct`) or 180 seconds (`sacct`, `squeue`) between two rounds of status checks.
+You can change this maximum with the `--slurm-max-seconds-between-status-checks=<time in seconds>` option.
+It must not be smaller than `--slurm-init-seconds-before-status-checks`.
+If both values are equal, the plugin checks the job status at a fixed interval.
+If you set only one of the two options, the plugin adjusts the default of the other one, so that the maximum is never smaller than the initial wait time.
+
+##### Status Command
+
+With `--slurm-status-command`, you select how the plugin queries the job status:
+
+* `squeue+sacct` (the default, if both commands are available) runs one `squeue` query per round for all jobs of the workflow run.
+  It runs one `sacct` query for the active jobs that `squeue` does not report.
+  For example, `squeue` no longer reports jobs that ended more than `MinJobAge` seconds ago.
+  This saves most queries to the accounting database and does not depend on `MinJobAge`.
+  Failed jobs are still reported with the reason from `sacct`.
+  Jobs submitted to other clusters with the `clusters` resource are always queried with `sacct`.
+  Without `sacct`, the plugin falls back to `squeue`.
+* `sacct` (the default, if `squeue` is not available) queries the SLURM accounting database (`slurmdbd`) for all jobs of the workflow run.
+* `squeue` (the default, if `sacct` is not available) queries the SLURM controller (`slurmctld`) for all jobs of the workflow run.
+  The controller only reports a job until `MinJobAge` seconds after it ended.
+  The plugin falls back to `sacct` if `sacct` is available and `MinJobAge` is unknown or shorter than three times the initial wait time.
+
+Each `squeue` query asks only for the jobs of the current user (`squeue --user`).
+So `slurmctld` sends only these jobs, instead of all jobs on the cluster.
 
 ##### Retry failed Jobs
 
@@ -758,8 +786,9 @@ squeue -u $USER -o %i,%P,%.10j,%.40k
 
 Here, the `.<number>` settings for the ID and the comment ensure a sufficient width, too.
 
-Snakemake will check the status of your jobs 40 seconds after submission.
-Another attempt will be made in 10 seconds, then 20, etcetera with an upper limit of 180 seconds.
+With the default status command `squeue+sacct`, Snakemake will check the status of your jobs every 20 seconds.
+With `sacct` or `squeue`, Snakemake will check the status of your jobs 40 seconds after submission.
+Each further check then waits 10 seconds longer than the previous one, up to 180 seconds by default (see `--slurm-max-seconds-between-status-checks`).
 
 ### Using Profiles
 
