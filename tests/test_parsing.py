@@ -1,7 +1,9 @@
 """Tests for parsing functions that don't require SLURM to be installed."""
 
 from io import StringIO
+from unittest.mock import MagicMock
 import pandas as pd
+import pytest
 from snakemake_executor_plugin_slurm.efficiency_report import (
     parse_sacct_data,
     time_to_seconds,
@@ -35,6 +37,23 @@ def test_parse_sacct_data():
     assert all(df["RequestedMem_MB"] == 32000.0)
     # check that MaxRSS_MB is properly calculated from job steps
     assert df.iloc[0]["MaxRSS_MB"] > 0  # Should have actual memory usage from job step
+
+
+@pytest.mark.parametrize("e_threshold, warns", [(0.8, True), (0.4, False)])
+def test_low_cpu_efficiency_warning_threshold_is_a_fraction(e_threshold, warns):
+    # the job step uses 50 s of CPU time in 100 s on 1 CPU: 50 % efficiency
+    test_data = [
+        "100|run-uuid|rule_a|00:01:40|00:50.000|1|1||1000M",
+        "100.0|python3||00:01:40|00:50.000|1|1|500000K|",
+    ]
+    logger = MagicMock()
+
+    df = parse_sacct_data(
+        lines=test_data, e_threshold=e_threshold, run_uuid="test", logger=logger
+    )
+
+    assert df.iloc[0]["CPU Efficiency (%)"] == 50
+    assert logger.warning.called == warns
 
 
 class TestTimeToSeconds:

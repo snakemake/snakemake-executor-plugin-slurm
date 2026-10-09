@@ -152,9 +152,10 @@ def parse_sacct_data(lines, e_threshold, run_uuid, logger):
 
     df["Memory Usage (%)"] = df["Memory Usage (%)"].fillna(0).round(2)
 
-    # Log warnings for low efficiency
+    # Log warnings for low efficiency. The threshold is a fraction in (0, 1],
+    # the CPU efficiency is in percent.
     for _, row in df.iterrows():
-        if row["CPU Efficiency (%)"] < e_threshold:
+        if row["CPU Efficiency (%)"] < e_threshold * 100:
             if nocomment:
                 logger.warning(
                     f"Job {row['JobID']} ({row['JobName']}) "

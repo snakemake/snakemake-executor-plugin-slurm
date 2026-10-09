@@ -336,8 +336,9 @@ class ExecutorSettings(ExecutorSettingsBase):
     efficiency_threshold: Optional[float] = field(
         default=0.8,
         metadata={
-            "help": "Threshold for efficiency report. "
-            "Jobs with efficiency below this threshold will be reported.",
+            "help": "Threshold for efficiency report, as a fraction in "
+            "(0, 1]. For example, 0.8 means 80 percent. Jobs with a CPU efficiency "
+            "below this threshold will be reported.",
             "env_var": False,
             "required": False,
         },
