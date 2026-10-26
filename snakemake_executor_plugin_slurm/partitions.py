@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Union
 import yaml
 from pathlib import Path
 from math import inf, isinf
@@ -259,7 +259,14 @@ def get_best_partition(
     candidate_partitions: List["Partition"],
     job: JobExecutorInterface,
     logger: LoggerExecutorInterface,
-) -> Optional[str]:
+) -> Optional[Union[List[str], str]]:
+    """
+    Select the best-fitting partition(s) for a job.
+
+    Returns a single partition name if there is one best partition, a list of
+    names if several partitions tie for the best score, or None if no
+    partition can run the job.
+    """
     scored_partitions = []
     for p in candidate_partitions:
         score = p.score_job_fit(job)
@@ -267,20 +274,28 @@ def get_best_partition(
         if score is not None:
             scored_partitions.append((p, score))
 
-    if scored_partitions:
-        best_partition, best_score = max(scored_partitions, key=lambda x: x[1])
-        partition = best_partition.name
-        logger.info(
-            f"Auto-selected partition '{partition}' for job {job.name} "
-            f"with score {best_score:.3f}"
-        )
-        return partition
-    else:
+    if not scored_partitions:
         logger.warning(
             f"No suitable partition found for job {job.name} based on "
             f"resource requirements. Falling back to default behavior."
         )
         return None
+
+    best_score = max(score for _, score in scored_partitions)
+    best_names = [p.name for p, score in scored_partitions if score == best_score]
+
+    if len(best_names) == 1:
+        logger.info(
+            f"Auto-selected partition '{best_names[0]}' for job {job.name} "
+            f"with score {best_score:.3f}"
+        )
+        return best_names[0]
+
+    logger.info(
+        f"Auto-selected partitions {', '.join(repr(n) for n in best_names)} "
+        f"for job {job.name} with equal score {best_score:.3f}"
+    )
+    return best_names
 
 
 def parse_gpu_requirements(job: JobExecutorInterface) -> tuple[int, Optional[str]]:

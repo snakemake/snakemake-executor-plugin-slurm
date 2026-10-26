@@ -1717,6 +1717,10 @@ We leave it to SLURM to resume your job(s)""")
             # we have to quote the partition, because it might
             # contain build-in shell commands
             # string conversion needed for partition if partition is an integer
+            # auto-selection may yield several equally good partitions, which
+            # sbatch accepts as a comma-separated list
+            if isinstance(partition, list):
+                partition = ",".join(str(p) for p in partition)
             return f" -p {shlex.quote(str(partition))}"
         else:
             return ""

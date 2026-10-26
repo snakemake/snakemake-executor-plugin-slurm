@@ -871,3 +871,90 @@ class TestPartitionSelection:
 
         finally:
             temp_path.unlink()
+
+    @pytest.fixture
+    def tied_partition_config(self):
+        """Two partitions that differ only in memory per CPU (tmp-partitions.yaml)."""
+        return {
+            "partitions": {
+                "base": {
+                    "max_mem_mb_per_cpu": 4000,
+                    "max_runtime": "1d",
+                    "max_threads": 64,
+                },
+                "large": {
+                    "max_mem_mb_per_cpu": 12000,
+                    "max_runtime": "1d",
+                    "max_threads": 64,
+                },
+            }
+        }
+
+    def test_tied_partitions_are_all_returned(
+        self, tied_partition_config, temp_yaml_file, mock_job, mock_logger
+    ):
+        """Equal best scores return every tied partition, in file order."""
+        temp_path = temp_yaml_file(tied_partition_config)
+        try:
+            partitions = read_partition_file(temp_path)
+            job = mock_job(threads=4, runtime=60)
+
+            selected = get_best_partition(partitions, job, mock_logger)
+
+            assert selected == ["base", "large"]
+            assert "'base', 'large'" in mock_logger.info.call_args_list[-1][0][0]
+        finally:
+            temp_path.unlink()
+
+    def test_single_best_partition_is_returned_as_str(
+        self, tied_partition_config, temp_yaml_file, mock_job, mock_logger
+    ):
+        """A strictly better score yields a plain string, not a list."""
+        temp_path = temp_yaml_file(tied_partition_config)
+        try:
+            partitions = read_partition_file(temp_path)
+            job = mock_job(threads=4, runtime=60, mem_mb_per_cpu=3000)
+
+            selected = get_best_partition(partitions, job, mock_logger)
+
+            # base has the lower limit, hence the higher ratio and score
+            assert selected == "base"
+        finally:
+            temp_path.unlink()
+
+    def test_no_fitting_partition_returns_none_with_ties_config(
+        self, tied_partition_config, temp_yaml_file, mock_job, mock_logger
+    ):
+        temp_path = temp_yaml_file(tied_partition_config)
+        try:
+            partitions = read_partition_file(temp_path)
+            job = mock_job(threads=128, runtime=60)
+
+            assert get_best_partition(partitions, job, mock_logger) is None
+            mock_logger.warning.assert_called_once()
+        finally:
+            temp_path.unlink()
+
+    @pytest.mark.parametrize(
+        "selected, expected",
+        [
+            (["base", "large"], " -p base,large"),
+            ("base", " -p base"),
+        ],
+    )
+    def test_get_partition_arg_joins_tied_partitions(
+        self, selected, expected, mock_job, monkeypatch
+    ):
+        """get_partition_arg turns a list of partitions into a comma list."""
+        from types import SimpleNamespace
+        from snakemake_executor_plugin_slurm import Executor
+
+        monkeypatch.setattr(
+            "snakemake_executor_plugin_slurm.get_best_partition",
+            lambda *args, **kwargs: selected,
+        )
+        fake_self = SimpleNamespace(
+            _partitions=[object()], _fallback_partition=None, logger=MagicMock()
+        )
+
+        assert Executor.get_partition_arg(fake_self, mock_job()) == expected
