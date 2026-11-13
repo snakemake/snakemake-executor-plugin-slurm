@@ -206,7 +206,10 @@ async def query_job_status(command: str, logger):
         for row in reader:
             if len(row) >= 2:
                 job_id = row[0].strip()
-                status = row[1].strip()
+                # SLURM may append details to the state, e.g. `scancel`
+                # yields "CANCELLED by <uid>". Keep only the state itself.
+                status_parts = row[1].split()
+                status = status_parts[0] if status_parts else ""
                 if job_id:  # skip empty lines
                     status_of_jobs[job_id] = status
 
