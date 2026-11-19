@@ -366,11 +366,22 @@ class ExecutorSettings(ExecutorSettingsBase):
     status_attempts: Optional[int] = field(
         default=5,
         metadata={
-            "help": "Defines the number of attempts to query the status of "
-            "all active jobs. If the status query fails, the next attempt "
-            "will be performed after the next status check interval. "
-            "The default is 5 status attempts before giving up. The maximum "
-            "time between status checks is 180 seconds.",
+            "help": "Maximum number of attempts to query the status of all active "
+            "jobs per polling cycle (default: 5). If all attempts fail, jobs "
+            "remain tracked and querying resumes after the next status check "
+            "interval. Polling cycles continue without an overall retry limit "
+            "unless --slurm-status-failure-limit is set.",
+            "env_var": False,
+            "required": False,
+        },
+    )
+
+    status_failure_limit: Optional[int] = field(
+        default=None,
+        metadata={
+            "help": "Stop with an executor error after this many consecutive "
+            "polling cycles in which all status query attempts fail. A successful "
+            "query resets the count. By default, retries are unlimited.",
             "env_var": False,
             "required": False,
         },
@@ -504,6 +515,7 @@ class Executor(RemoteExecutor):
         self._main_event_loop = None
         self._status_query_calls = 0
         self._status_query_failures = 0
+        self._consecutive_failed_status_cycles = 0
         self._status_query_total_seconds = 0.0
         self._status_query_min_seconds = None
         self._status_query_max_seconds = 0.0
@@ -1296,6 +1308,7 @@ class Executor(RemoteExecutor):
         )
         # Fast path: if there are no active jobs, skip querying
         if not active_jobs:
+            self._consecutive_failed_status_cycles = 0
             self.next_seconds_between_status_checks = initial_interval
             self.logger.debug("No active jobs; skipping status query.")
             return
@@ -1399,6 +1412,27 @@ class Executor(RemoteExecutor):
                     )
                 if not missing_sacct_status:
                     break
+
+        if sacct_query_durations:
+            self._consecutive_failed_status_cycles = 0
+        else:
+            self._consecutive_failed_status_cycles += 1
+            failure_limit = self.workflow.executor_settings.status_failure_limit
+            if (
+                failure_limit is not None
+                and self._consecutive_failed_status_cycles >= failure_limit
+            ):
+                raise WorkflowError(
+                    "SLURM status queries failed for "
+                    f"{self._consecutive_failed_status_cycles} consecutive polling "
+                    "cycles, reaching --slurm-status-failure-limit. "
+                    "The status of submitted jobs is unknown."
+                )
+            self.logger.warning(
+                f"All {status_attempts} SLURM status query attempts failed. "
+                "Keeping active jobs tracked and retrying after the next "
+                "status check interval."
+            )
 
         if sacct_query_durations:
             cycle_avg_duration = sum(sacct_query_durations) / len(sacct_query_durations)
@@ -1545,7 +1579,7 @@ We leave it to SLURM to resume your job(s)""")
                         )
                         self.report_job_error(j, msg=msg, aux_logs=[slurm_logfile_str])
                         active_jobs_seen_by_sacct.discard(j.external_jobid)
-                elif status in fail_stati:
+                elif status.startswith(fail_stati):
                     # we can only check for the fail status, if `sacct` is available
                     if status_command_name != "sacct":
                         msg = (
@@ -1558,26 +1592,26 @@ We leave it to SLURM to resume your job(s)""")
                         active_jobs_seen_by_sacct.discard(j.external_jobid)
                         continue
                     reasons = []
-                    for step in range(10):  # Iterate over up to 10 job steps
-                        reason_command = (
-                            f"sacct -j {j.external_jobid}.{step} "
-                            "--format=Reason --noheader"
+                    reason_command = (
+                        f"sacct -j {j.external_jobid} "
+                        "--format=JobID,State,ExitCode,Reason --parsable2 --noheader"
+                    )
+                    async with self.status_rate_limiter:
+                        details, _ = await query_job_status(
+                            reason_command, self.logger, with_details=True
                         )
-                        try:
-                            reason_output = subprocess.check_output(
-                                reason_command,
-                                shell=True,
-                                text=True,
-                                stderr=subprocess.PIPE,
-                            ).strip()
-                            if reason_output:
-                                reasons.append(f"Step {step}: {reason_output}")
-                        except subprocess.CalledProcessError as e:
-                            self.logger.warning(
-                                f"Failed to retrieve jobstep reason for SLURM job "
-                                f"'{j.external_jobid}.{step}': {e.stderr.strip()}"
+                    if details is None:
+                        self.logger.warning(
+                            "Failed to retrieve failure details for SLURM job "
+                            f"'{j.external_jobid}'"
+                        )
+                        reasons.append("Unable to retrieve reason")
+                    else:
+                        for job_id, (state, exit_code, reason) in details.items():
+                            reasons.append(
+                                f"{job_id}: State={state}, ExitCode={exit_code}, "
+                                f"Reason={reason or 'Unknown'}"
                             )
-                            reasons.append(f"Step {step}: Unable to retrieve reason")
 
                     if not reasons:
                         reasons.append("Unknown")
@@ -1606,6 +1640,10 @@ We leave it to SLURM to resume your job(s)""")
                 )
             else:
                 self.next_seconds_between_status_checks = initial_interval
+        else:
+            # Keep jobs tracked so the next polling cycle can retry.
+            for job in active_jobs:
+                yield job
 
     def cancel_jobs(self, active_jobs: List[SubmittedJobInfo]):
         """Cancel all active jobs.

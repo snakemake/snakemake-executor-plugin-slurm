@@ -1,11 +1,65 @@
 """Tests for parsing functions that don't require SLURM to be installed."""
 
 from io import StringIO
+import asyncio
+from unittest.mock import AsyncMock, MagicMock
+
 import pandas as pd
+import pytest
 from snakemake_executor_plugin_slurm.efficiency_report import (
     parse_sacct_data,
     time_to_seconds,
 )
+from snakemake_executor_plugin_slurm.job_status_query import query_job_status
+
+
+@pytest.mark.parametrize("with_details", [False, True])
+def test_query_job_status_parses_job_and_step_records(monkeypatch, with_details):
+    process = MagicMock(returncode=0)
+    process.communicate = AsyncMock(
+        return_value=(
+            b" 123 | CANCELLED by 456 | 0:15 | None \n"
+            b"123.batch|FAILED|1:0|NonZeroExitCode\n"
+            b"123.extern|COMPLETED|0:0|None\n"
+            b"123.10|OUT_OF_MEMORY|0:9|\n"
+            b"\nmalformed\n|FAILED|1:0|None\n",
+            b"",
+        )
+    )
+    monkeypatch.setattr(
+        asyncio, "create_subprocess_exec", AsyncMock(return_value=process)
+    )
+    expected = {
+        "123": ("CANCELLED by 456", "0:15", "None"),
+        "123.batch": ("FAILED", "1:0", "NonZeroExitCode"),
+        "123.extern": ("COMPLETED", "0:0", "None"),
+        "123.10": ("OUT_OF_MEMORY", "0:9", ""),
+    }
+
+    result, duration = asyncio.run(
+        query_job_status("sacct", MagicMock(), with_details=with_details)
+    )
+
+    if not with_details:
+        expected = {job_id: fields[0] for job_id, fields in expected.items()}
+    assert result == expected
+    assert duration >= 0
+
+
+@pytest.mark.parametrize("failure", ["exit", "timeout"])
+def test_query_job_details_handles_failure(monkeypatch, failure):
+    process = MagicMock(returncode=1)
+    process.communicate = AsyncMock(return_value=(b"", b"accounting unavailable"))
+    if failure == "timeout":
+        process.communicate.side_effect = asyncio.TimeoutError
+    monkeypatch.setattr(
+        asyncio, "create_subprocess_exec", AsyncMock(return_value=process)
+    )
+
+    assert asyncio.run(query_job_status("sacct", MagicMock(), with_details=True)) == (
+        None,
+        None,
+    )
 
 
 def test_parse_sacct_data():

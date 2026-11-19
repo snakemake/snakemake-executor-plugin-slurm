@@ -17,9 +17,10 @@ import json
 import re
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
+from snakemake_interface_common.exceptions import WorkflowError
 
 from snakemake_executor_plugin_slurm import (
     Executor,
@@ -121,6 +122,17 @@ def _make_executor_stub(array_jobs=None, array_limit=100):
 
 class TestArrayJobsSettings:
     """Tests for ExecutorSettings array-job fields and their defaults."""
+
+    @pytest.mark.parametrize("failure_limit", [None, 1, 3])
+    def test_status_failure_limit(self, failure_limit):
+        settings = ExecutorSettings(status_failure_limit=failure_limit)
+        assert settings.status_failure_limit == failure_limit
+        assert ExecutorSettings().status_failure_limit is None
+
+    @pytest.mark.parametrize("failure_limit", [0, -1, 1.5, "2", True])
+    def test_invalid_status_failure_limit(self, failure_limit):
+        with pytest.raises(WorkflowError, match="status_failure_limit"):
+            ExecutorSettings(status_failure_limit=failure_limit)
 
     def test_array_jobs_default_is_none(self):
         """array_jobs field defaults to None."""
@@ -598,6 +610,7 @@ def _make_check_executor():
     executor.next_seconds_between_status_checks = 40
     executor._status_query_calls = 0
     executor._status_query_failures = 0
+    executor._consecutive_failed_status_cycles = 0
     executor._status_query_total_seconds = 0.0
     executor._status_query_min_seconds = None
     executor._status_query_max_seconds = 0.0
@@ -609,6 +622,7 @@ def _make_check_executor():
     executor.workflow = SimpleNamespace(
         executor_settings=SimpleNamespace(
             status_attempts=1,
+            status_failure_limit=None,
             init_seconds_before_status_checks=40,
             keep_successful_logs=False,
             requeue=False,
@@ -635,8 +649,8 @@ class TestCheckActiveArrayJobs:
     def _patch_all(self, monkeypatch, status_dict):
         """Patch all external dependencies used by check_active_jobs."""
 
-        async def _mock_query(command, logger):
-            return (status_dict, 0.01)
+        async def _mock_query(command, logger, *, with_details=False):
+            return ({} if with_details else status_dict, 0.01)
 
         monkeypatch.setattr(
             "snakemake_executor_plugin_slurm.query_job_status", _mock_query
@@ -652,6 +666,76 @@ class TestCheckActiveArrayJobs:
             "snakemake_executor_plugin_slurm.is_query_tool_available",
             lambda tool: True,
         )
+
+    @pytest.mark.parametrize(
+        "initial_result",
+        [(None, None), ({}, 0.01), ({"123_1": "RUNNING"}, 0.01)],
+    )
+    def test_jobs_remain_tracked_until_status_recovers(self, monkeypatch, initial_result):
+        executor = _make_check_executor()
+        executor.workflow.executor_settings.status_attempts = 3
+        executor.workflow.executor_settings.keep_successful_logs = True
+        self._patch_all(monkeypatch, {})
+        query = AsyncMock(return_value=initial_result)
+        monkeypatch.setattr("snakemake_executor_plugin_slurm.query_job_status", query)
+        active_jobs = [
+            SimpleNamespace(external_jobid=f"123_{i}", aux={}) for i in (1, 2)
+        ]
+
+        remaining = _run_check(executor, active_jobs)
+
+        assert len(remaining) == len(active_jobs)
+        assert all(actual is original for actual, original in zip(remaining, active_jobs))
+        assert query.await_count == (3 if initial_result[0] is None else 1)
+        executor.report_job_success.assert_not_called()
+        executor.report_job_error.assert_not_called()
+
+        query.return_value = ({job.external_jobid: "COMPLETED" for job in remaining}, 0.01)
+
+        assert _run_check(executor, remaining) == []
+        assert executor.report_job_success.call_args_list == [
+            call(job) for job in active_jobs
+        ]
+        executor.report_job_error.assert_not_called()
+
+    @pytest.mark.parametrize("failure_limit", [None, 1, 2])
+    def test_consecutive_failed_cycles_obey_limit(self, monkeypatch, failure_limit):
+        executor = _make_check_executor()
+        executor.workflow.executor_settings.status_attempts = 3
+        executor.workflow.executor_settings.status_failure_limit = failure_limit
+        self._patch_all(monkeypatch, {})
+        query = AsyncMock(return_value=(None, None))
+        monkeypatch.setattr("snakemake_executor_plugin_slurm.query_job_status", query)
+        job = SimpleNamespace(external_jobid="123_1", aux={})
+
+        for _ in range(5 if failure_limit is None else failure_limit - 1):
+            assert _run_check(executor, [job]) == [job]
+            executor.logger.warning.assert_called()
+
+        if failure_limit is not None:
+            with pytest.raises(WorkflowError, match="status-failure-limit"):
+                _run_check(executor, [job])
+            assert query.await_count == 3 * failure_limit
+        executor.report_job_success.assert_not_called()
+        executor.report_job_error.assert_not_called()
+
+    @pytest.mark.parametrize("recovered_status", [{}, {"123_1": "RUNNING"}])
+    def test_successful_query_resets_failure_limit(self, monkeypatch, recovered_status):
+        executor = _make_check_executor()
+        executor.workflow.executor_settings.status_failure_limit = 2
+        self._patch_all(monkeypatch, {})
+        query = AsyncMock(
+            side_effect=[(None, None), (recovered_status, 0.01), (None, None), (None, None)]
+        )
+        monkeypatch.setattr("snakemake_executor_plugin_slurm.query_job_status", query)
+        job = SimpleNamespace(external_jobid="123_1", aux={})
+
+        for _ in range(3):
+            assert _run_check(executor, [job]) == [job]
+        with pytest.raises(WorkflowError, match="status-failure-limit"):
+            _run_check(executor, [job])
+        executor.report_job_success.assert_not_called()
+        executor.report_job_error.assert_not_called()
 
     def test_task_level_status_takes_precedence_over_parent(
         self, monkeypatch, tmp_path
@@ -704,6 +788,23 @@ class TestCheckActiveArrayJobs:
         assert remaining == [active_job]
         executor.report_job_success.assert_not_called()
         executor.report_job_error.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "status", ["CANCELLED", "CANCELLED by 12345", "FAILED+", "TIMEOUT+"]
+    )
+    def test_failure_status_with_suffix_reports_error(self, monkeypatch, tmp_path, status):
+        executor = _make_check_executor()
+        self._patch_all(monkeypatch, {"123_1": status})
+        log = tmp_path / "123_1.log"
+        active_job = SimpleNamespace(external_jobid="123_1", aux={"slurm_logfile": log})
+
+        assert _run_check(executor, [active_job]) == []
+        executor.report_job_success.assert_not_called()
+        executor.report_job_error.assert_called_once_with(
+            active_job,
+            msg=f"SLURM-job '123_1' failed, SLURM status is: '{status}'. Reason: Unknown.",
+            aux_logs=[str(log)],
+        )
 
     def test_node_fail_tracks_failing_node(self, monkeypatch, tmp_path):
         """A NODE_FAIL job adds the node returned by SLURM to the exclusion set."""

@@ -1,7 +1,9 @@
 import asyncio
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from snakemake_executor_plugin_slurm import Executor, _status_lookup_ids
 
@@ -20,7 +22,25 @@ def test_status_lookup_ids_for_array_task():
     assert _status_lookup_ids("abc_1") == ["abc_1"]
 
 
-def test_check_active_jobs_uses_parent_array_status(monkeypatch):
+@pytest.mark.parametrize(
+    "details, expected_reason",
+    [
+        (
+            {
+                "1057651_1": ("FAILED", "1:0", "NonZeroExitCode"),
+                "1057651_1.batch": ("FAILED", "1:0", "None"),
+                "1057651_1.extern": ("COMPLETED", "0:0", "None"),
+                "1057651_1.10": ("OUT_OF_MEMORY", "0:9", ""),
+            },
+            "1057651_1.10: State=OUT_OF_MEMORY, ExitCode=0:9, Reason=Unknown",
+        ),
+        ({}, "Reason: Unknown"),
+        (None, "Reason: Unable to retrieve reason"),
+    ],
+)
+def test_check_active_jobs_uses_parent_array_status(
+    monkeypatch, details, expected_reason
+):
     executor = Executor.__new__(Executor)
     executor.logger = MagicMock()
     executor.run_uuid = "run-uuid"
@@ -47,12 +67,11 @@ def test_check_active_jobs_uses_parent_array_status(monkeypatch):
         )
     )
 
-    async def _mock_query_job_status(command, logger):
-        return ({"1057651": "FAILED"}, 0.01)
+    query = AsyncMock(side_effect=[({"1057651": "FAILED"}, 0.01), (details, 0.01)])
 
     monkeypatch.setattr(
         "snakemake_executor_plugin_slurm.query_job_status",
-        _mock_query_job_status,
+        query,
     )
     monkeypatch.setattr(
         "snakemake_executor_plugin_slurm.query_job_status_sacct",
@@ -83,6 +102,19 @@ def test_check_active_jobs_uses_parent_array_status(monkeypatch):
     assert remaining == []
     executor.report_job_success.assert_not_called()
     executor.report_job_error.assert_called_once()
+    assert query.await_count == 2  # One status query and one diagnostic query.
+    query.assert_awaited_with(
+        "sacct -j 1057651_1 "
+        "--format=JobID,State,ExitCode,Reason --parsable2 --noheader",
+        executor.logger,
+        with_details=True,
+    )
+    message = executor.report_job_error.call_args.kwargs["msg"]
+    assert expected_reason in message
+    if details:
+        for job_id, (state, exit_code, reason) in details.items():
+            assert f"{job_id}: State={state}, ExitCode={exit_code}" in message
+    assert executor.report_job_error.call_args.kwargs["aux_logs"] == ["fake.log"]
 
 
 def test_parent_fallback_completed_keeps_array_task_log(monkeypatch, tmp_path):
