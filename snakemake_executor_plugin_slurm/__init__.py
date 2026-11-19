@@ -1606,6 +1606,10 @@ We leave it to SLURM to resume your job(s)""")
                 )
             else:
                 self.next_seconds_between_status_checks = initial_interval
+        else:
+            # Keep jobs tracked so the next polling cycle can retry.
+            for job in active_jobs:
+                yield job
 
     def cancel_jobs(self, active_jobs: List[SubmittedJobInfo]):
         """Cancel all active jobs.
