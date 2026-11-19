@@ -20,6 +20,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
+from snakemake_interface_common.exceptions import WorkflowError
 
 from snakemake_executor_plugin_slurm import (
     Executor,
@@ -121,6 +122,17 @@ def _make_executor_stub(array_jobs=None, array_limit=100):
 
 class TestArrayJobsSettings:
     """Tests for ExecutorSettings array-job fields and their defaults."""
+
+    @pytest.mark.parametrize("failure_limit", [None, 1, 3])
+    def test_status_failure_limit(self, failure_limit):
+        settings = ExecutorSettings(status_failure_limit=failure_limit)
+        assert settings.status_failure_limit == failure_limit
+        assert ExecutorSettings().status_failure_limit is None
+
+    @pytest.mark.parametrize("failure_limit", [0, -1, 1.5, "2", True])
+    def test_invalid_status_failure_limit(self, failure_limit):
+        with pytest.raises(WorkflowError, match="status_failure_limit"):
+            ExecutorSettings(status_failure_limit=failure_limit)
 
     def test_array_jobs_default_is_none(self):
         """array_jobs field defaults to None."""
@@ -598,6 +610,7 @@ def _make_check_executor():
     executor.next_seconds_between_status_checks = 40
     executor._status_query_calls = 0
     executor._status_query_failures = 0
+    executor._consecutive_failed_status_cycles = 0
     executor._status_query_total_seconds = 0.0
     executor._status_query_min_seconds = None
     executor._status_query_max_seconds = 0.0
@@ -609,6 +622,7 @@ def _make_check_executor():
     executor.workflow = SimpleNamespace(
         executor_settings=SimpleNamespace(
             status_attempts=1,
+            status_failure_limit=None,
             init_seconds_before_status_checks=40,
             keep_successful_logs=False,
             requeue=False,
@@ -682,6 +696,45 @@ class TestCheckActiveArrayJobs:
         assert executor.report_job_success.call_args_list == [
             call(job) for job in active_jobs
         ]
+        executor.report_job_error.assert_not_called()
+
+    @pytest.mark.parametrize("failure_limit", [None, 1, 2])
+    def test_consecutive_failed_cycles_obey_limit(self, monkeypatch, failure_limit):
+        executor = _make_check_executor()
+        executor.workflow.executor_settings.status_attempts = 3
+        executor.workflow.executor_settings.status_failure_limit = failure_limit
+        self._patch_all(monkeypatch, {})
+        query = AsyncMock(return_value=(None, None))
+        monkeypatch.setattr("snakemake_executor_plugin_slurm.query_job_status", query)
+        job = SimpleNamespace(external_jobid="123_1", aux={})
+
+        for _ in range(5 if failure_limit is None else failure_limit - 1):
+            assert _run_check(executor, [job]) == [job]
+            executor.logger.warning.assert_called()
+
+        if failure_limit is not None:
+            with pytest.raises(WorkflowError, match="status-failure-limit"):
+                _run_check(executor, [job])
+            assert query.await_count == 3 * failure_limit
+        executor.report_job_success.assert_not_called()
+        executor.report_job_error.assert_not_called()
+
+    @pytest.mark.parametrize("recovered_status", [{}, {"123_1": "RUNNING"}])
+    def test_successful_query_resets_failure_limit(self, monkeypatch, recovered_status):
+        executor = _make_check_executor()
+        executor.workflow.executor_settings.status_failure_limit = 2
+        self._patch_all(monkeypatch, {})
+        query = AsyncMock(
+            side_effect=[(None, None), (recovered_status, 0.01), (None, None), (None, None)]
+        )
+        monkeypatch.setattr("snakemake_executor_plugin_slurm.query_job_status", query)
+        job = SimpleNamespace(external_jobid="123_1", aux={})
+
+        for _ in range(3):
+            assert _run_check(executor, [job]) == [job]
+        with pytest.raises(WorkflowError, match="status-failure-limit"):
+            _run_check(executor, [job])
+        executor.report_job_success.assert_not_called()
         executor.report_job_error.assert_not_called()
 
     def test_task_level_status_takes_precedence_over_parent(
