@@ -348,7 +348,7 @@ def set_gres_string(job: JobExecutorInterface) -> str:
     # gpu model arguments can be of type "string"
     # The model string may contain a dot for variants, see
     # https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/387
-    gpu_model_re = re.compile(r"^[a-zA-Z0-9_\.]+$")
+    gpu_model_re = re.compile(r"^[a-zA-Z0-9_\.-]+$")
 
     # any arguments should not start and end with ticks or
     # quotation marks:
