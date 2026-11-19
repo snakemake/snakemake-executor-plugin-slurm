@@ -705,6 +705,27 @@ class TestCheckActiveArrayJobs:
         executor.report_job_success.assert_not_called()
         executor.report_job_error.assert_not_called()
 
+    @pytest.mark.parametrize(
+        "status", ["CANCELLED", "CANCELLED by 12345", "FAILED+", "TIMEOUT+"]
+    )
+    def test_failure_status_with_suffix_reports_error(self, monkeypatch, tmp_path, status):
+        executor = _make_check_executor()
+        self._patch_all(monkeypatch, {"123_1": status})
+        monkeypatch.setattr(
+            "snakemake_executor_plugin_slurm.subprocess.check_output",
+            MagicMock(return_value=""),
+        )
+        log = tmp_path / "123_1.log"
+        active_job = SimpleNamespace(external_jobid="123_1", aux={"slurm_logfile": log})
+
+        assert _run_check(executor, [active_job]) == []
+        executor.report_job_success.assert_not_called()
+        executor.report_job_error.assert_called_once_with(
+            active_job,
+            msg=f"SLURM-job '123_1' failed, SLURM status is: '{status}'. Reason: Unknown.",
+            aux_logs=[str(log)],
+        )
+
     def test_node_fail_tracks_failing_node(self, monkeypatch, tmp_path):
         """A NODE_FAIL job adds the node returned by SLURM to the exclusion set."""
         executor = _make_check_executor()
