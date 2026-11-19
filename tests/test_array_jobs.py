@@ -17,7 +17,7 @@ import json
 import re
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
@@ -652,6 +652,37 @@ class TestCheckActiveArrayJobs:
             "snakemake_executor_plugin_slurm.is_query_tool_available",
             lambda tool: True,
         )
+
+    @pytest.mark.parametrize(
+        "initial_result",
+        [(None, None), ({}, 0.01), ({"123_1": "RUNNING"}, 0.01)],
+    )
+    def test_jobs_remain_tracked_until_status_recovers(self, monkeypatch, initial_result):
+        executor = _make_check_executor()
+        executor.workflow.executor_settings.status_attempts = 3
+        executor.workflow.executor_settings.keep_successful_logs = True
+        self._patch_all(monkeypatch, {})
+        query = AsyncMock(return_value=initial_result)
+        monkeypatch.setattr("snakemake_executor_plugin_slurm.query_job_status", query)
+        active_jobs = [
+            SimpleNamespace(external_jobid=f"123_{i}", aux={}) for i in (1, 2)
+        ]
+
+        remaining = _run_check(executor, active_jobs)
+
+        assert len(remaining) == len(active_jobs)
+        assert all(actual is original for actual, original in zip(remaining, active_jobs))
+        assert query.await_count == (3 if initial_result[0] is None else 1)
+        executor.report_job_success.assert_not_called()
+        executor.report_job_error.assert_not_called()
+
+        query.return_value = ({job.external_jobid: "COMPLETED" for job in remaining}, 0.01)
+
+        assert _run_check(executor, remaining) == []
+        assert executor.report_job_success.call_args_list == [
+            call(job) for job in active_jobs
+        ]
+        executor.report_job_error.assert_not_called()
 
     def test_task_level_status_takes_precedence_over_parent(
         self, monkeypatch, tmp_path
