@@ -190,6 +190,13 @@ def validate_executor_settings(settings, logger=None):
             or settings.status_attempts < 1
         ):
             raise WorkflowError("status_attempts must be a positive integer")
+    if settings.status_failure_limit is not None:
+        if (
+            not isinstance(settings.status_failure_limit, int)
+            or isinstance(settings.status_failure_limit, bool)
+            or settings.status_failure_limit < 1
+        ):
+            raise WorkflowError("status_failure_limit must be a positive integer")
     # init_seconds_before_status_checks
     if settings.init_seconds_before_status_checks is not None:
         if (
