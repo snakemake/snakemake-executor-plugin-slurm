@@ -161,17 +161,19 @@ def query_job_status_squeue(runid) -> list:
     return query_command
 
 
-async def query_job_status(command: str, logger):
+async def query_job_status(command: str, logger, *, with_details=False):
     """Obtain SLURM job status of all submitted jobs with sacct or squeue
 
     Args:
         command: SLURM command that returns one line for each job with:
                  "<raw/main_job_id>|<long_status_string>"
         logger: Logger instance for debug/error output
+        with_details: Parse State, ExitCode and Reason fields for each job or step.
 
     Returns:
         Tuple of (status_dict, query_duration) where status_dict is a dict
         mapping job IDs to status strings, and query_duration is time in seconds.
+        With with_details=True, values are (state, exit_code, reason) tuples.
         Returns (None, None) on query failure.
     """
     status_of_jobs = {}
@@ -204,9 +206,13 @@ async def query_job_status(command: str, logger):
         # Parse the CSV output with | delimiter
         reader = csv.reader(StringIO(out_text), delimiter="|")
         for row in reader:
-            if len(row) >= 2:
+            if len(row) >= (4 if with_details else 2):
                 job_id = row[0].strip()
-                status = row[1].strip()
+                status = (
+                    tuple(field.strip() for field in row[1:4])
+                    if with_details
+                    else row[1].strip()
+                )
                 if job_id:  # skip empty lines
                     status_of_jobs[job_id] = status
 

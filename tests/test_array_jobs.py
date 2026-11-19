@@ -649,8 +649,8 @@ class TestCheckActiveArrayJobs:
     def _patch_all(self, monkeypatch, status_dict):
         """Patch all external dependencies used by check_active_jobs."""
 
-        async def _mock_query(command, logger):
-            return (status_dict, 0.01)
+        async def _mock_query(command, logger, *, with_details=False):
+            return ({} if with_details else status_dict, 0.01)
 
         monkeypatch.setattr(
             "snakemake_executor_plugin_slurm.query_job_status", _mock_query
@@ -795,10 +795,6 @@ class TestCheckActiveArrayJobs:
     def test_failure_status_with_suffix_reports_error(self, monkeypatch, tmp_path, status):
         executor = _make_check_executor()
         self._patch_all(monkeypatch, {"123_1": status})
-        monkeypatch.setattr(
-            "snakemake_executor_plugin_slurm.subprocess.check_output",
-            MagicMock(return_value=""),
-        )
         log = tmp_path / "123_1.log"
         active_job = SimpleNamespace(external_jobid="123_1", aux={"slurm_logfile": log})
 

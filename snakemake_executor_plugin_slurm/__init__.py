@@ -1592,26 +1592,26 @@ We leave it to SLURM to resume your job(s)""")
                         active_jobs_seen_by_sacct.discard(j.external_jobid)
                         continue
                     reasons = []
-                    for step in range(10):  # Iterate over up to 10 job steps
-                        reason_command = (
-                            f"sacct -j {j.external_jobid}.{step} "
-                            "--format=Reason --noheader"
+                    reason_command = (
+                        f"sacct -j {j.external_jobid} "
+                        "--format=JobID,State,ExitCode,Reason --parsable2 --noheader"
+                    )
+                    async with self.status_rate_limiter:
+                        details, _ = await query_job_status(
+                            reason_command, self.logger, with_details=True
                         )
-                        try:
-                            reason_output = subprocess.check_output(
-                                reason_command,
-                                shell=True,
-                                text=True,
-                                stderr=subprocess.PIPE,
-                            ).strip()
-                            if reason_output:
-                                reasons.append(f"Step {step}: {reason_output}")
-                        except subprocess.CalledProcessError as e:
-                            self.logger.warning(
-                                f"Failed to retrieve jobstep reason for SLURM job "
-                                f"'{j.external_jobid}.{step}': {e.stderr.strip()}"
+                    if details is None:
+                        self.logger.warning(
+                            "Failed to retrieve failure details for SLURM job "
+                            f"'{j.external_jobid}'"
+                        )
+                        reasons.append("Unable to retrieve reason")
+                    else:
+                        for job_id, (state, exit_code, reason) in details.items():
+                            reasons.append(
+                                f"{job_id}: State={state}, ExitCode={exit_code}, "
+                                f"Reason={reason or 'Unknown'}"
                             )
-                            reasons.append(f"Step {step}: Unable to retrieve reason")
 
                     if not reasons:
                         reasons.append("Unknown")
