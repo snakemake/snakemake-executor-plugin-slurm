@@ -1545,7 +1545,7 @@ We leave it to SLURM to resume your job(s)""")
                         )
                         self.report_job_error(j, msg=msg, aux_logs=[slurm_logfile_str])
                         active_jobs_seen_by_sacct.discard(j.external_jobid)
-                elif any([status.startswith(st) for st in fail_stati]):
+                elif status.startswith(fail_stati):
                     # we can only check for the fail status, if `sacct` is available
                     if status_command_name != "sacct":
                         msg = (
